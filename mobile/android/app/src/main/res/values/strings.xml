@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Honest Jobcoach</string>
+    <string name="title_activity_main">Honest Jobcoach</string>
+    <string name="package_name">com.bjelland.honestjobcoach</string>
+    <string name="custom_url_scheme">com.bjelland.honestjobcoach</string>
+</resources>
