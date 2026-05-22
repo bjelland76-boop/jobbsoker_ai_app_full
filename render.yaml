@@ -1,0 +1,49 @@
+services:
+  - type: web
+    name: jobbsoker-ai-backend
+    env: docker
+    rootDir: backend
+    plan: starter
+    autoDeploy: true
+
+    # The backend listens on 8000 (see backend/Dockerfile)
+    healthCheckPath: /health
+
+    envVars:
+      - key: APP_DATA_DIR
+        value: /data
+
+      # Required (set in Render dashboard / during Blueprint deploy)
+      - key: JWT_SECRET
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+
+      # SMTP (set according to provider). Defaults below are Gmail-friendly.
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+
+      # For Gmail:
+      # - SMTP_USER: your gmail address
+      # - SMTP_PASSWORD: App Password (requires 2FA)
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: FROM_EMAIL
+        sync: false
+
+      # Optional
+      - key: REPLY_TO_EMAIL
+        sync: false
+      - key: SMTP_USE_TLS
+        value: "true"
+      - key: SMTP_TIMEOUT_SECONDS
+        value: "20"
+
+    disk:
+      name: app-data
+      mountPath: /data
+      sizeGB: 1

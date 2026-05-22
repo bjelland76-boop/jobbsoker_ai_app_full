@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Ærlig JobbCoach",
+    "slug": "aerlig-jobbcoach",
+    "version": "1.0.0",
+    "plugins": [
+      "expo-font"
+    ],
+    "android": {
+      "package": "com.frankbjelland.aerligjobbcoach"
+    }
+  }
+}

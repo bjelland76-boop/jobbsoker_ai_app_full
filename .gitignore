@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+backend/.venv/
+backend/venv/
+
+# Local databases / generated files
+*.db
+backend/generated_pdfs/
+generated_pdfs/
+
+# Env files
+.env
+backend/.env
+
+# Node / Expo / Web
+node_modules/
+mobile/node_modules/
+web/node_modules/
+
+.expo/
+mobile/.expo/
+
+# Vite / web builds
+web/dist/
+
+# Capacitor native projects (usually generated locally)
+web/android/
+web/ios/
+web/.capacitor/
+
+# Logs
+*.log

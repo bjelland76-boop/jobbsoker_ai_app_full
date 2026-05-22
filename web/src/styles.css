@@ -1,0 +1,94 @@
+:root {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, sans-serif;
+  color: #0f172a;
+  background: #0b0b12;
+}
+
+body {
+  margin: 0;
+}
+
+.container {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.card {
+  background: #121225;
+  border: 1px solid #24244a;
+  border-radius: 16px;
+  padding: 18px;
+  color: #f8fafc;
+  margin-bottom: 14px;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+input, textarea, select {
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 12px;
+  border: 1px solid #24244a;
+  background: #171733;
+  color: #f8fafc;
+  outline: none;
+}
+
+textarea {
+  min-height: 110px;
+}
+
+button {
+  cursor: pointer;
+  border-radius: 12px;
+  border: 1px solid #8b5cf6;
+  background: #8b5cf6;
+  color: #fff;
+  padding: 12px 14px;
+  font-weight: 700;
+}
+
+button.secondary {
+  background: transparent;
+  color: #8b5cf6;
+}
+
+.small {
+  font-size: 13px;
+  color: #a1a1aa;
+}
+
+h1,h2,h3 {
+  margin: 0 0 10px 0;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tab {
+  border: 1px solid #24244a;
+  background: #171733;
+  color: #f8fafc;
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.tab.active {
+  background: #8b5cf6;
+  border-color: #8b5cf6;
+}
+
+.link {
+  color: #c4b5fd;
+  text-decoration: underline;
+  cursor: pointer;
+}
