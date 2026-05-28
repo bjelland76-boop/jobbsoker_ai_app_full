@@ -18,8 +18,13 @@ export default function App() {
 
   // Auth
   const [email, setEmail] = useState('');
+  const [authStep, setAuthStep] = useState('email'); // email | login | register
+  const [signupName, setSignupName] = useState('');
   const [code, setCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [authNotice, setAuthNotice] = useState('');
   const [token, setToken] = useState('');
 
   // Profile
@@ -47,42 +52,85 @@ export default function App() {
     setTab('profile');
   }, [token]);
 
+  function resetAuthFlow({ keepEmail = true } = {}) {
+    setAuthError('');
+    setAuthNotice('');
+    setCodeSent(false);
+    setCode('');
+    setSignupName('');
+    setAuthStep('email');
+    if (!keepEmail) setEmail('');
+  }
+
+  async function startAuth(nextStep) {
+    // Keep existing OTP flow. We simply let the user choose
+    // «Logg inn» vs «Opprett konto» without requiring any extra backend endpoint.
+    setAuthStep(nextStep);
+    await requestCode();
+  }
+
   async function requestCode() {
-    if (!email || !email.includes('@')) {
-      alert('Skriv inn e-post');
+    const e = (email || '').trim().toLowerCase();
+    if (!e || !e.includes('@')) {
+      setAuthError('Skriv inn en gyldig e-post');
       return;
     }
+
+    setAuthLoading(true);
+    setAuthError('');
+    setAuthNotice('');
+
     try {
       await apiFetch('/auth/request-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: e }),
       });
       setCodeSent(true);
       setCode('');
-      alert('Kode sendt. Sjekk e-posten din.');
-    } catch (e) {
-      alert(errText(e));
+      setAuthNotice('Kode sendt. Sjekk e-posten din.');
+    } catch (err) {
+      setAuthError(errText(err));
+    } finally {
+      setAuthLoading(false);
     }
   }
 
   async function verifyCode() {
-    if (!email || !code) {
-      alert('Mangler e-post eller kode');
+    const e = (email || '').trim().toLowerCase();
+    const c = String(code || '').trim();
+
+    if (!e || !c) {
+      setAuthError('Mangler e-post eller kode');
       return;
     }
+
+    if (authStep === 'register' && !(signupName || '').trim()) {
+      setAuthError('Skriv inn navn');
+      return;
+    }
+
+    setAuthLoading(true);
+    setAuthError('');
+    setAuthNotice('');
+
     try {
+      const payload = { email: e, code: c };
+      if (authStep === 'register') payload.name = (signupName || '').trim();
+
       const res = await apiFetch('/auth/verify-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code: String(code).trim() }),
+        body: JSON.stringify(payload),
       });
 
       const t = res?.access_token;
       if (!t) throw new Error('Mangler token fra server');
       setToken(t);
-    } catch (e) {
-      alert(errText(e));
+    } catch (err) {
+      setAuthError(errText(err));
+    } finally {
+      setAuthLoading(false);
     }
   }
 
@@ -251,26 +299,161 @@ export default function App() {
       </div>
 
       {tab === 'auth' && (
-        <div className="card">
-          <h3>Logg inn (engangskode)</h3>
-          <div className="row">
-            <div style={{ flex: 1, minWidth: 280 }}>
-              <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-post" />
+        <div className="authShell">
+          <div className={`authCard ${authLoading ? 'isLoading' : ''}`}>
+            <div className="authHeader">
+              <div className="authKicker">Ærlig JobbCoach</div>
+              <h1 className="authTitle">Kom i gang</h1>
+              <div className="authSubtitle">Logg inn med engangskode på e-post. Ingen passord.</div>
             </div>
-          </div>
 
-          {!codeSent ? (
-            <button type="button" onClick={requestCode}>Send kode</button>
-          ) : (
-            <>
-              <div style={{ height: 10 }} />
-              <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Kode (6 siffer)" />
-              <div className="row">
-                <button type="button" onClick={verifyCode}>Verifiser</button>
-                <button className="secondary" type="button" onClick={() => { setCodeSent(false); setCode(''); }}>Tilbake</button>
+            {authStep === 'email' ? (
+              <div className="authBody">
+                <label className="field">
+                  <div className="label">E-post</div>
+                  <input
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setAuthError('');
+                      setAuthNotice('');
+                    }}
+                    placeholder="navn@firma.no"
+                    autoComplete="email"
+                  />
+                </label>
+
+                {authError ? <div className="alert error">{authError}</div> : null}
+                {authNotice ? <div className="alert notice">{authNotice}</div> : null}
+
+                <div className="row" style={{ gap: 10 }}>
+                  <button
+                    className="btn primary"
+                    type="button"
+                    onClick={() => startAuth('login')}
+                    disabled={authLoading}
+                    aria-busy={authLoading}
+                    style={{ flex: 1 }}
+                  >
+                    <span className="btnContent">
+                      <span>{authLoading ? 'Sender…' : 'Send engangskode'}</span>
+                      {authLoading ? <span className="spinner" aria-hidden="true" /> : null}
+                    </span>
+                  </button>
+
+                  <button
+                    className="btn secondary"
+                    type="button"
+                    onClick={() => startAuth('register')}
+                    disabled={authLoading}
+                    style={{ flex: 1 }}
+                  >
+                    Opprett konto
+                  </button>
+                </div>
+
+                <div className="finePrint">Trykk «Send engangskode» for å logge inn. Har du ikke konto, trykk «Opprett konto» (da legger du inn navn).</div>
               </div>
-            </>
-          )}
+            ) : (
+              <div className="authBody">
+                <div className="emailPillRow">
+                  <div className="emailPill">{(email || '').trim().toLowerCase()}</div>
+                  <button
+                    type="button"
+                    className="btn link"
+                    onClick={() => resetAuthFlow({ keepEmail: true })}
+                    disabled={authLoading}
+                  >
+                    Endre
+                  </button>
+                </div>
+
+                <div className="stepTitle">
+                  {authStep === 'login' ? 'Logg inn' : 'Opprett konto'}
+                </div>
+
+                {authStep === 'register' ? (
+                  <>
+                    <div className="callout">
+                      Opprett konto: Skriv inn navn, og bekreft engangskoden du får på e-post.
+                    </div>
+                    <label className="field">
+                      <div className="label">Navn</div>
+                      <input
+                        value={signupName}
+                        onChange={(e) => setSignupName(e.target.value)}
+                        placeholder="Ditt navn"
+                        autoComplete="name"
+                      />
+                    </label>
+                  </>
+                ) : null}
+
+                {!codeSent ? (
+                  <button
+                    className="btn primary"
+                    type="button"
+                    onClick={requestCode}
+                    disabled={authLoading}
+                    aria-busy={authLoading}
+                  >
+                    <span className="btnContent">
+                      <span>{authLoading ? 'Sender…' : 'Send engangskode'}</span>
+                      {authLoading ? <span className="spinner" aria-hidden="true" /> : null}
+                    </span>
+                  </button>
+                ) : (
+                  <>
+                    <label className="field">
+                      <div className="label">Engangskode</div>
+                      <input
+                        value={code}
+                        onChange={(e) => setCode(e.target.value)}
+                        placeholder="6 siffer"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                      />
+                    </label>
+
+                    <button
+                      className="btn primary"
+                      type="button"
+                      onClick={verifyCode}
+                      disabled={authLoading}
+                      aria-busy={authLoading}
+                    >
+                      <span className="btnContent">
+                        <span>{authLoading ? 'Verifiserer…' : (authStep === 'login' ? 'Logg inn' : 'Opprett konto')}</span>
+                        {authLoading ? <span className="spinner" aria-hidden="true" /> : null}
+                      </span>
+                    </button>
+
+                    <div className="row" style={{ marginTop: 10 }}>
+                      <button
+                        className="btn secondary"
+                        type="button"
+                        onClick={() => requestCode()}
+                        disabled={authLoading}
+                      >
+                        Send ny kode
+                      </button>
+                      <button
+                        className="btn ghost"
+                        type="button"
+                        onClick={() => { setCodeSent(false); setCode(''); setAuthError(''); setAuthNotice(''); }}
+                        disabled={authLoading}
+                      >
+                        Tilbake
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {authError ? <div className="alert error" style={{ marginTop: 12 }}>{authError}</div> : null}
+                {authNotice ? <div className="alert notice" style={{ marginTop: 12 }}>{authNotice}</div> : null}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

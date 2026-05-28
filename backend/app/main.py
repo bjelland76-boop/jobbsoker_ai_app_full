@@ -347,6 +347,8 @@ class RequestCodeIn(BaseModel):
 class VerifyCodeIn(BaseModel):
     email: str
     code: str
+    # Optional: only used when creating a new account via passwordless login.
+    name: str | None = None
 
 
 class CodeSentOut(BaseModel):
@@ -357,6 +359,10 @@ class TokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user_id: int
+
+
+class EmailExistsOut(BaseModel):
+    exists: bool
 
 
 @app.get("/", tags=["meta"])
@@ -502,14 +508,33 @@ def _cleanup_login_codes(db: Session, *, keep_days: int = 7) -> None:
             pass
 
 
-def _ensure_user_and_profile(db: Session, email: str) -> User:
-    """Create user + default profile if missing."""
+def _ensure_user_and_profile(db: Session, email: str, *, display_name: str | None = None) -> User:
+    """Create user + default profile if missing.
+
+    `display_name` is optional and is only applied when creating a new profile
+    (or when the existing profile still has a default/placeholder name).
+    """
+
+    email_local = (email.split("@", 1)[0] or "Bruker").strip() or "Bruker"
+    wanted_name = (display_name or "").strip() or None
+
+    def _should_overwrite_name(current: str | None) -> bool:
+        cur = (current or "").strip()
+        if not cur:
+            return True
+        return cur in {email_local, "Bruker", "Ærlig JobbCoach"}
 
     user = get_user_by_email(db, email)
     if user:
-        # Ensure at least one profile exists.
         existing_profile = db.scalars(select(Profile).where(Profile.user_id == user.id)).first()
         if existing_profile:
+            # Best-effort: if this looks like an auto-generated name, allow overwriting
+            # with the chosen display name.
+            if wanted_name and _should_overwrite_name(getattr(existing_profile, "name", "")):
+                existing_profile.name = wanted_name
+                if not (existing_profile.email or "").strip():
+                    existing_profile.email = email
+                db.commit()
             return user
 
     if not user:
@@ -527,11 +552,10 @@ def _ensure_user_and_profile(db: Session, email: str) -> User:
                 pass
         db.commit()
 
-    display_name = (email.split("@", 1)[0] or "Bruker").strip() or "Bruker"
-
+    # Ensure the user has at least one profile for greeting + profile flow.
     p = Profile(
         user_id=user.id,
-        name=display_name,
+        name=(wanted_name or email_local),
         email=email,
         phone="",
         address="",
@@ -714,7 +738,10 @@ def verify_login_code(data: VerifyCodeIn, request: Request, db: Session = Depend
     row.used_at = now
     db.commit()
 
-    user = _ensure_user_and_profile(db, email)
+    existed = bool(get_user_by_email(db, email))
+    wanted_name = (data.name or "").strip() if not existed else None
+
+    user = _ensure_user_and_profile(db, email, display_name=wanted_name)
 
     return {"access_token": create_access_token(user_id=user.id), "user_id": user.id, "token_type": "bearer"}
 
@@ -734,6 +761,17 @@ def login(data: LoginIn, db: Session = Depends(get_db)):
 @app.get("/auth/me", tags=["auth"])
 def me(current_user: User = Depends(get_current_user)):
     return {"id": current_user.id, "email": current_user.email}
+
+
+@app.get("/auth/email-exists", response_model=EmailExistsOut, tags=["auth"])
+def email_exists(email: str = Query(...), db: Session = Depends(get_db)):
+    """Used by the frontend to decide whether to show Login vs Create account flow."""
+
+    e = _normalize_email(email)
+    if not e or "@" not in e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ugyldig e-post")
+
+    return {"exists": bool(get_user_by_email(db, e))}
 
 
 @app.delete("/me", tags=["auth"])
