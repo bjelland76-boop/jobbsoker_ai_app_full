@@ -74,6 +74,14 @@ class GeneratedApplication(Base):
     pdf_path: Mapped[str] = mapped_column(Text, default="")
     cv_pdf_path: Mapped[str] = mapped_column(Text, default="")
 
+    # Phase 4: PDF generation dedupe metadata.
+    template: Mapped[str] = mapped_column(String(80), default="")
+    include_photo: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
+
+    # Phase 4/production: content-based PDF dedupe.
+    # TEXT column with default '' (legacy rows). Indexed for fast lookups.
+    content_hash: Mapped[str] = mapped_column(Text, default="", index=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 

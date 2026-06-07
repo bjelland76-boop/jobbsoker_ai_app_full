@@ -67,11 +67,25 @@ class JobAnalysisOut(BaseModel):
     job_id: Optional[int] = None
     job_title: Optional[str] = None
     company: Optional[str] = None
+
     match_score: Optional[float] = None
+    interview_probability: Optional[int] = None
+    seniority_match: Optional[int] = None
+
+    top_reason: Optional[str] = None
+    main_risk: Optional[str] = None
+
+    # Derived in backend code (no extra AI call)
+    recruiter_explanation: dict[str, list[str]] = Field(default_factory=dict)
+
     honest_assessment: Optional[str] = None
     strengths: list[Any] = Field(default_factory=list)
     weaknesses: list[Any] = Field(default_factory=list)
     missing_requirements: list[Any] = Field(default_factory=list)
+
+    # Phase 1: recommended CV changes derived from missing requirements/job fit.
+    recommended_cv_changes: list[Any] = Field(default_factory=list)
+
     should_apply: Optional[bool] = None
     improvement_tips: list[Any] = Field(default_factory=list)
 

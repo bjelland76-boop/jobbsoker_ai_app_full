@@ -1043,7 +1043,57 @@ export default function App() {
     };
   }, [profileId, consentAnalytics]);
 
-  async function loadJobAnalyses() {
+  function showAssistantError(e, { retry = null } = {}) {
+    const msg = String(e?.message || e || '');
+    const lower = msg.toLowerCase();
+
+    const isNetworkish = (
+      lower.includes('network request failed')
+      || lower.includes('failed to fetch')
+      || lower.includes('timeout')
+      || lower.includes('timed out')
+      || lower.includes('nettverksfeil')
+      || lower.includes('kunne ikke nå')
+      || lower.includes('could not reach')
+      || lower.includes('abort')
+    );
+
+    const copy = (uiLanguage === 'en')
+      ? {
+        networkTitle: 'Connection issue',
+        networkBody: "I couldn't reach the server right now. Check Wi‑Fi and try again.",
+        genericTitle: 'Something went wrong',
+        genericBody: 'Please try again in a moment.',
+        retry: 'Try again',
+        cancel: 'Cancel',
+        ok: 'OK',
+      }
+      : {
+        networkTitle: 'Ingen forbindelse',
+        networkBody: 'Jeg fikk ikke kontakt med serveren akkurat nå. Sjekk Wi‑Fi og prøv igjen.',
+        genericTitle: 'Noe gikk galt',
+        genericBody: 'Prøv igjen om litt.',
+        retry: 'Prøv igjen',
+        cancel: 'Avbryt',
+        ok: 'OK',
+      };
+
+    if (isNetworkish) {
+      Alert.alert(
+        copy.networkTitle,
+        copy.networkBody,
+        [
+          { text: copy.cancel, style: 'cancel' },
+          retry ? { text: copy.retry, onPress: retry } : { text: copy.ok },
+        ].filter(Boolean)
+      );
+      return;
+    }
+
+    Alert.alert(copy.genericTitle, copy.genericBody);
+  }
+
+  async function loadJobAnalyses({ silent = true } = {}) {
     if (!profileId) return;
 
     setJobAnalysesLoading(true);
@@ -1051,7 +1101,10 @@ export default function App() {
       const data = await apiFetch(`/job-analyses?profile_id=${profileId}`);
       setJobAnalyses(Array.isArray(data) ? data : []);
     } catch (e) {
-      console.log('Kunne ikke laste analyser:', e);
+      console.error('[Assistant] loadJobAnalyses failed', e);
+      if (!silent && activeTab === 'analysis') {
+        showAssistantError(e, { retry: () => loadJobAnalyses({ silent: false }) });
+      }
     }
     setJobAnalysesLoading(false);
   }
@@ -1068,7 +1121,12 @@ export default function App() {
 
       setJobAnalyses((prev) => prev.filter((it) => it?.job?.id !== jobId));
     } catch (e) {
-      Alert.alert('Feil', String(e));
+      console.error('[Assistant] hideJobAnalysis failed', e);
+      if (activeTab === 'analysis') {
+        showAssistantError(e, { retry: () => hideJobAnalysis(jobId) });
+      } else {
+        Alert.alert('Feil', errText(e));
+      }
     }
   }
 
@@ -1082,14 +1140,22 @@ export default function App() {
       if (url) setJobUrl(url);
       setActiveTab('analysis');
     } catch (e) {
-      Alert.alert('Feil', String(e));
+      console.error('[Assistant] openSavedAnalysis failed', e);
+      if (activeTab === 'analysis') {
+        showAssistantError(e, { retry: () => openSavedAnalysis(jobId, url) });
+      } else {
+        Alert.alert('Feil', errText(e));
+      }
     }
     setLoading(false);
   }
 
   async function moveAnalysisToApplications(jobId) {
     if (!profileId) {
-      Alert.alert('Feil', 'Lagre profilen først');
+      Alert.alert(
+        (uiLanguage === 'en') ? 'Profile missing' : 'Mangler profil',
+        (uiLanguage === 'en') ? 'Please save your profile first.' : 'Lagre profilen først.'
+      );
       return;
     }
 
@@ -1101,10 +1167,18 @@ export default function App() {
         body: JSON.stringify({}),
       });
 
-      Alert.alert('Lagt til', 'Jobben er lagt til under Søknader.');
+      Alert.alert(
+        (uiLanguage === 'en') ? 'Added' : 'Lagt til',
+        (uiLanguage === 'en') ? 'The job is now tracked under Applications.' : 'Jobben er lagt til under Søknader.'
+      );
       setActiveTab('applications');
     } catch (e) {
-      Alert.alert('Feil', String(e));
+      console.error('[Assistant] moveAnalysisToApplications failed', e);
+      if (activeTab === 'analysis') {
+        showAssistantError(e, { retry: () => moveAnalysisToApplications(jobId) });
+      } else {
+        Alert.alert('Feil', errText(e));
+      }
     }
   }
 
@@ -1117,17 +1191,32 @@ export default function App() {
       setIncludePhotoInPdf(!!includePhotoDefault);
     }
 
-    loadJobAnalyses();
+    // Silent load: don't show alerts on automatic refresh.
+    loadJobAnalyses({ silent: true });
   }, [activeTab, profileId, profilePhotoData, includePhotoDefault]);
 
   async function analyzeJob() {
+    const copy = (uiLanguage === 'en')
+      ? {
+        missingUrlTitle: 'Paste a job URL',
+        missingUrlBody: 'Paste a job ad URL so I can analyze it for you.',
+        missingProfileTitle: 'Profile missing',
+        missingProfileBody: 'Please save your profile before running an analysis.',
+      }
+      : {
+        missingUrlTitle: 'Lim inn jobbannonse',
+        missingUrlBody: 'Lim inn en jobbannonse-URL, så analyserer jeg den for deg.',
+        missingProfileTitle: 'Mangler profil',
+        missingProfileBody: 'Lagre profilen før du kjører analyse.',
+      };
+
     if (!jobUrl) {
-      Alert.alert('Feil', 'Lim inn jobbannonse');
+      Alert.alert(copy.missingUrlTitle, copy.missingUrlBody);
       return;
     }
 
     if (!profileId) {
-      Alert.alert('Feil', 'Lagre profilen før analyse');
+      Alert.alert(copy.missingProfileTitle, copy.missingProfileBody);
       return;
     }
 
@@ -1136,18 +1225,7 @@ export default function App() {
       const data = await apiFetch('/analyze-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profile_id: profileId, url: jobUrl, application_style: applicationStyle }),
-      });
-
-      setAnalysis(data);
-      setActiveTab('analysis');
-      loadJobAnalyses();
-    } catch (e) {
-      Alert.alert('Feil', String(e));
-    }
-    setLoading(false);
-  }
-
+        body: JSON.stringify({ profile_id: profileId, url
   async function sendApplication() {
     if (!profileId) {
       Alert.alert('Feil', 'Lagre profilen før sending');

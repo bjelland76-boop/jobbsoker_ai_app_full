@@ -35,6 +35,7 @@ from .models import (
     Profile,
     User,
 )
+from .pdf_dedupe import compute_pdf_content_hash
 from .pdfgen import OUT as GENERATED_PDFS_DIR, make_application_pdfs
 from .schemas import (
     AnalyzeAndSendOut,
@@ -94,6 +95,22 @@ def ensure_profile_columns() -> None:
             "generated_applications",
             "cv_pdf_path",
             "cv_pdf_path TEXT DEFAULT ''",
+        )
+        ensure_col(
+            "generated_applications",
+            "template",
+            "template TEXT DEFAULT ''",
+        )
+        # Nullable: older rows have unknown include_photo.
+        ensure_col(
+            "generated_applications",
+            "include_photo",
+            "include_photo INTEGER",
+        )
+        ensure_col(
+            "generated_applications",
+            "content_hash",
+            "content_hash TEXT DEFAULT ''",
         )
 
         # job_analysis_history
@@ -1255,6 +1272,46 @@ def generate_pdfs_from_saved_analysis(
     tailored_cv = _to_text(data.get("tailored_cv"))
     email_text = _to_text(data.get("email_text"))
 
+    # If the saved analysis was produced in low-cost mode (no documents),
+    # generate cover_letter + tailored_cv on demand.
+    if not cover_letter.strip() or not tailored_cv.strip():
+        from .job_analyzer import fetch_job_text, generate_application_texts
+
+        job_text = (job.description or "").strip()
+        if not job_text:
+            job_text = fetch_job_text(job.url)
+            # Best-effort: persist compact job text for later use.
+            try:
+                job.description = " ".join(job_text.split())[:3000]
+                db.commit()
+            except Exception:
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
+
+        style_norm = str(data.get("recommended_application_style") or "vanlig").strip().lower()
+        gen = generate_application_texts(
+            profile,
+            job_title=(job.title or ""),
+            company=(job.company or ""),
+            job_text=job_text,
+            application_style=style_norm,
+        )
+
+        cover_letter = _to_text(gen.get("cover_letter"))
+        tailored_cv = _to_text(gen.get("tailored_cv"))
+        email_text = _to_text(gen.get("email_text") or email_text)
+
+        data["cover_letter"] = cover_letter
+        data["tailored_cv"] = tailored_cv
+        data["email_text"] = email_text
+
+        row.analysis_json = json.dumps(data, ensure_ascii=False)
+        row.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(row)
+
     pdf_tailored_cv = _inject_references_into_cv(profile, tailored_cv)
 
     if not cover_letter.strip() or not tailored_cv.strip():
@@ -1262,6 +1319,53 @@ def generate_pdfs_from_saved_analysis(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Analysen mangler søknad/CV-tekst. Kjør analyse på nytt.",
         )
+
+    # Phase 4/production: PDF generation dedupe.
+    template_id = "sidebar_v1"
+
+    content_hash = compute_pdf_content_hash(
+        template_id=template_id,
+        include_photo=bool(include_photo),
+        cover_letter=cover_letter,
+        rendered_cv_text=pdf_tailored_cv,
+        profile=profile,
+        job=job,
+    )
+
+    def _pdf_exists(rel_path: str) -> bool:
+        if not rel_path:
+            return False
+        base_dir = GENERATED_PDFS_DIR.resolve()
+        try:
+            p = Path(rel_path).resolve()
+            if base_dir != p and base_dir not in p.parents:
+                return False
+            return p.exists() and p.is_file()
+        except Exception:
+            return False
+
+    existing = db.scalars(
+        select(GeneratedApplication)
+        .where(
+            GeneratedApplication.profile_id == profile.id,
+            GeneratedApplication.job_id == job.id,
+            GeneratedApplication.content_hash == content_hash,
+        )
+        .order_by(GeneratedApplication.created_at.desc())
+    ).first()
+
+    if existing:
+        cover_rel = (getattr(existing, "pdf_path", "") or "").strip()
+        cv_rel = (getattr(existing, "cv_pdf_path", "") or cover_rel).strip()
+        if cover_rel and cv_rel and _pdf_exists(cover_rel) and _pdf_exists(cv_rel):
+            _upsert_progress(db, profile.id, job.id)
+            return {
+                "id": existing.id,
+                "job": job_to_dict(job),
+                "created_at": existing.created_at,
+                "cover_pdf_url": f"/generated-applications/{existing.id}/pdf/cover",
+                "cv_pdf_url": f"/generated-applications/{existing.id}/pdf/cv",
+            }
 
     cover_pdf, cv_pdf = make_application_pdfs(
         profile,
@@ -1279,6 +1383,9 @@ def generate_pdfs_from_saved_analysis(
         tailored_cv=tailored_cv,
         pdf_path=cover_pdf,
         cv_pdf_path=cv_pdf,
+        template=template_id,
+        include_photo=include_photo,
+        content_hash=content_hash,
     )
 
     db.add(approw)
@@ -1343,7 +1450,13 @@ def analyze_url(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
 
     try:
-        result = analyze_job_url(profile, data.url, application_style=data.application_style)
+        result = analyze_job_url(
+            profile,
+            data.url,
+            application_style=data.application_style,
+            generate_documents=False,
+        )
+        job_desc = (result.pop("__job_text", "") or "").strip()
 
         # Persist job so it can be tracked in the app later.
         job = db.scalars(select(Job).where(Job.url == data.url, Job.user_id == current_user.id)).first()
@@ -1354,7 +1467,7 @@ def analyze_url(
                 company=result.get("company") or "",
                 location="",
                 url=data.url,
-                description="",
+                description=job_desc,
                 match_score=float(result.get("match_score") or 0),
                 status="analyzed",
             )
@@ -1365,6 +1478,8 @@ def analyze_url(
             job.company = result.get("company") or job.company
             job.match_score = float(result.get("match_score") or job.match_score)
             job.status = "analyzed"
+            if job_desc:
+                job.description = job_desc
         db.commit()
         db.refresh(job)
 
@@ -1395,7 +1510,13 @@ def analyze_url_and_send(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
 
     try:
-        result = analyze_job_url(profile, data.url, application_style=data.application_style)
+        result = analyze_job_url(
+            profile,
+            data.url,
+            application_style=data.application_style,
+            generate_documents=True,
+        )
+        job_desc = (result.pop("__job_text", "") or "").strip()
 
         # Persist job so it can be tracked in the app.
         job = db.scalars(select(Job).where(Job.url == data.url, Job.user_id == current_user.id)).first()
@@ -1406,7 +1527,7 @@ def analyze_url_and_send(
                 company=result.get("company") or "",
                 location="",
                 url=data.url,
-                description="",
+                description=job_desc,
                 match_score=float(result.get("match_score") or 0),
                 status="analyzed",
             )
@@ -1417,6 +1538,8 @@ def analyze_url_and_send(
             job.company = result.get("company") or job.company
             job.match_score = float(result.get("match_score") or job.match_score)
             job.status = "analyzed"
+            if job_desc:
+                job.description = job_desc
         db.commit()
         db.refresh(job)
 
@@ -1435,6 +1558,17 @@ def analyze_url_and_send(
         )
 
         # Persist generated content.
+        template_id = "sidebar_v1"
+        include_photo_flag = bool(data.include_photo)
+        content_hash = compute_pdf_content_hash(
+            template_id=template_id,
+            include_photo=include_photo_flag,
+            cover_letter=cover_letter,
+            rendered_cv_text=pdf_tailored_cv,
+            profile=profile,
+            job=job,
+        )
+
         approw = GeneratedApplication(
             job_id=job.id,
             profile_id=profile.id,
@@ -1443,6 +1577,9 @@ def analyze_url_and_send(
             tailored_cv=tailored_cv,
             pdf_path=cover_pdf,
             cv_pdf_path=cv_pdf,
+            template=template_id,
+            include_photo=include_photo_flag,
+            content_hash=content_hash,
         )
 
         db.add(approw)

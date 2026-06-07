@@ -529,6 +529,53 @@ export default function App() {
           ) : (
             <>
               <div className="small">Matchscore: {Math.round(analysis.match_score || 0)}%</div>
+              {analysis.interview_probability !== undefined && analysis.interview_probability !== null ? (
+                <div className="small">Intervju-sjanse: {Math.round(analysis.interview_probability || 0)}%</div>
+              ) : null}
+              {analysis.seniority_match !== undefined && analysis.seniority_match !== null ? (
+                <div className="small">Senioritet-match: {Math.round(analysis.seniority_match || 0)}%</div>
+              ) : null}
+
+              {analysis.top_reason ? (
+                <p style={{ whiteSpace: 'pre-wrap' }}><strong>Toppgrunn:</strong> {analysis.top_reason}</p>
+              ) : null}
+              {analysis.main_risk ? (
+                <p style={{ whiteSpace: 'pre-wrap' }}><strong>Hovedrisiko:</strong> {analysis.main_risk}</p>
+              ) : null}
+
+              {analysis?.recruiter_explanation?.why_score?.length > 0 ? (
+                <div style={{ marginTop: 10 }}>
+                  <div className="small"><strong>Hvorfor denne scoren</strong></div>
+                  <ul>
+                    {analysis.recruiter_explanation.why_score.map((x, i) => (
+                      <li key={i} className="small">{x}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {analysis?.recruiter_explanation?.score_risks?.length > 0 ? (
+                <div style={{ marginTop: 10 }}>
+                  <div className="small"><strong>Risikoer</strong></div>
+                  <ul>
+                    {analysis.recruiter_explanation.score_risks.map((x, i) => (
+                      <li key={i} className="small">{x}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {Array.isArray(analysis.recommended_cv_changes) && analysis.recommended_cv_changes.length > 0 ? (
+                <div style={{ marginTop: 10 }}>
+                  <div className="small"><strong>Anbefalte CV-endringer</strong></div>
+                  <ul>
+                    {analysis.recommended_cv_changes.map((x, i) => (
+                      <li key={i} className="small">{x}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
               {analysis.honest_assessment ? (
                 <p style={{ whiteSpace: 'pre-wrap' }}>{analysis.honest_assessment}</p>
               ) : null}

@@ -30,6 +30,9 @@ mobile/.expo/
 # Vite / web builds
 web/dist/
 
+# Expo exports (optional, generated)
+mobile/dist/
+
 # Capacitor native projects (usually generated locally)
 web/android/
 web/ios/
