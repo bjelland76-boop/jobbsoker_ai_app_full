@@ -302,8 +302,15 @@ export default function App() {
   const [cvLoading, setCvLoading] = useState(false);
   const [applicationStyle, setApplicationStyle] = useState('vanlig'); // kort | vanlig | profesjonell
   const [applicationEmail, setApplicationEmail] = useState('');
+  // Unified output from backend generator (used by both "Send email" and "Generate PDF").
+  // Strict contract: { cv, coverLetter, pdfUrl }
+  const [applicationPackage, setApplicationPackage] = useState(null);
   const [sending, setSending] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  // Request locking: only allow one active generation request at a time.
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationBanner, setGenerationBanner] = useState('');
+  const generationLockRef = useRef(false);
   const [includePhotoDefault, setIncludePhotoDefault] = useState(true);
   const [includePhotoInPdf, setIncludePhotoInPdf] = useState(true);
   const [profileId, setProfileId] = useState(null);
@@ -668,6 +675,10 @@ export default function App() {
     setCvAnalysis(null);
     setApplicationStyle('vanlig');
     setApplicationEmail('');
+    setApplicationPackage(null);
+    setGenerationBanner('');
+    setIsGenerating(false);
+    generationLockRef.current = false;
 
     // Lists
     setApplications([]);
@@ -1220,12 +1231,35 @@ export default function App() {
       return;
     }
 
+    // New analysis => clear any previously generated package view.
+    setApplicationPackage(null);
+    setGenerationBanner('');
+
     setLoading(true);
     try {
       const data = await apiFetch('/analyze-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profile_id: profileId, url
+        body: JSON.stringify({
+          profile_id: profileId,
+          url: jobUrl,
+          application_style: applicationStyle,
+        }),
+      });
+
+      setAnalysis(data);
+      // If triggered from "Ny søknad" we still want to show the analysis screen.
+      setActiveTab('analysis');
+      // Refresh the history list (best-effort).
+      loadJobAnalyses({ silent: true });
+    } catch (e) {
+      console.error('[Assistant] analyzeJob failed', e);
+      Alert.alert('Feil', errText(e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function sendApplication() {
     if (!profileId) {
       Alert.alert('Feil', 'Lagre profilen før sending');
@@ -1236,25 +1270,72 @@ export default function App() {
       return;
     }
 
+    if (generationLockRef.current || isGenerating) return;
+    generationLockRef.current = true;
+    setIsGenerating(true);
+
+    const prevPackage = applicationPackage;
+    const failMsg = (uiLanguage === 'en')
+      ? 'Generation failed, try again'
+      : 'Generering feilet, prøv igjen';
+
     const includePhoto = !!profilePhotoData && !!includePhotoInPdf;
 
     setSending(true);
+    setGenerationBanner('');
+    // Only clear UI AFTER request is confirmed started.
+    setApplicationPackage(null);
+
     try {
-      const result = await apiFetch('/analyze-url-and-send', {
+      const pkg = await apiFetch('/analyze-url-and-send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profile_id: profileId, url: jobUrl, to_email: applicationEmail, application_style: applicationStyle, include_photo: includePhoto }),
+        body: JSON.stringify({
+          profile_id: profileId,
+          url: jobUrl,
+          to_email: applicationEmail,
+          application_style: applicationStyle,
+          include_photo: includePhoto,
+        }),
       });
 
-      if (result?.sent === false) {
-        Alert.alert('Advarsel', 'Analysen ble lagret, men e-post ble ikke sendt (SMTP er ikke konfigurert).');
-      } else {
-        Alert.alert('Sendt', 'Søknad og CV er sendt på e-post.');
+      const isValidPackage = (
+        pkg
+        && typeof pkg.cv === 'string'
+        && typeof pkg.coverLetter === 'string'
+      );
+
+      if (isValidPackage) {
+        const safePkg = {
+          cv: pkg.cv,
+          coverLetter: pkg.coverLetter,
+          pdfUrl: (typeof pkg.pdfUrl === 'string') ? pkg.pdfUrl : '',
+        };
+
+        const hasAnyText = (
+          (safePkg.cv || '').trim().length > 0
+          || (safePkg.coverLetter || '').trim().length > 0
+        );
+
+        if (hasAnyText) {
+          setApplicationPackage(safePkg);
+          Alert.alert('OK', 'Søknad + CV er generert. Sjekk e-post hvis utsending er konfigurert.');
+          return;
+        }
       }
+
+      // Invalid/incomplete => keep previous state and show non-blocking banner.
+      if (prevPackage) setApplicationPackage(prevPackage);
+      setGenerationBanner(failMsg);
     } catch (e) {
-      Alert.alert('Feil', String(e));
+      console.error('[Assistant] sendApplication failed', e);
+      if (prevPackage) setApplicationPackage(prevPackage);
+      setGenerationBanner(failMsg);
+    } finally {
+      setSending(false);
+      setIsGenerating(false);
+      generationLockRef.current = false;
     }
-    setSending(false);
   }
 
   async function generatePdf() {
@@ -1263,43 +1344,83 @@ export default function App() {
       return;
     }
 
-    const jobId = analysis?.job_id;
-    if (!jobId) {
-      Alert.alert('Feil', 'Mangler job_id. Kjør analyse på nytt.');
+    if (!jobUrl) {
+      Alert.alert('Feil', 'Lim inn jobbannonse først.');
       return;
     }
+
+    if (generationLockRef.current || isGenerating) return;
+    generationLockRef.current = true;
+    setIsGenerating(true);
+
+    const prevPackage = applicationPackage;
+    const failMsg = (uiLanguage === 'en')
+      ? 'Generation failed, try again'
+      : 'Generering feilet, prøv igjen';
 
     const includePhoto = !!profilePhotoData && !!includePhotoInPdf;
 
     setGeneratingPdf(true);
+    setGenerationBanner('');
+    // Only clear UI AFTER request is confirmed started.
+    setApplicationPackage(null);
+
     try {
-      const created = await apiFetch(`/job-analyses/${jobId}/generate-pdf?profile_id=${profileId}&include_photo=${includePhoto ? 1 : 0}`, {
+      // Use the same unified backend generator as the "Send email" flow.
+      const pkg = await apiFetch('/analyze-url-and-send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          profile_id: profileId,
+          url: jobUrl,
+          application_style: applicationStyle,
+          include_photo: includePhoto,
+        }),
       });
 
-      // Make it show up immediately even if refresh fails on some devices.
-      if (created?.id) {
-        setDocuments((prev) => {
-          const next = [created, ...(prev || [])];
-          const seen = new Set();
-          return next.filter((d) => {
-            const k = String(d?.id ?? '');
-            if (!k || seen.has(k)) return false;
-            seen.add(k);
-            return true;
-          });
-        });
+      const isValidPackage = (
+        pkg
+        && typeof pkg.cv === 'string'
+        && typeof pkg.coverLetter === 'string'
+      );
+
+      if (isValidPackage) {
+        const safePkg = {
+          cv: pkg.cv,
+          coverLetter: pkg.coverLetter,
+          pdfUrl: (typeof pkg.pdfUrl === 'string') ? pkg.pdfUrl : '',
+        };
+
+        const hasAnyText = (
+          (safePkg.cv || '').trim().length > 0
+          || (safePkg.coverLetter || '').trim().length > 0
+        );
+
+        if (hasAnyText) {
+          setApplicationPackage(safePkg);
+
+          // Only navigate/open documents when a PDF was actually created.
+          if (safePkg.pdfUrl && safePkg.pdfUrl.trim()) {
+            await loadDocuments();
+            setActiveTab('documents');
+            Alert.alert('OK', 'PDF er generert. Se under Dokumenter.');
+          }
+
+          return;
+        }
       }
 
-      await loadDocuments();
-      setActiveTab('documents');
-      Alert.alert('OK', 'PDF er generert. Se under Dokumenter.');
+      if (prevPackage) setApplicationPackage(prevPackage);
+      setGenerationBanner(failMsg);
     } catch (e) {
-      Alert.alert('Feil', String(e));
+      console.error('[Assistant] generatePdf failed', e);
+      if (prevPackage) setApplicationPackage(prevPackage);
+      setGenerationBanner(failMsg);
+    } finally {
+      setGeneratingPdf(false);
+      setIsGenerating(false);
+      generationLockRef.current = false;
     }
-    setGeneratingPdf(false);
   }
 
   async function loadApplications() {
@@ -1884,13 +2005,74 @@ export default function App() {
             </View>
           ) : null}
 
-          <TouchableOpacity style={styles.secondaryButton} onPress={sendApplication}>
+          {generationBanner ? (
+            <View style={{
+              backgroundColor: 'rgba(239, 68, 68, 0.12)',
+              borderColor: 'rgba(239, 68, 68, 0.35)',
+              borderWidth: 1,
+              borderRadius: THEME.radius.control,
+              paddingVertical: 10,
+              paddingHorizontal: 12,
+              marginTop: 12,
+            }}>
+              <Text style={{
+                color: THEME.colors.danger,
+                fontWeight: '800',
+                fontSize: 13,
+                lineHeight: 18,
+              }}>{generationBanner}</Text>
+            </View>
+          ) : null}
+
+          <TouchableOpacity
+            style={[styles.secondaryButton, isGenerating ? { opacity: 0.6 } : null]}
+            onPress={sendApplication}
+            disabled={isGenerating}
+          >
             <Text style={styles.secondaryButtonText}>{sending ? 'Sender...' : 'Send søknad (e-post)'}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.secondaryButton} onPress={generatePdf}>
+          <TouchableOpacity
+            style={[styles.secondaryButton, isGenerating ? { opacity: 0.6 } : null]}
+            onPress={generatePdf}
+            disabled={isGenerating}
+          >
             <Text style={styles.secondaryButtonText}>{generatingPdf ? 'Genererer...' : 'Generer PDF (uten e-post)'}</Text>
           </TouchableOpacity>
+
+          {applicationPackage ? (
+            <View style={{ marginTop: 12 }}>
+              {(typeof applicationPackage?.pdfUrl === 'string' && applicationPackage.pdfUrl.trim()) ? (
+                <TouchableOpacity
+                  style={[styles.secondaryButton, { marginTop: 0 }]}
+                  onPress={() => openDocument(applicationPackage.pdfUrl)}
+                >
+                  <Text style={styles.secondaryButtonText}>Åpne PDF</Text>
+                </TouchableOpacity>
+              ) : null}
+
+              {(typeof applicationPackage?.coverLetter === 'string' && applicationPackage.coverLetter.trim()) ? (
+                <>
+                  <Text style={styles.analysisSubheading}>Søknad</Text>
+                  <Text style={styles.analysisList}>{applicationPackage.coverLetter}</Text>
+                </>
+              ) : null}
+
+              {(typeof applicationPackage?.cv === 'string' && applicationPackage.cv.trim()) ? (
+                <>
+                  <Text style={styles.analysisSubheading}>CV</Text>
+                  <Text style={styles.analysisList}>{applicationPackage.cv}</Text>
+                </>
+              ) : null}
+
+              {(
+                (!applicationPackage?.coverLetter || !String(applicationPackage.coverLetter).trim())
+                && (!applicationPackage?.cv || !String(applicationPackage.cv).trim())
+              ) ? (
+                <Text style={[styles.helpText, { marginTop: 6 }]}>Ingen tekst å vise.</Text>
+              ) : null}
+            </View>
+          ) : null}
         </View>
       )}
     </View>
@@ -2025,6 +2207,42 @@ export default function App() {
     <View style={styles.pageCard}>
       <Text style={styles.pageTitle}>Dokumenter</Text>
       <Text style={styles.pageSubtitle}>Her finner du genererte PDF-er (søknad + CV i samme fil).</Text>
+
+      {applicationPackage ? (
+        <View style={styles.analysisCard}>
+          <Text style={styles.analysisHeading}>Siste genererte pakke</Text>
+
+          {(typeof applicationPackage?.pdfUrl === 'string' && applicationPackage.pdfUrl.trim()) ? (
+            <TouchableOpacity
+              style={[styles.secondaryButton, { marginTop: 0 }]}
+              onPress={() => openDocument(applicationPackage.pdfUrl)}
+            >
+              <Text style={styles.secondaryButtonText}>Åpne PDF</Text>
+            </TouchableOpacity>
+          ) : null}
+
+          {(typeof applicationPackage?.coverLetter === 'string' && applicationPackage.coverLetter.trim()) ? (
+            <>
+              <Text style={styles.analysisSubheading}>Søknad</Text>
+              <Text style={styles.analysisList}>{applicationPackage.coverLetter}</Text>
+            </>
+          ) : null}
+
+          {(typeof applicationPackage?.cv === 'string' && applicationPackage.cv.trim()) ? (
+            <>
+              <Text style={styles.analysisSubheading}>CV</Text>
+              <Text style={styles.analysisList}>{applicationPackage.cv}</Text>
+            </>
+          ) : null}
+
+          {(
+            (!applicationPackage?.coverLetter || !String(applicationPackage.coverLetter).trim())
+            && (!applicationPackage?.cv || !String(applicationPackage.cv).trim())
+          ) ? (
+            <Text style={styles.helpText}>Ingen tekst å vise.</Text>
+          ) : null}
+        </View>
+      ) : null}
 
       <TouchableOpacity style={styles.secondaryButton} onPress={loadDocuments}>
         <Text style={styles.secondaryButtonText}>{documentsLoading ? 'Laster...' : 'Oppdater'}</Text>

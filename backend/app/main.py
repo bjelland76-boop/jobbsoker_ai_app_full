@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Union
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, status
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -40,6 +40,7 @@ from .pdfgen import OUT as GENERATED_PDFS_DIR, make_application_pdfs
 from .schemas import (
     AnalyzeAndSendOut,
     ApplicationItemOut,
+    ApplicationPackageOut,
     CVAnalysisOut,
     EducationOptionOut,
     GeneratedApplicationItemOut,
@@ -335,7 +336,8 @@ class AnalyzeCvIn(BaseModel):
 class SendAnalysisIn(BaseModel):
     profile_id: int
     url: str
-    to_email: str
+    # Optional: when missing/empty, we only generate the package (no email send).
+    to_email: str | None = None
     application_style: str = "vanlig"  # kort | vanlig | profesjonell
     include_photo: bool = True
 
@@ -1228,6 +1230,7 @@ def get_job_analysis(
     "/job-analyses/{job_id}/generate-pdf",
     response_model=GeneratedApplicationItemOut,
     tags=["generated"],
+    deprecated=True,
 )
 def generate_pdfs_from_saved_analysis(
     job_id: int,
@@ -1236,7 +1239,16 @@ def generate_pdfs_from_saved_analysis(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Generate PDFs from a previously saved analysis (no new OpenAI call)."""
+    """DEPRECATED stub.
+
+    This endpoint is intentionally disabled to enforce a single generation pipeline.
+    Use POST /analyze-url-and-send instead.
+    """
+
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="Deprecated. Use POST /analyze-url-and-send",
+    )
 
     profile = db.get(Profile, profile_id)
     if not profile or profile.user_id != current_user.id:
@@ -1437,6 +1449,158 @@ def hide_job_analysis(
     return {"hidden": True}
 
 
+def generateApplicationPackage(
+    profile: Profile,
+    url: str,
+    *,
+    application_style: str = "vanlig",
+    include_photo: bool = True,
+    current_user: User,
+    db: Session,
+) -> tuple[dict, dict]:
+    """Generate a full application package: cover letter + CV + unified PDF.
+
+    Returns:
+      (package_out, email_meta)
+
+    package_out (strict contract):
+      {"cv": "...", "coverLetter": "...", "pdfUrl": "..."}
+
+    email_meta (internal use):
+      {"subject": "...", "body": "...", "attachments": ["/path.pdf", ...]}
+
+    This function is the single source of truth for both:
+    - "Generate PDF"
+    - "Send email"
+    """
+
+    from .job_analyzer import analyze_job_url
+
+    result = analyze_job_url(
+        profile,
+        url,
+        application_style=application_style,
+        generate_documents=True,
+    )
+
+    job_desc = (result.pop("__job_text", "") or "").strip()
+
+    # Persist job so it can be tracked in the app.
+    job = db.scalars(select(Job).where(Job.url == url, Job.user_id == current_user.id)).first()
+    if not job:
+        job = Job(
+            user_id=current_user.id,
+            title=result.get("job_title") or "Ukjent stilling",
+            company=result.get("company") or "",
+            location="",
+            url=url,
+            description=job_desc,
+            match_score=float(result.get("match_score") or 0),
+            status="analyzed",
+        )
+        db.add(job)
+    else:
+        # Update existing job with latest analysis results.
+        job.title = result.get("job_title") or job.title
+        job.company = result.get("company") or job.company
+        job.match_score = float(result.get("match_score") or job.match_score)
+        job.status = "analyzed"
+        if job_desc:
+            job.description = job_desc
+
+    db.commit()
+    db.refresh(job)
+
+    cover_letter = _to_text(result.get("cover_letter"))
+    tailored_cv = _to_text(result.get("tailored_cv"))
+    email_text = _to_text(result.get("email_text"))
+
+    # Persist analysis even if document generation is incomplete.
+    _upsert_analysis_history(
+        db,
+        profile.id,
+        job.id,
+        result.get("match_score"),
+        analysis_json=json.dumps(result, ensure_ascii=False),
+    )
+
+    package: dict[str, str] = {
+        "cv": tailored_cv or "",
+        "coverLetter": cover_letter or "",
+        "pdfUrl": "",
+    }
+
+    # Only generate PDFs when we have both texts (prevents PDF generator crashes).
+    cover_pdf = ""
+    cv_pdf = ""
+    if cover_letter.strip() and tailored_cv.strip():
+        pdf_tailored_cv = _inject_references_into_cv(profile, tailored_cv)
+
+        cover_pdf, cv_pdf = make_application_pdfs(
+            profile,
+            job,
+            cover_letter,
+            pdf_tailored_cv,
+            include_photo=bool(include_photo),
+        )
+
+        # Persist generated content.
+        template_id = "sidebar_v1"
+        include_photo_flag = bool(include_photo)
+
+        content_hash = compute_pdf_content_hash(
+            template_id=template_id,
+            include_photo=include_photo_flag,
+            cover_letter=cover_letter,
+            rendered_cv_text=pdf_tailored_cv,
+            profile=profile,
+            job=job,
+        )
+
+        approw = GeneratedApplication(
+            job_id=job.id,
+            profile_id=profile.id,
+            email_text=email_text,
+            cover_letter=cover_letter,
+            tailored_cv=tailored_cv,
+            pdf_path=cover_pdf,
+            cv_pdf_path=cv_pdf,
+            template=template_id,
+            include_photo=include_photo_flag,
+            content_hash=content_hash,
+        )
+
+        db.add(approw)
+        db.commit()
+        db.refresh(approw)
+
+        _upsert_progress(db, profile.id, job.id)
+
+        package["pdfUrl"] = f"/generated-applications/{approw.id}/pdf/cover"
+
+    body = (
+        f"{email_text}\n\n"
+        f"Match-score: {result.get('match_score')}%\n\n"
+        f"Ærlig vurdering:\n{_to_text(result.get('honest_assessment'))}\n\n"
+        f"--- SØKNAD ---\n{cover_letter}\n\n"
+        f"--- CV ---\n{tailored_cv}"
+    )
+
+    attachments: list[str] = []
+    if cover_pdf:
+        attachments.append(cover_pdf)
+    if cv_pdf and cv_pdf != cover_pdf:
+        attachments.append(cv_pdf)
+
+    email_meta = {
+        "subject": f"Jobbanalyse: {result.get('job_title', 'stilling')}",
+        "body": body,
+        "attachments": attachments,
+    }
+
+    return package, email_meta
+
+
 @app.post("/analyze-url", response_model=JobAnalysisOut)
 def analyze_url(
     data: AnalyzeUrlIn,
@@ -1497,133 +1661,70 @@ def analyze_url(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@app.post("/analyze-url-and-send", response_model=AnalyzeAndSendOut)
+@app.post("/analyze-url-and-send", response_model=ApplicationPackageOut)
 def analyze_url_and_send(
     data: SendAnalysisIn,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    from .job_analyzer import analyze_job_url
+    """Unified generation endpoint.
+
+    CORE RULE:
+    - Always generate the full application package first (single source of truth)
+    - Optional side effect (email) is triggered only after we have the full package
+    - Always return the same strict response contract
+
+    Response:
+      {"cv": "...", "coverLetter": "...", "pdfUrl": "..."}
+    """
 
     profile = db.get(Profile, data.profile_id)
     if not profile or profile.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
 
+    result: dict = {"cv": "", "coverLetter": "", "pdfUrl": ""}
+    email_meta: dict = {}
+
+    # Always call the unified generator first.
     try:
-        result = analyze_job_url(
+        result, email_meta = generateApplicationPackage(
             profile,
             data.url,
             application_style=data.application_style,
-            generate_documents=True,
-        )
-        job_desc = (result.pop("__job_text", "") or "").strip()
-
-        # Persist job so it can be tracked in the app.
-        job = db.scalars(select(Job).where(Job.url == data.url, Job.user_id == current_user.id)).first()
-        if not job:
-            job = Job(
-                user_id=current_user.id,
-                title=result.get("job_title") or "Ukjent stilling",
-                company=result.get("company") or "",
-                location="",
-                url=data.url,
-                description=job_desc,
-                match_score=float(result.get("match_score") or 0),
-                status="analyzed",
-            )
-            db.add(job)
-        else:
-            # Update existing job with latest analysis results.
-            job.title = result.get("job_title") or job.title
-            job.company = result.get("company") or job.company
-            job.match_score = float(result.get("match_score") or job.match_score)
-            job.status = "analyzed"
-            if job_desc:
-                job.description = job_desc
-        db.commit()
-        db.refresh(job)
-
-        cover_letter = _to_text(result.get("cover_letter"))
-        tailored_cv = _to_text(result.get("tailored_cv"))
-        email_text = _to_text(result.get("email_text"))
-
-        pdf_tailored_cv = _inject_references_into_cv(profile, tailored_cv)
-
-        cover_pdf, cv_pdf = make_application_pdfs(
-            profile,
-            job,
-            cover_letter,
-            pdf_tailored_cv,
             include_photo=bool(data.include_photo),
+            current_user=current_user,
+            db=db,
+        )
+    except Exception:
+        # Never change response shape on failures; keep empty package.
+        result = {"cv": "", "coverLetter": "", "pdfUrl": ""}
+        email_meta = {}
+
+    # Defensive normalization: never return missing keys or null fields.
+    if not isinstance(result, dict):
+        result = {"cv": "", "coverLetter": "", "pdfUrl": ""}
+
+    for key in ["cv", "coverLetter", "pdfUrl"]:
+        v = result.get(key)
+        if v is None:
+            result[key] = ""
+        elif not isinstance(v, str):
+            result[key] = _to_text(v)
+
+    to_email = (data.to_email or "").strip()
+    if to_email:
+        # Side effect is best-effort and must not change the response contract.
+        background_tasks.add_task(
+            send_email,
+            to_email,
+            (email_meta.get("subject") if isinstance(email_meta, dict) else None) or "Jobbanalyse",
+            (email_meta.get("body") if isinstance(email_meta, dict) else None) or "",
+            attachments=list((email_meta.get("attachments") if isinstance(email_meta, dict) else None) or []),
         )
 
-        # Persist generated content.
-        template_id = "sidebar_v1"
-        include_photo_flag = bool(data.include_photo)
-        content_hash = compute_pdf_content_hash(
-            template_id=template_id,
-            include_photo=include_photo_flag,
-            cover_letter=cover_letter,
-            rendered_cv_text=pdf_tailored_cv,
-            profile=profile,
-            job=job,
-        )
+    return result
 
-        approw = GeneratedApplication(
-            job_id=job.id,
-            profile_id=profile.id,
-            email_text=email_text,
-            cover_letter=cover_letter,
-            tailored_cv=tailored_cv,
-            pdf_path=cover_pdf,
-            cv_pdf_path=cv_pdf,
-            template=template_id,
-            include_photo=include_photo_flag,
-            content_hash=content_hash,
-        )
-
-        db.add(approw)
-        db.commit()
-        db.refresh(approw)
-
-        _upsert_progress(db, profile.id, job.id)
-        _upsert_analysis_history(
-            db,
-            profile.id,
-            job.id,
-            result.get("match_score"),
-            analysis_json=json.dumps(result, ensure_ascii=False),
-        )
-
-        body = (
-            f"{email_text}\n\n"
-            f"Match-score: {result.get('match_score')}%\n\n"
-            f"Ærlig vurdering:\n{_to_text(result.get('honest_assessment'))}\n\n"
-            f"--- SØKNAD ---\n{cover_letter}\n\n"
-            f"--- CV ---\n{tailored_cv}"
-        )
-
-        attachments = [cover_pdf]
-        if cv_pdf and cv_pdf != cover_pdf:
-            attachments.append(cv_pdf)
-
-        email_result = send_email(
-            data.to_email,
-            f"Jobbanalyse: {result.get('job_title', 'stilling')}",
-            body,
-            attachments=attachments,
-        )
-
-        actually_sent = True
-        if isinstance(email_result, dict) and email_result.get("sent") is False:
-            actually_sent = False
-
-        result["job_id"] = job.id
-
-        return {"sent": actually_sent, "analysis": result}
-
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 def _calc_stats(rows: list[ApplicationProgress]) -> dict:

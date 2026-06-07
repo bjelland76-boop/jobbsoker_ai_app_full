@@ -100,8 +100,21 @@ class JobAnalysisOut(BaseModel):
 
 
 class AnalyzeAndSendOut(BaseModel):
+    """Legacy response model (kept for backwards compatibility).
+
+    NOTE: The mobile app should prefer the unified application package response.
+    """
+
     sent: bool
     analysis: JobAnalysisOut
+
+
+class ApplicationPackageOut(BaseModel):
+    """Unified output for both "Generate PDF" and "Send email" flows."""
+
+    cv: str
+    coverLetter: str
+    pdfUrl: str
 
 
 class EducationOptionOut(BaseModel):

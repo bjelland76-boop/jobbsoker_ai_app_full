@@ -235,17 +235,22 @@ export default function App() {
       alert('Lagre profil først');
       return;
     }
-    const jobId = analysis?.job_id;
-    if (!jobId) {
-      alert('Mangler job_id. Kjør analyse på nytt.');
+    if (!jobUrl) {
+      alert('Lim inn jobbannonse-URL');
       return;
     }
 
     try {
-      await apiFetch(`/job-analyses/${jobId}/generate-pdf?profile_id=${profileId}&include_photo=0`, {
+      // Unified generation pipeline (same as "Send email" flow in mobile).
+      await apiFetch('/analyze-url-and-send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          profile_id: profileId,
+          url: jobUrl,
+          application_style: applicationStyle,
+          include_photo: false,
+        }),
       });
 
       await loadDocuments();
