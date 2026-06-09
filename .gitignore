@@ -30,8 +30,8 @@ mobile/.expo/
 # Vite / web builds
 web/dist/
 
-# Expo exports (optional, generated)
-mobile/dist/
+# Expo exports / web build output
+# NOTE: For Capacitor/EAS builds we may need to commit/include mobile/dist so the WebView has assets.
 
 # Capacitor native projects (usually generated locally)
 web/android/
