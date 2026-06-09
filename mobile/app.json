@@ -8,6 +8,11 @@
     ],
     "android": {
       "package": "com.frankbjelland.aerligjobbcoach"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "0356fcdd-d96f-460c-a235-69f34b91fc47"
+      }
     }
   }
 }

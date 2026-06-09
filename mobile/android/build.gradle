@@ -31,3 +31,18 @@ task clean(type: Delete) {
         exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
     }
 }
+
+// EAS build environment commonly uses JDK 17. Force Android modules to compile with Java 17,
+// even if some Capacitor modules default to a higher source/target level.
+subprojects { subproject ->
+    subproject.afterEvaluate {
+        if (subproject.hasProperty('android')) {
+            subproject.android {
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+            }
+        }
+    }
+}
