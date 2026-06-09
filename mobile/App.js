@@ -39,13 +39,68 @@ function guessDevHost() {
 
 const DEV_HOST = guessDevHost();
 
-const API =
-  process.env.EXPO_PUBLIC_API_URL ||
-  (Platform.OS === 'web'
-    ? 'http://localhost:8000'
-    : DEV_HOST
-      ? `http://${DEV_HOST}:8000`
-      : 'http://localhost:8000');
+function validateApiBaseUrl(rawApiBaseUrl, { envProvided = false } = {}) {
+  const api = (rawApiBaseUrl || '').trim();
+  // __DEV__ is a React Native global (true in development, false in release builds)
+  // eslint-disable-next-line no-undef
+  const isDev = (typeof __DEV__ !== 'undefined') ? __DEV__ : true;
+
+  function fail(msg) {
+    const full = `[API] ${msg}`;
+    console.error(full);
+    throw new Error(full);
+  }
+
+  if (!api) {
+    if (!isDev) {
+      fail('Missing API base URL. Set EXPO_PUBLIC_API_URL to a public https://... backend URL for release builds.');
+    }
+    return api;
+  }
+
+  let hostname = '';
+  try {
+    // eslint-disable-next-line no-undef
+    const u = new URL(api);
+    hostname = String(u?.hostname || '');
+  } catch (e) {
+    if (!isDev) {
+      fail(`Invalid API base URL: "${api}". It must be an absolute http(s) URL, e.g. https://your-backend.example.com`);
+    }
+    console.warn('[API] Could not parse API base URL (dev):', api);
+    return api;
+  }
+
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+  const isLan192 = /^192\.168\.(\d{1,3})\.(\d{1,3})$/.test(hostname);
+
+  // In release builds we require an explicit env URL to avoid accidentally shipping
+  // a fallback like http://localhost:8000.
+  if (!isDev && !envProvided) {
+    fail('EXPO_PUBLIC_API_URL is required in release builds. Refusing to use an auto-guessed localhost/LAN URL.');
+  }
+
+  // Explicitly block localhost / 127.0.0.1 in release.
+  if (!isDev && isLocalhost) {
+    fail(`Release build is configured with a local API URL (${api}). Use a public https://... backend URL instead.`);
+  }
+
+  // Development allowances (explicitly permitted by task): localhost/127 and 192.168.x.x
+  if (isDev && (isLocalhost || isLan192)) {
+    return api;
+  }
+
+  return api;
+}
+
+const ENV_API = (process.env.EXPO_PUBLIC_API_URL || '').trim();
+const AUTO_API = (Platform.OS === 'web'
+  ? 'http://localhost:8000'
+  : DEV_HOST
+    ? `http://${DEV_HOST}:8000`
+    : 'http://localhost:8000');
+
+const API = validateApiBaseUrl(ENV_API || AUTO_API, { envProvided: !!ENV_API });
 
 console.log('API base URL:', API);
 
