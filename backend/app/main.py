@@ -1578,18 +1578,13 @@ def generateApplicationPackage(
 
         package["pdfUrl"] = f"/generated-applications/{approw.id}/pdf/cover"
 
-    body = (
-        f"{email_text}\n\n"
-        f"Match-score: {result.get('match_score')}%\n\n"
-        f"Ærlig vurdering:\n{_to_text(result.get('honest_assessment'))}\n\n"
-        f"--- SØKNAD ---\n{cover_letter}\n\n"
-        f"--- CV ---\n{tailored_cv}"
-    )
+    # Email contract:
+    # - Body: cover letter text (søknadstekst)
+    # - Attachment: CV-only PDF
+    body = (cover_letter or "").strip() or (email_text or "").strip()
 
     attachments: list[str] = []
-    if cover_pdf:
-        attachments.append(cover_pdf)
-    if cv_pdf and cv_pdf != cover_pdf:
+    if cv_pdf:
         attachments.append(cv_pdf)
 
     email_meta = {
@@ -1724,6 +1719,49 @@ def analyze_url_and_send(
         )
 
     return result
+
+
+@app.post("/interview/chat", tags=["interview"])
+async def interview_chat_api(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+):
+    """Interview practice chat endpoint used by the mobile UI.
+
+    Frontend calls: POST /interview/chat
+    Body: { job_title, company, job_context, user_answer, history }
+
+    Response (strict): { feedback, question, tip }
+    """
+
+    from .interview_agent import interview_chat
+
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    if not isinstance(payload, dict):
+        payload = {}
+
+    history = payload.get("history")
+    if not isinstance(history, list):
+        history = []
+
+    out = interview_chat(
+        job_title=str(payload.get("job_title") or ""),
+        company=str(payload.get("company") or ""),
+        job_context=str(payload.get("job_context") or ""),
+        user_answer=str(payload.get("user_answer") or ""),
+        history=history,
+    )
+
+    # Keep a stable response contract for the UI.
+    return {
+        "feedback": str(out.get("feedback") or ""),
+        "question": str(out.get("question") or ""),
+        "tip": str(out.get("tip") or ""),
+    }
 
 
 

@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "com.bjelland.honestjobcoach"
+    namespace "com.frankbjelland.aerligjobbcoach"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.bjelland.honestjobcoach"
+        applicationId "com.frankbjelland.aerligjobbcoach"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

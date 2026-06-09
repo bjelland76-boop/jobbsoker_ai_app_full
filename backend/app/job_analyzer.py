@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 from .ai_matcher import analyze_job_match, _compress_text
+from .prompt_rules import SHARED_ANTI_HALLUCINATION_RULES
 
 load_dotenv(".env")
 
@@ -161,6 +162,8 @@ Regler:
 - Ikke finn på erfaring/utdanning.
 - Ikke bruk placeholders som [telefon] eller [adresse].
 - {style_text}
+
+{SHARED_ANTI_HALLUCINATION_RULES}
 
 tailored_cv:
 - Ren tekst (ATS-vennlig): ingen markdown, ingen tabeller, ingen emojis.

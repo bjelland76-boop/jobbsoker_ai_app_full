@@ -1,4 +1,4 @@
-package com.bjelland.honestjobcoach;
+package com.frankbjelland.aerligjobbcoach;
 
 import com.getcapacitor.BridgeActivity;
 

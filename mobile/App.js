@@ -97,8 +97,8 @@ async function apiFetch(path, options) {
   return data;
 }
 
-// TODO: Replace with your own published privacy policy URL before Google Play release.
-const PRIVACY_URL = 'https://example.com/personvern';
+// TODO: Må være publisert og korrekt før Google Play intern testing.
+const PRIVACY_URL = 'https://frankbjelland.no/personvern-aerlig-jobbcoach';
 
 const THEME = {
   // Dark / purple palette

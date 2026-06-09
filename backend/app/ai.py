@@ -4,6 +4,8 @@ import os
 from dotenv import load_dotenv
 from openai import OpenAI
 
+from .prompt_rules import SHARED_ANTI_HALLUCINATION_RULES
+
 load_dotenv(".env")
 
 
@@ -47,8 +49,14 @@ Regler:
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "Du lager norske jobbsøknader og svarer kun med gyldig JSON."},
-            {"role": "user", "content": prompt}
+            {
+                "role": "system",
+                "content": (
+                    "Du lager norske jobbsøknader og svarer kun med gyldig JSON.\n\n"
+                    + SHARED_ANTI_HALLUCINATION_RULES
+                ),
+            },
+            {"role": "user", "content": prompt},
         ],
         temperature=0.35,
         response_format={"type": "json_object"}

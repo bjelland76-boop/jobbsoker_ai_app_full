@@ -9,6 +9,8 @@ from typing import Any, List, Optional, TypedDict
 from dotenv import load_dotenv
 from openai import OpenAI
 
+from .prompt_rules import SHARED_ANTI_HALLUCINATION_RULES
+
 load_dotenv(".env")
 
 
@@ -298,7 +300,9 @@ def analyze_job_match(
         if isinstance(cached, dict):
             return _normalize_result(cached)
 
-    system_prompt = "Recruiter AI. Return ONLY JSON. Be concise."
+    system_prompt = (
+        "Recruiter AI. Return ONLY JSON. Be concise.\n\n" + SHARED_ANTI_HALLUCINATION_RULES
+    )
 
     # Very compact schema instruction to minimize tokens.
     prompt = (

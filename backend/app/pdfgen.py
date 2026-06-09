@@ -647,28 +647,82 @@ class _SidebarPdfDoc:
         return str(self.path)
 
 
-def make_application_pdfs(profile, job, cover_letter: str, tailored_cv: str, *, include_photo: bool = True):
-    """Generate ONE combined PDF with a modern layout.
+class _SidebarCvOnlyDoc(_SidebarPdfDoc):
+    """CV-only variant of the sidebar template.
 
-    The PDF includes:
-    - Left blue sidebar with photo + personal details + languages (from profile)
-    - Right white area with a cover letter box at the top (cover_letter)
-    - CV section generated from AI (tailored_cv)
+    Requirements:
+    - Must NOT show job title/company/URL or other job-ad noise at the top.
+    - Must only render candidate CV content (AI tailored_cv or profile fallback).
+    """
+
+    def build(self) -> str:
+        self._new_page()
+
+        # No job subtitle here (prevents "annonsetittel øverst" in CV-only PDF).
+        self._draw_main_title("CV", subtitle=None)
+
+        if (self.cv_text or "").strip():
+            self._section_header("CV")
+            self._paragraph(self.cv_text)
+        else:
+            # Fallback: render from profile if AI CV text is missing.
+            self._section_header("Erfaring")
+            self._draw_experience()
+
+            self._section_header("Utdanning")
+            self._draw_education()
+
+            skills = (getattr(self.profile, "skills", "") or "").strip()
+            if skills:
+                self._section_header("Ferdigheter")
+                self._paragraph(skills)
+
+            gaps = (getattr(self.profile, "cv_gaps", "") or "").strip()
+            if gaps:
+                self._section_header("Hull i CV")
+                self._paragraph(gaps)
+
+            self._section_header("Referanser")
+            self._draw_references()
+
+        self.c.save()
+        return str(self.path)
+
+
+def make_application_pdfs(profile, job, cover_letter: str, tailored_cv: str, *, include_photo: bool = True):
+    """Generate TWO PDFs with the same visual style.
+
+    Returns (combined_pdf_path, cv_only_pdf_path).
+
+    - combined PDF: Søknad + CV (used by app "Generer PDF")
+    - CV-only PDF: used as email attachment
 
     Note: We keep the (cover_path, cv_path) return signature for backward compatibility.
     """
 
     base = safe_name(f"{job.title}_{job.company}")
-    filename = f"soknad_og_cv_{base}.pdf"
 
-    doc = _SidebarPdfDoc(
-        filename,
+    combined_filename = f"soknad_og_cv_{base}.pdf"
+    cv_filename = f"cv_{base}.pdf"
+
+    combined_doc = _SidebarPdfDoc(
+        combined_filename,
         profile,
         job,
         cover_letter=cover_letter,
         cv_text=tailored_cv,
         include_photo=include_photo,
     )
+    combined_path = combined_doc.build()
 
-    combined_path = doc.build()
-    return combined_path, combined_path
+    cv_doc = _SidebarCvOnlyDoc(
+        cv_filename,
+        profile,
+        job,
+        cover_letter="",
+        cv_text=tailored_cv,
+        include_photo=include_photo,
+    )
+    cv_path = cv_doc.build()
+
+    return combined_path, cv_path
