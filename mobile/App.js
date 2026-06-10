@@ -1693,233 +1693,300 @@ export default function App() {
     </View>
   );
 
-  const renderAnalysis = () => (
-    <View style={styles.pageCard}>
-      <Text style={styles.pageTitle}>Analyser jobbannonse</Text>
-      <Text style={styles.pageSubtitle}>Lim inn en jobbannonse for rask match og forbedringstips.</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Lim inn jobbannonse-URL"
-        value={jobUrl}
-        onChangeText={setJobUrl}
-        autoCapitalize="none"
-      />
-      <TouchableOpacity style={styles.primaryButton} onPress={analyzeJob}>
-        <Text style={styles.primaryButtonText}>{loading ? 'Analyserer...' : 'Analyser jobb'}</Text>
-      </TouchableOpacity>
+  const renderAnalysis = () => {
+    const ripple = Platform.OS === 'android'
+      ? { android_ripple: { color: 'rgba(26, 26, 46, 0.10)' } }
+      : {};
 
-      <View style={{ marginTop: 10 }}>
-        <Text style={styles.sectionTitle}>Tidligere analyser</Text>
-        <TouchableOpacity style={styles.secondaryButton} onPress={loadJobAnalyses}>
-          <Text style={styles.secondaryButtonText}>{jobAnalysesLoading ? 'Laster...' : 'Oppdater liste'}</Text>
-        </TouchableOpacity>
+    const matchScore = (typeof analysis?.match_score === 'number' && !Number.isNaN(analysis.match_score))
+      ? Math.max(0, Math.min(100, Math.round(analysis.match_score)))
+      : (analysis?.match_score ?? 0);
 
-        {jobAnalysesLoading ? (
-          <Text style={[styles.helpText, { marginTop: 8 }]}>Laster analyser...</Text>
-        ) : null}
+    const hasMatchScore = (analysis?.match_score != null);
 
-        {!jobAnalysesLoading && jobAnalyses.length === 0 ? (
-          <Text style={[styles.helpText, { marginTop: 8 }]}>Ingen analyser ennå. Analyser en jobb-URL for å få den inn her.</Text>
-        ) : null}
+    const strengths = Array.isArray(analysis?.strengths) ? analysis.strengths : [];
+
+    return (
+      <View style={styles.aerligHomeWrap}>
+        <View style={styles.aerligPageCard}>
+          <Text style={styles.aerligPageTitle}>Analyser jobbannonse</Text>
+          <Text style={styles.aerligPageSubtitle}>Lim inn en jobbannonse for rask match og forbedringstips.</Text>
+
+          <TextInput
+            style={[styles.input, styles.aerligInput]}
+            placeholder="Lim inn jobbannonse-URL"
+            value={jobUrl}
+            onChangeText={setJobUrl}
+            autoCapitalize="none"
+          />
+
+          <TouchableOpacity style={styles.aerligPrimaryButton} onPress={analyzeJob}>
+            <Text style={styles.aerligPrimaryButtonText}>{loading ? 'Analyserer...' : 'Analyser jobb'}</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.aerligCard}>
+          <Text style={styles.aerligCardEyebrow}>Tidligere analyser</Text>
+
+          <TouchableOpacity style={styles.aerligSecondaryButton} onPress={loadJobAnalyses}>
+            <Text style={styles.aerligSecondaryButtonText}>{jobAnalysesLoading ? 'Laster...' : 'Oppdater liste'}</Text>
+          </TouchableOpacity>
+
+          {jobAnalysesLoading ? (
+            <Text style={[styles.helpText, styles.aerligHelpText, { marginTop: 8 }]}>Laster analyser...</Text>
+          ) : null}
+
+          {!jobAnalysesLoading && jobAnalyses.length === 0 ? (
+            <Text style={[styles.helpText, styles.aerligHelpText, { marginTop: 8 }]}>Ingen analyser ennå. Analyser en jobb-URL for å få den inn her.</Text>
+          ) : null}
+        </View>
 
         {jobAnalyses.map((item) => (
-          <View key={item.job.id} style={styles.messageCard}>
-            <Text style={styles.messageTitle}>{item.job.title}</Text>
-            <Text style={styles.messageText}>{item.job.company || 'Ukjent bedrift'}</Text>
-            <Text style={[styles.helpText, { marginTop: 6 }]}>Matchscore: {Math.round(item.match_score || item.job.match_score || 0)}%</Text>
+          <View key={item.job.id} style={styles.aerligCard}>
+            <Text style={styles.aerligCardTitle}>{item.job.title}</Text>
+            <Text style={styles.aerligCardMeta}>{item.job.company || 'Ukjent bedrift'}</Text>
+            <Text style={[styles.helpText, styles.aerligHelpText, { marginTop: 0 }]}>Matchscore: {Math.round(item.match_score || item.job.match_score || 0)}%</Text>
 
             <TouchableOpacity
-              style={[styles.secondaryButton, { marginTop: 10, paddingVertical: 12 }]}
+              style={[styles.aerligSecondaryButton, { marginTop: 10, paddingVertical: 12 }]}
               onPress={() => openSavedAnalysis(item.job.id, item?.job?.url)}
             >
-              <Text style={styles.secondaryButtonText}>Åpne analyse</Text>
+              <Text style={styles.aerligSecondaryButtonText}>Åpne analyse</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.secondaryButton, { marginTop: 10, paddingVertical: 12 }]}
+              style={[styles.aerligSecondaryButton, { marginTop: 10, paddingVertical: 12 }]}
               onPress={() => moveAnalysisToApplications(item.job.id)}
             >
-              <Text style={styles.secondaryButtonText}>Legg til i Søknader</Text>
+              <Text style={styles.aerligSecondaryButtonText}>Legg til i Søknader</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.removeButton, { marginTop: 10 }]}
+              style={[styles.aerligDangerButton, { marginTop: 10 }]}
               onPress={() => hideJobAnalysis(item.job.id)}
             >
-              <Text style={styles.removeButtonText}>Fjern fra listen</Text>
+              <Text style={styles.aerligDangerButtonText}>Fjern fra listen</Text>
             </TouchableOpacity>
           </View>
         ))}
-      </View>
 
-      {analysis && (
-        <View style={styles.analysisCard}>
-          <Text style={styles.analysisHeading}>Analyse</Text>
-          <View style={styles.analysisRow}>
-            <Text style={styles.analysisLabel}>Matchscore</Text>
-            <Text style={styles.analysisValue}>{analysis.match_score ?? 0}%</Text>
-          </View>
-          <View style={styles.analysisRow}>
-            <Text style={styles.analysisLabel}>Søkeanbefaling</Text>
-            <Text style={styles.analysisValue}>{analysis.should_apply ? 'JA' : 'NEI'}</Text>
-          </View>
+        {analysis ? (
+          <>
+            <View style={[styles.aerligCard, styles.aerligAccentNavy]}>
+              <Text style={styles.aerligCardEyebrow}>Analyse</Text>
 
-          {analysis.recommended_application_style ? (
-            <View style={{ marginTop: 10 }}>
-              <Text style={styles.analysisSubheading}>Anbefalt søknadslengde</Text>
-              <Text style={styles.analysisList}>
-                {analysis.recommended_application_style === 'kort'
-                  ? 'Kort (1 avsnitt)'
-                  : analysis.recommended_application_style === 'profesjonell'
-                    ? 'Profesjonell (4–6 avsnitt)'
-                    : 'Vanlig (2–3 avsnitt)'}
-              </Text>
-              {analysis.recommended_style_reason ? (
-                <Text style={styles.analysisList}>{analysis.recommended_style_reason}</Text>
+              {hasMatchScore ? (
+                <>
+                  <View style={styles.aerligMeterRow}>
+                    <Text style={styles.aerligMeterLabel}>Matchmeter</Text>
+                    <Text style={styles.aerligMeterValue}>{matchScore}%</Text>
+                  </View>
+                  <View style={styles.aerligMeterOuter}>
+                    <View
+                      style={[
+                        styles.aerligMeterInner,
+                        (matchScore >= 70) ? styles.aerligMeterGood : styles.aerligMeterWarn,
+                        { width: `${Math.max(0, Math.min(100, matchScore))}%` },
+                      ]}
+                    />
+                  </View>
+                </>
               ) : null}
-              <TouchableOpacity
-                style={[styles.secondaryButton, { marginTop: 8, paddingVertical: 12 }]}
-                onPress={() => setApplicationStyle(analysis.recommended_application_style)}
-              >
-                <Text style={styles.secondaryButtonText}>Bruk anbefalt</Text>
-              </TouchableOpacity>
+
+              {(typeof analysis?.should_apply === 'boolean') ? (
+                <>
+                  <View style={styles.aerligMeterRow}>
+                    <Text style={styles.aerligMeterLabel}>Ærlighetsmåler</Text>
+                    <Text style={styles.aerligMeterValue}>{analysis.should_apply ? 'SØK' : 'VENT'}</Text>
+                  </View>
+                  <View style={styles.aerligMeterOuter}>
+                    <View
+                      style={[
+                        styles.aerligMeterInner,
+                        analysis.should_apply ? styles.aerligMeterGood : styles.aerligMeterWarn,
+                        { width: '100%' },
+                      ]}
+                    />
+                  </View>
+                </>
+              ) : null}
+
+              {analysis.recommended_application_style ? (
+                <View style={{ marginTop: 10 }}>
+                  <Text style={styles.aerligCardSectionTitle}>Anbefalt søknadslengde</Text>
+                  <Text style={styles.aerligCardBody}>
+                    {analysis.recommended_application_style === 'kort'
+                      ? 'Kort (1 avsnitt)'
+                      : analysis.recommended_application_style === 'profesjonell'
+                        ? 'Profesjonell (4–6 avsnitt)'
+                        : 'Vanlig (2–3 avsnitt)'}
+                  </Text>
+                  {analysis.recommended_style_reason ? (
+                    <Text style={[styles.aerligCardBody, { marginTop: 6 }]}>{analysis.recommended_style_reason}</Text>
+                  ) : null}
+                  <TouchableOpacity
+                    style={[styles.aerligSecondaryButton, { marginTop: 10, paddingVertical: 12 }]}
+                    onPress={() => setApplicationStyle(analysis.recommended_application_style)}
+                  >
+                    <Text style={styles.aerligSecondaryButtonText}>Bruk anbefalt</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
             </View>
-          ) : null}
-          {analysis.honest_assessment ? (
-            <>
-              <Text style={styles.analysisSubheading}>Ærlig vurdering</Text>
-              <Text style={styles.analysisList}>{analysis.honest_assessment}</Text>
-            </>
-          ) : null}
-          {analysis.missing_requirements?.length > 0 && (
-            <>
-              <Text style={styles.analysisSubheading}>Mangler</Text>
-              {analysis.missing_requirements.map((item, index) => (
-                <Text key={index} style={styles.analysisList}>• {item}</Text>
-              ))}
-            </>
-          )}
-          {analysis.improvement_tips?.length > 0 && (
-            <>
-              <Text style={styles.analysisSubheading}>Forbedringstips</Text>
-              {analysis.improvement_tips.map((item, index) => (
-                <Text key={index} style={styles.analysisList}>• {item}</Text>
-              ))}
-            </>
-          )}
-          <Text style={[styles.inputLabel, { marginTop: 18 }]}>Velg søknadslengde</Text>
-          <View style={styles.filterChipRow}>
-            {[
-              { key: 'kort', label: 'Kort (1 avsnitt)' },
-              { key: 'vanlig', label: 'Vanlig (2–3 avsnitt)' },
-              { key: 'profesjonell', label: 'Profesjonell (4–6 avsnitt)' },
-            ].map((opt) => {
-              const active = applicationStyle === opt.key;
-              return (
-                <TouchableOpacity
-                  key={opt.key}
-                  style={[styles.filterChip, active && styles.filterChipActive]}
-                  onPress={() => setApplicationStyle(opt.key)}
-                >
-                  <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{opt.label}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
 
-          <Text style={[styles.inputLabel, { marginTop: 6 }]}>Send til e-post</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Din e-postadresse"
-            value={applicationEmail}
-            onChangeText={setApplicationEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-
-          {profilePhotoData ? (
-            <View style={styles.profileField}>
-              <Text style={styles.inputLabel}>Bilde i PDF</Text>
-              <Text style={styles.helpText}>Du kan velge om profilbildet skal være med i denne søknaden/PDF-en (standard kan settes i Profil).</Text>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={styles.messageText}>{includePhotoInPdf ? 'På' : 'Av'}</Text>
-                <Switch value={includePhotoInPdf} onValueChange={setIncludePhotoInPdf} />
+            {analysis.honest_assessment ? (
+              <View style={[styles.aerligCard, styles.aerligAccentOrange]}>
+                <Text style={styles.aerligCardEyebrow}>Ærlig vurdering</Text>
+                <Text style={styles.aerligCardBody}>{analysis.honest_assessment}</Text>
               </View>
-            </View>
+            ) : null}
+
+            {strengths.length > 0 ? (
+              <View style={[styles.aerligCard, styles.aerligAccentGreen]}>
+                <Text style={styles.aerligCardEyebrow}>Sterke sider</Text>
+                {strengths.map((s, idx) => (
+                  <Text key={idx} style={styles.aerligCardBody}>• {s}</Text>
+                ))}
+              </View>
           ) : null}
 
-          {generationBanner ? (
-            <View style={{
-              backgroundColor: 'rgba(239, 68, 68, 0.12)',
-              borderColor: 'rgba(239, 68, 68, 0.35)',
-              borderWidth: 1,
-              borderRadius: THEME.radius.control,
-              paddingVertical: 10,
-              paddingHorizontal: 12,
-              marginTop: 12,
-            }}>
-              <Text style={{
-                color: THEME.colors.danger,
-                fontWeight: '800',
-                fontSize: 13,
-                lineHeight: 18,
-              }}>{generationBanner}</Text>
+            {analysis.missing_requirements?.length > 0 ? (
+              <View style={[styles.aerligCard, styles.aerligAccentOrange]}>
+                <Text style={styles.aerligCardEyebrow}>Svake sider</Text>
+                {analysis.missing_requirements.map((item, index) => (
+                  <Text key={index} style={styles.aerligCardBody}>• {item}</Text>
+                ))}
+              </View>
+            ) : null}
+
+            {analysis.improvement_tips?.length > 0 ? (
+              <View style={[styles.aerligCard, styles.aerligAccentGreen]}>
+                <Text style={styles.aerligCardEyebrow}>Forbedringstips</Text>
+                {analysis.improvement_tips.map((item, index) => (
+                  <Text key={index} style={styles.aerligCardBody}>• {item}</Text>
+                ))}
+              </View>
+            ) : null}
+
+            <View style={styles.aerligCard}>
+              <Text style={styles.aerligCardEyebrow}>Søknad / PDF</Text>
+
+              <Text style={[styles.inputLabel, styles.aerligLabel, { marginTop: 6 }]}>Velg søknadslengde</Text>
+              <View style={[styles.filterChipRow, styles.aerligFilterChipRow]}>
+                {[
+                  { key: 'kort', label: 'Kort (1 avsnitt)' },
+                  { key: 'vanlig', label: 'Vanlig (2–3 avsnitt)' },
+                  { key: 'profesjonell', label: 'Profesjonell (4–6 avsnitt)' },
+                ].map((opt) => {
+                  const active = applicationStyle === opt.key;
+                  return (
+                    <TouchableOpacity
+                      key={opt.key}
+                      style={[styles.filterChip, styles.aerligFilterChip, active && styles.aerligFilterChipActive]}
+                      onPress={() => setApplicationStyle(opt.key)}
+                    >
+                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, active && styles.aerligFilterChipTextActive]}>{opt.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={[styles.inputLabel, styles.aerligLabel, { marginTop: 6 }]}>Send til e-post</Text>
+              <TextInput
+                style={[styles.input, styles.aerligInput]}
+                placeholder="Din e-postadresse"
+                value={applicationEmail}
+                onChangeText={setApplicationEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+
+              {profilePhotoData ? (
+                <View style={styles.profileField}>
+                  <Text style={[styles.inputLabel, styles.aerligLabel]}>Bilde i PDF</Text>
+                  <Text style={[styles.helpText, styles.aerligHelpText]}>Du kan velge om profilbildet skal være med i denne søknaden/PDF-en (standard kan settes i Profil).</Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={[styles.messageText, styles.aerligMessageText]}>{includePhotoInPdf ? 'På' : 'Av'}</Text>
+                    <Switch value={includePhotoInPdf} onValueChange={setIncludePhotoInPdf} />
+                  </View>
+                </View>
+              ) : null}
+
+              {generationBanner ? (
+                <View style={{
+                  backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                  borderColor: 'rgba(239, 68, 68, 0.35)',
+                  borderWidth: 1,
+                  borderRadius: 16,
+                  paddingVertical: 10,
+                  paddingHorizontal: 12,
+                  marginTop: 12,
+                }}>
+                  <Text style={{
+                    color: THEME.colors.danger,
+                    fontWeight: '900',
+                    fontSize: 13,
+                    lineHeight: 18,
+                  }}>{generationBanner}</Text>
+                </View>
+              ) : null}
+
+              <TouchableOpacity
+                style={[styles.aerligSecondaryButton, isGenerating ? { opacity: 0.6 } : null]}
+                onPress={sendApplication}
+                disabled={isGenerating}
+              >
+                <Text style={styles.aerligSecondaryButtonText}>{sending ? 'Sender...' : 'Send søknad (e-post)'}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.aerligSecondaryButton, isGenerating ? { opacity: 0.6 } : null]}
+                onPress={generatePdf}
+                disabled={isGenerating}
+              >
+                <Text style={styles.aerligSecondaryButtonText}>{generatingPdf ? 'Genererer...' : 'Generer PDF (uten e-post)'}</Text>
+              </TouchableOpacity>
+
+              {applicationPackage ? (
+                <View style={{ marginTop: 12 }}>
+                  {(typeof applicationPackage?.pdfUrl === 'string' && applicationPackage.pdfUrl.trim()) ? (
+                    <TouchableOpacity
+                      style={[styles.aerligSecondaryButton, { marginTop: 0 }]}
+                      onPress={() => openDocument(applicationPackage.pdfUrl)}
+                    >
+                      <Text style={styles.aerligSecondaryButtonText}>Åpne PDF</Text>
+                    </TouchableOpacity>
+                  ) : null}
+
+                  {(typeof applicationPackage?.coverLetter === 'string' && applicationPackage.coverLetter.trim()) ? (
+                    <>
+                      <Text style={styles.aerligCardSectionTitle}>Søknad</Text>
+                      <Text style={styles.aerligCardBody}>{applicationPackage.coverLetter}</Text>
+                    </>
+                  ) : null}
+
+                  {(typeof applicationPackage?.cv === 'string' && applicationPackage.cv.trim()) ? (
+                    <>
+                      <Text style={styles.aerligCardSectionTitle}>CV</Text>
+                      <Text style={styles.aerligCardBody}>{applicationPackage.cv}</Text>
+                    </>
+                  ) : null}
+
+                  {(
+                    (!applicationPackage?.coverLetter || !String(applicationPackage.coverLetter).trim())
+                    && (!applicationPackage?.cv || !String(applicationPackage.cv).trim())
+                  ) ? (
+                    <Text style={[styles.helpText, styles.aerligHelpText, { marginTop: 6 }]}>Ingen tekst å vise.</Text>
+                  ) : null}
+                </View>
+              ) : null}
             </View>
-          ) : null}
+          </>
+        ) : null}
+      </View>
+    );
+  };
 
-          <TouchableOpacity
-            style={[styles.secondaryButton, isGenerating ? { opacity: 0.6 } : null]}
-            onPress={sendApplication}
-            disabled={isGenerating}
-          >
-            <Text style={styles.secondaryButtonText}>{sending ? 'Sender...' : 'Send søknad (e-post)'}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.secondaryButton, isGenerating ? { opacity: 0.6 } : null]}
-            onPress={generatePdf}
-            disabled={isGenerating}
-          >
-            <Text style={styles.secondaryButtonText}>{generatingPdf ? 'Genererer...' : 'Generer PDF (uten e-post)'}</Text>
-          </TouchableOpacity>
-
-          {applicationPackage ? (
-            <View style={{ marginTop: 12 }}>
-              {(typeof applicationPackage?.pdfUrl === 'string' && applicationPackage.pdfUrl.trim()) ? (
-                <TouchableOpacity
-                  style={[styles.secondaryButton, { marginTop: 0 }]}
-                  onPress={() => openDocument(applicationPackage.pdfUrl)}
-                >
-                  <Text style={styles.secondaryButtonText}>Åpne PDF</Text>
-                </TouchableOpacity>
-              ) : null}
-
-              {(typeof applicationPackage?.coverLetter === 'string' && applicationPackage.coverLetter.trim()) ? (
-                <>
-                  <Text style={styles.analysisSubheading}>Søknad</Text>
-                  <Text style={styles.analysisList}>{applicationPackage.coverLetter}</Text>
-                </>
-              ) : null}
-
-              {(typeof applicationPackage?.cv === 'string' && applicationPackage.cv.trim()) ? (
-                <>
-                  <Text style={styles.analysisSubheading}>CV</Text>
-                  <Text style={styles.analysisList}>{applicationPackage.cv}</Text>
-                </>
-              ) : null}
-
-              {(
-                (!applicationPackage?.coverLetter || !String(applicationPackage.coverLetter).trim())
-                && (!applicationPackage?.cv || !String(applicationPackage.cv).trim())
-              ) ? (
-                <Text style={[styles.helpText, { marginTop: 6 }]}>Ingen tekst å vise.</Text>
-              ) : null}
-            </View>
-          ) : null}
-        </View>
-      )}
-    </View>
-  );
 
   const renderNew = () => (
     <View style={styles.pageCard}>
@@ -4205,5 +4272,22 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '900',
     letterSpacing: 0.2,
+  },
+
+  // Analysis accents
+  aerligAccentNavy: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#1A1A2E',
+    paddingLeft: 12,
+  },
+  aerligAccentOrange: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#E8622A',
+    paddingLeft: 12,
+  },
+  aerligAccentGreen: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#3A7D44',
+    paddingLeft: 12,
   },
 });
