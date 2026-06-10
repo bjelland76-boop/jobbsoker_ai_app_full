@@ -2228,50 +2228,73 @@ export default function App() {
   );
 
   const renderInterview = () => {
+    const ripple = Platform.OS === 'android'
+      ? { android_ripple: { color: 'rgba(26, 26, 46, 0.10)' } }
+      : {};
+
     const qList = INTERVIEW_QUESTIONS[uiLanguage] || INTERVIEW_QUESTIONS.no;
     const q = qList[interviewIndex % qList.length];
     const notes = interviewNotes[String(interviewIndex)] || '';
 
     return (
-      <View style={styles.pageCard}>
-        <Text style={styles.pageTitle}>{t('interviewTitle')}</Text>
-        <Text style={styles.pageSubtitle}>{t('interviewSubtitle')}</Text>
-
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryName}>Spørsmål {interviewIndex + 1} / {qList.length}</Text>
-          <Text style={styles.summaryText}>{q}</Text>
+      <View style={styles.aerligHomeWrap}>
+        <View style={styles.aerligPageCard}>
+          <Text style={styles.aerligPageTitle}>{t('interviewTitle')}</Text>
+          <Text style={styles.aerligPageSubtitle}>{t('interviewSubtitle')}</Text>
         </View>
 
-        <Text style={styles.inputLabel}>{t('yourNotes')}</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          value={notes}
-          onChangeText={(v) => setInterviewNotes((prev) => ({ ...(prev || {}), [String(interviewIndex)]: v }))}
-          placeholder={t('yourNotes')}
-          multiline
-        />
+        <View style={[styles.aerligChatBubble, styles.aerligChatBubbleAi]}>
+          <View style={styles.aerligChatMetaRow}>
+            <View style={[styles.aerligChatTag, styles.aerligChatTagAi]}>
+              <Text style={[styles.aerligChatTagText, styles.aerligChatTagTextAi]}>AI</Text>
+            </View>
+            <Text style={styles.aerligChatMetaRight}>Spørsmål {interviewIndex + 1} / {qList.length}</Text>
+          </View>
+          <Text style={styles.aerligChatText}>{q}</Text>
+        </View>
 
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <TouchableOpacity
-            style={[styles.secondaryButton, { flex: 1, marginTop: 0, marginRight: 6 }]}
+        <View style={[styles.aerligChatBubble, styles.aerligChatBubbleUser]}>
+          <View style={styles.aerligChatMetaRow}>
+            <View style={[styles.aerligChatTag, styles.aerligChatTagUser]}>
+              <Text style={[styles.aerligChatTagText, styles.aerligChatTagTextUser]}>Du</Text>
+            </View>
+            <Text style={styles.aerligChatMetaRight}>{t('yourNotes')}</Text>
+          </View>
+
+          <TextInput
+            style={[styles.input, styles.aerligInput, styles.textArea, styles.aerligChatInput]}
+            value={notes}
+            onChangeText={(v) => setInterviewNotes((prev) => ({ ...(prev || {}), [String(interviewIndex)]: v }))}
+            placeholder={t('yourNotes')}
+            multiline
+          />
+        </View>
+
+        <View style={styles.aerligChatControlsRow}>
+          <Pressable
+            {...ripple}
+            style={[styles.aerligSecondaryButton, { flex: 1, marginTop: 0, marginRight: 8 }]}
             onPress={() => setInterviewIndex((i) => (i <= 0 ? 0 : i - 1))}
           >
-            <Text style={styles.secondaryButtonText}>{t('previous')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.primaryButton, { flex: 1, marginTop: 0, marginLeft: 6 }]}
+            <Text style={styles.aerligSecondaryButtonText}>{t('previous')}</Text>
+          </Pressable>
+
+          <Pressable
+            {...ripple}
+            style={[styles.aerligPrimaryButton, { flex: 1, marginTop: 0, marginLeft: 8 }]}
             onPress={() => setInterviewIndex((i) => (i >= qList.length - 1 ? 0 : i + 1))}
           >
-            <Text style={styles.primaryButtonText}>{t('next')}</Text>
-          </TouchableOpacity>
+            <Text style={styles.aerligPrimaryButtonText}>{t('next')}</Text>
+          </Pressable>
         </View>
 
-        <TouchableOpacity
-          style={[styles.secondaryButton, { marginTop: 12 }]}
+        <Pressable
+          {...ripple}
+          style={[styles.aerligSecondaryButton, { marginTop: 0 }]}
           onPress={() => setActiveTab('home')}
         >
-          <Text style={styles.secondaryButtonText}>Tilbake</Text>
-        </TouchableOpacity>
+          <Text style={styles.aerligSecondaryButtonText}>Tilbake</Text>
+        </Pressable>
       </View>
     );
   };
@@ -4294,5 +4317,75 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: '#3A7D44',
     paddingLeft: 12,
+  },
+
+  // Interview (Ærlig. chat-style)
+  aerligChatBubble: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(26, 26, 46, 0.12)',
+    marginBottom: 14,
+  },
+  aerligChatBubbleAi: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#1A1A2E',
+    paddingLeft: 12,
+  },
+  aerligChatBubbleUser: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#E8622A',
+    paddingLeft: 12,
+  },
+  aerligChatMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  aerligChatMetaRight: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: 'rgba(26, 26, 46, 0.60)',
+  },
+  aerligChatTag: {
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+  },
+  aerligChatTagAi: {
+    backgroundColor: 'rgba(26, 26, 46, 0.08)',
+    borderColor: 'rgba(26, 26, 46, 0.18)',
+  },
+  aerligChatTagUser: {
+    backgroundColor: 'rgba(232, 98, 42, 0.10)',
+    borderColor: 'rgba(232, 98, 42, 0.22)',
+  },
+  aerligChatTagText: {
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  aerligChatTagTextAi: {
+    color: '#1A1A2E',
+  },
+  aerligChatTagTextUser: {
+    color: '#E8622A',
+  },
+  aerligChatText: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#1A1A2E',
+    fontWeight: '800',
+  },
+  aerligChatInput: {
+    marginBottom: 0,
+    marginTop: 0,
+  },
+  aerligChatControlsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
 });
