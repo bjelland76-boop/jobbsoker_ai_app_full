@@ -22,6 +22,7 @@ import {
 import { THEME } from './styles/theme';
 import { I18N } from './i18n/no';
 import { INTERVIEW_QUESTIONS, CAREER_TIPS } from './constants/content';
+import { schoolOptions, languageOptions } from './constants/options';
 
 function guessDevHost() {
   // In Expo/React Native dev, this usually contains something like:
@@ -246,87 +247,6 @@ export default function App() {
   const profilePhoto = {
     uri: 'https://api.dicebear.com/9.x/adventurer/png?seed=Teacher&backgroundColor=b6e3f4&size=256',
   };
-
-  const schoolOptions = [
-    'Universitetet i Oslo',
-    'NTNU',
-    'Universitetet i Bergen',
-    'Universitetet i Tromsø',
-    'Universitetet i Agder',
-    'Universitetet i Stavanger',
-    'Universitetet i Sørøst-Norge',
-    'NMBU',
-    'OsloMet – storbyuniversitetet',
-    'Nord universitet',
-    'Høgskulen på Vestlandet',
-    'Høgskolen i Innlandet',
-    'Høgskolen i Østfold',
-    'Høgskolen i Molde',
-    'Høgskolen i Volda',
-    'BI Norwegian Business School',
-    'Høyskolen Kristiania',
-    'NLA Høgskolen',
-    'MF vitenskapelig høyskole',
-    'Westerdals Oslo ACT',
-    'Norges idrettshøgskole',
-    'Kunsthøgskolen i Oslo',
-    'Arkitektur- og designhøgskolen i Oslo',
-    'Fagskole - Teknikk og industriell produksjon',
-    'Fagskole - Helse og oppvekst',
-    'Fagskole - IT og digitalisering',
-    'Ullern videregående skole',
-    'Elvebakken videregående skole',
-    'Nydalen videregående skole',
-    'Frogner videregående skole',
-    'Bygdøy videregående skole',
-    'Bjørkelangen videregående skole',
-    'Bergen katedralskole',
-    'Strinda videregående skole',
-    'Åsane videregående skole',
-    'Drammen videregående skole',
-    'Kirkeparken videregående skole',
-    'St. Olav videregående skole',
-    'Lillestrøm videregående skole',
-    'Skedsmo videregående skole',
-    'Romerike videregående skole',
-    'Annen skole',
-  ];
-
-  const languageOptions = [
-    'Norsk',
-    'Engelsk',
-    'Svensk',
-    'Dansk',
-    'Finsk',
-    'Islandsk',
-    'Tysk',
-    'Nederlandsk',
-    'Fransk',
-    'Spansk',
-    'Italiensk',
-    'Portugisisk',
-    'Russisk',
-    'Ukrainsk',
-    'Rumensk',
-    'Bulgarsk',
-    'Gresk',
-    'Tsjekkisk',
-    'Ungarsk',
-    'Kinesisk',
-    'Japansk',
-    'Koreansk',
-    'Arabisk',
-    'Hebraisk',
-    'Hindi',
-    'Punjabi',
-    'Urdu',
-    'Tyrkisk',
-    'Persisk (Farsi)',
-    'Thai',
-    'Vietnamesisk',
-    'Polsk',
-  ];
-
 
   const strings = I18N[uiLanguage] || I18N.no;
   const t = (key) => strings[key] ?? I18N.no[key] ?? String(key);
