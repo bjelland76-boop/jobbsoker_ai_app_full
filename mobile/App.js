@@ -2241,496 +2241,509 @@ export default function App() {
   }
 
   const renderProfile = () => (
-    <View style={styles.pageCard}>
-      <Text style={styles.pageTitle}>Profil</Text>
-      <Text style={styles.pageSubtitle}>Personopplysninger, erfaring og referanser.</Text>
-      <View style={styles.profileField}>
-        <Text style={styles.inputLabel}>Navn</Text>
-        <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Navn" />
-      </View>
+    <View style={styles.aerligHomeWrap}>
+      <View style={styles.aerligPageCard}>
+        <Text style={styles.aerligPageTitle}>Profil</Text>
+        <Text style={styles.aerligPageSubtitle}>Personopplysninger, erfaring og referanser.</Text>
 
-      <View style={styles.profileField}>
-        <Text style={styles.inputLabel}>Profilbilde (valgfritt)</Text>
-        {profilePhotoData ? (
-          <View style={{ alignItems: 'center', marginBottom: 10 }}>
-            <Image
-              source={{ uri: profilePhotoData }}
-              style={{ width: 110, height: 110, borderRadius: 16, marginBottom: 10 }}
-            />
-            <TouchableOpacity
-              style={[styles.secondaryButton, { marginTop: 0, paddingVertical: 12, width: '100%' }]}
-              onPress={() => {
-                setProfilePhotoData('');
-                if (profileId) {
-                  saveProfile({ silent: true, override: { photo_data: '' } });
-                }
-              }}
-            >
-              <Text style={styles.secondaryButtonText}>Fjern bilde</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
+        <View style={styles.profileField}>
+          <Text style={[styles.inputLabel, styles.aerligLabel]}>Navn</Text>
+          <TextInput style={[styles.input, styles.aerligInput]} value={name} onChangeText={setName} placeholder="Navn" />
+        </View>
 
-        <TouchableOpacity style={[styles.secondaryButton, { marginTop: 0, paddingVertical: 12 }]} onPress={pickProfilePhoto}>
-          <Text style={styles.secondaryButtonText}>{profilePhotoData ? 'Bytt bilde' : 'Velg bilde'}</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.helpText}>Du kan velge om bildet skal være med i hver PDF når du lager søknad.</Text>
-
-        {profilePhotoData ? (
-          <View style={{ marginTop: 8 }}>
-            <Text style={styles.inputLabel}>Bilde i PDF som standard</Text>
-            <Text style={styles.helpText}>Dette blir standardvalget hver gang du lager ny søknad/PDF (kan overstyres per søknad).</Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={styles.messageText}>{includePhotoDefault ? 'På' : 'Av'}</Text>
-              <Switch
-                value={includePhotoDefault}
-                onValueChange={(v) => {
-                  setIncludePhotoDefault(!!v);
-                  setIncludePhotoInPdf(!!v);
+        <View style={styles.profileField}>
+          <Text style={[styles.inputLabel, styles.aerligLabel]}>Profilbilde (valgfritt)</Text>
+          {profilePhotoData ? (
+            <View style={{ alignItems: 'center', marginBottom: 10 }}>
+              <Image
+                source={{ uri: profilePhotoData }}
+                style={{ width: 110, height: 110, borderRadius: 16, marginBottom: 10 }}
+              />
+              <TouchableOpacity
+                style={[styles.aerligSecondaryButton, { marginTop: 0, paddingVertical: 12, width: '100%' }]}
+                onPress={() => {
+                  setProfilePhotoData('');
                   if (profileId) {
-                    saveProfile({ silent: true, override: { include_photo_default: !!v } });
+                    saveProfile({ silent: true, override: { photo_data: '' } });
                   }
                 }}
-              />
+              >
+                <Text style={styles.aerligSecondaryButtonText}>Fjern bilde</Text>
+              </TouchableOpacity>
             </View>
-          </View>
-        ) : null}
-      </View>
-      <View style={styles.profileField}>
-        <Text style={styles.inputLabel}>E-post</Text>
-        <TextInput style={styles.input} value={profileEmail} onChangeText={setProfileEmail} placeholder="E-post" autoCapitalize="none" keyboardType="email-address" />
-      </View>
-      <View style={styles.profileField}>
-        <Text style={styles.inputLabel}>Telefon</Text>
-        <TextInput style={styles.input} value={phone} onChangeText={setPhone} placeholder="Telefon" keyboardType="phone-pad" />
-      </View>
-      <View style={styles.profileField}>
-        <Text style={styles.inputLabel}>Adresse</Text>
-        <TextInput
-          style={styles.input}
-          value={address}
-          onChangeText={setAddress}
-          placeholder="Gateadresse"
-          autoCapitalize="words"
-        />
-      </View>
+          ) : null}
 
-      <View style={styles.inlineRow}>
-        <TextInput
-          style={[styles.input, styles.inlineInput]}
-          value={postalCode}
-          onChangeText={setPostalCode}
-          placeholder="Postnr"
-          keyboardType="numeric"
-        />
-        <TextInput
-          style={[styles.input, styles.inlineInput, { marginRight: 0 }]}
-          value={postalPlace}
-          onChangeText={setPostalPlace}
-          placeholder="Poststed"
-          autoCapitalize="words"
-        />
-      </View>
-      <View style={styles.profileField}>
-        <Text style={styles.inputLabel}>Erfaring</Text>
-        {experienceEntries.map((entry, index) => (
-          <View key={index} style={styles.listItem}>
-            <TextInput
-              style={styles.input}
-              value={entry.title}
-              placeholder="Stillingstittel"
-              onChangeText={(value) => {
-                const items = [...experienceEntries];
-                items[index].title = value;
-                setExperienceEntries(items);
-              }}
-            />
-            <TextInput
-              style={styles.input}
-              value={entry.company}
-              placeholder="Arbeidsgiver"
-              onChangeText={(value) => {
-                const items = [...experienceEntries];
-                items[index].company = value;
-                setExperienceEntries(items);
-              }}
-            />
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-              <TouchableOpacity
-                style={[styles.checkbox, { marginLeft: 0 }, entry.current && styles.checkboxOn]}
-                onPress={() => {
+          <TouchableOpacity style={[styles.aerligSecondaryButton, { marginTop: 0, paddingVertical: 12 }]} onPress={pickProfilePhoto}>
+            <Text style={styles.aerligSecondaryButtonText}>{profilePhotoData ? 'Bytt bilde' : 'Velg bilde'}</Text>
+          </TouchableOpacity>
+
+          <Text style={[styles.helpText, styles.aerligHelpText]}>Du kan velge om bildet skal være med i hver PDF når du lager søknad.</Text>
+
+          {profilePhotoData ? (
+            <View style={{ marginTop: 8 }}>
+              <Text style={[styles.inputLabel, styles.aerligLabel]}>Bilde i PDF som standard</Text>
+              <Text style={[styles.helpText, styles.aerligHelpText]}>Dette blir standardvalget hver gang du lager ny søknad/PDF (kan overstyres per søknad).</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={[styles.messageText, styles.aerligMessageText]}>{includePhotoDefault ? 'På' : 'Av'}</Text>
+                <Switch
+                  value={includePhotoDefault}
+                  onValueChange={(v) => {
+                    setIncludePhotoDefault(!!v);
+                    setIncludePhotoInPdf(!!v);
+                    if (profileId) {
+                      saveProfile({ silent: true, override: { include_photo_default: !!v } });
+                    }
+                  }}
+                />
+              </View>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.profileField}>
+          <Text style={[styles.inputLabel, styles.aerligLabel]}>E-post</Text>
+          <TextInput style={[styles.input, styles.aerligInput]} value={profileEmail} onChangeText={setProfileEmail} placeholder="E-post" autoCapitalize="none" keyboardType="email-address" />
+        </View>
+
+        <View style={styles.profileField}>
+          <Text style={[styles.inputLabel, styles.aerligLabel]}>Telefon</Text>
+          <TextInput style={[styles.input, styles.aerligInput]} value={phone} onChangeText={setPhone} placeholder="Telefon" keyboardType="phone-pad" />
+        </View>
+
+        <View style={styles.profileField}>
+          <Text style={[styles.inputLabel, styles.aerligLabel]}>Adresse</Text>
+          <TextInput
+            style={[styles.input, styles.aerligInput]}
+            value={address}
+            onChangeText={setAddress}
+            placeholder="Gateadresse"
+            autoCapitalize="words"
+          />
+        </View>
+
+        <View style={styles.inlineRow}>
+          <TextInput
+            style={[styles.input, styles.aerligInput, styles.inlineInput]}
+            value={postalCode}
+            onChangeText={setPostalCode}
+            placeholder="Postnr"
+            keyboardType="numeric"
+          />
+          <TextInput
+            style={[styles.input, styles.aerligInput, styles.inlineInput, { marginRight: 0 }]}
+            value={postalPlace}
+            onChangeText={setPostalPlace}
+            placeholder="Poststed"
+            autoCapitalize="words"
+          />
+        </View>
+
+        <View style={styles.profileField}>
+          <Text style={[styles.inputLabel, styles.aerligLabel]}>Erfaring</Text>
+          {experienceEntries.map((entry, index) => (
+            <View key={index} style={styles.aerligCard}>
+              <TextInput
+                style={[styles.input, styles.aerligInput]}
+                value={entry.title}
+                placeholder="Stillingstittel"
+                onChangeText={(value) => {
                   const items = [...experienceEntries];
-                  const next = !items[index].current;
-                  items[index].current = next;
-                  if (next) {
-                    items[index].to = '';
-                  }
+                  items[index].title = value;
+                  setExperienceEntries(items);
+                }}
+              />
+              <TextInput
+                style={[styles.input, styles.aerligInput]}
+                value={entry.company}
+                placeholder="Arbeidsgiver"
+                onChangeText={(value) => {
+                  const items = [...experienceEntries];
+                  items[index].company = value;
+                  setExperienceEntries(items);
+                }}
+              />
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                <TouchableOpacity
+                  style={[styles.checkbox, styles.aerligCheckbox, { marginLeft: 0 }, entry.current && styles.aerligCheckboxOn]}
+                  onPress={() => {
+                    const items = [...experienceEntries];
+                    const next = !items[index].current;
+                    items[index].current = next;
+                    if (next) {
+                      items[index].to = '';
+                    }
+                    setExperienceEntries(items);
+                  }}
+                >
+                  <Text style={[styles.checkboxText, styles.aerligCheckboxText, entry.current && styles.aerligCheckboxTextOn]}>{entry.current ? '✓' : ''}</Text>
+                </TouchableOpacity>
+                <Text style={styles.aerligInlineNote}>
+                  Jobber her fremdeles
+                </Text>
+              </View>
+
+              <View style={styles.inlineRow}>
+                <TextInput
+                  style={[styles.input, styles.aerligInput, styles.inlineInput]}
+                  value={entry.from || ''}
+                  placeholder="Fra (år/mnd)"
+                  onChangeText={(value) => {
+                    const items = [...experienceEntries];
+                    items[index].from = value;
+                    setExperienceEntries(items);
+                  }}
+                />
+                <TextInput
+                  style={[styles.input, styles.aerligInput, styles.inlineInput, { marginRight: 0 }, entry.current && { opacity: 0.6 }]}
+                  value={entry.current ? 'Nå' : (entry.to || '')}
+                  placeholder={entry.current ? 'Nå' : 'Til (år/mnd)'}
+                  editable={!entry.current}
+                  onChangeText={(value) => {
+                    const items = [...experienceEntries];
+                    items[index].to = value;
+                    setExperienceEntries(items);
+                  }}
+                />
+              </View>
+              <TouchableOpacity
+                style={[styles.removeButton, styles.aerligRemoveButton]}
+                onPress={() => {
+                  const items = experienceEntries.filter((_, i) => i !== index);
                   setExperienceEntries(items);
                 }}
               >
-                <Text style={[styles.checkboxText, entry.current && styles.checkboxTextOn]}>{entry.current ? '✓' : ''}</Text>
+                <Text style={[styles.removeButtonText, styles.aerligRemoveButtonText]}>Fjern</Text>
               </TouchableOpacity>
-              <Text style={{ marginLeft: 10, color: THEME.colors.muted, fontSize: 13, fontWeight: '700' }}>
-                Jobber her fremdeles
-              </Text>
             </View>
-
-            <View style={styles.inlineRow}>
-              <TextInput
-                style={[styles.input, styles.inlineInput]}
-                value={entry.from || ''}
-                placeholder="Fra (år/mnd)"
-                onChangeText={(value) => {
-                  const items = [...experienceEntries];
-                  items[index].from = value;
-                  setExperienceEntries(items);
-                }}
-              />
-              <TextInput
-                style={[styles.input, styles.inlineInput, { marginRight: 0 }, entry.current && { opacity: 0.6 }]}
-                value={entry.current ? 'Nå' : (entry.to || '')}
-                placeholder={entry.current ? 'Nå' : 'Til (år/mnd)'}
-                editable={!entry.current}
-                onChangeText={(value) => {
-                  const items = [...experienceEntries];
-                  items[index].to = value;
-                  setExperienceEntries(items);
-                }}
-              />
-            </View>
-            <TouchableOpacity
-              style={styles.removeButton}
-              onPress={() => {
-                const items = experienceEntries.filter((_, i) => i !== index);
-                setExperienceEntries(items);
-              }}
-            >
-              <Text style={styles.removeButtonText}>Fjern</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-        <TouchableOpacity
-          style={styles.smallButton}
-          onPress={() => setExperienceEntries([...experienceEntries, { title: '', company: '', from: '', to: '', current: false }])}
-        >
-          <Text style={styles.smallButtonText}>Legg til erfaring</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.profileField}>
-        <Text style={styles.inputLabel}>Utdanning</Text>
-        {educationEntries.map((entry, index) => (
-          <View key={index} style={styles.listItem}>
-            <TouchableOpacity
-              style={styles.input}
-              onPress={() => {
-                setShowSchoolListIndex(index);
-                setSchoolFilter('');
-                setSchoolKindFilter('all');
-                setSchoolResults([]);
-              }}
-            >
-              <Text style={entry.school ? styles.inputText : styles.placeholderText}>
-                {entry.school || 'Velg skole'}
-              </Text>
-            </TouchableOpacity>
-            {showSchoolListIndex === index && (
-              <View style={styles.dropdownList}>
-                <TextInput
-                  style={[styles.input, { margin: 8 }]}
-                  placeholder="Søk: videregående, universitet eller nettskole..."
-                  value={schoolFilter}
-                  onChangeText={setSchoolFilter}
-                  autoCapitalize="words"
-                />
-
-                <View style={styles.filterChipRow}>
-                  {[
-                    { key: 'all', label: 'Alle' },
-                    { key: 'vgs', label: 'VGS' },
-                    { key: 'universitet', label: 'Uni/høyskole' },
-                    { key: 'nettskole', label: 'Nettskole' },
-                  ].map((item) => {
-                    const active = schoolKindFilter === item.key;
-                    return (
-                      <TouchableOpacity
-                        key={item.key}
-                        style={[styles.filterChip, active && styles.filterChipActive]}
-                        onPress={() => setSchoolKindFilter(item.key)}
-                      >
-                        <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{item.label}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-
-                {schoolFilter.trim().length < 2 ? (
-                  <Text style={[styles.helpText, { marginLeft: 12, marginBottom: 8 }]}>Skriv minst 2 bokstaver for forslag.</Text>
-                ) : null}
-
-                {schoolResultsLoading ? (
-                  <Text style={[styles.helpText, { marginLeft: 12, marginBottom: 8 }]}>Laster skoler...</Text>
-                ) : null}
-
-                {!schoolResultsLoading && schoolFilter.trim().length >= 2 && (
-                  (schoolResults.length === 0 &&
-                    schoolOptions.filter((s) => s.toLowerCase().includes(schoolFilter.toLowerCase())).length === 0)
-                ) ? (
-                  <Text style={[styles.helpText, { marginLeft: 12, marginBottom: 8 }]}>Ingen treff.</Text>
-                ) : null}
-
-                {(schoolFilter.trim().length >= 2
-                  ? (schoolResults.length > 0
-                      ? schoolResults
-                      : schoolOptions
-                          .filter((s) => s.toLowerCase().includes(schoolFilter.toLowerCase()))
-                          .map((name) => ({ name, kind: 'lokal', kommune: null })))
-                  : [])
-                  .map((option) => (
-                    <TouchableOpacity
-                      key={option.name}
-                      style={styles.dropdownItem}
-                      onPress={() => {
-                        const items = [...educationEntries];
-                        items[index].school = option.name;
-                        setEducationEntries(items);
-                        setShowSchoolListIndex(-1);
-                        setSchoolFilter('');
-                      }}
-                    >
-                      <Text style={styles.dropdownItemText}>{option.name}</Text>
-                      {option.kind || option.kommune ? (
-                        <Text style={styles.dropdownItemSub}>
-                          {[option.kind, option.kommune].filter(Boolean).join(' • ')}
-                        </Text>
-                      ) : null}
-                    </TouchableOpacity>
-                  ))}
-              </View>
-            )}
-            <TextInput
-              style={styles.input}
-              value={entry.degree}
-              placeholder="Grad / studieretning"
-              onChangeText={(value) => {
-                const items = [...educationEntries];
-                items[index].degree = value;
-                setEducationEntries(items);
-              }}
-            />
-            <View style={styles.inlineRow}>
-              <TextInput
-                style={[styles.input, styles.inlineInput]}
-                value={entry.from}
-                placeholder="Fra (år/mnd)"
-                onChangeText={(value) => {
-                  const items = [...educationEntries];
-                  items[index].from = value;
-                  setEducationEntries(items);
-                }}
-              />
-              <TextInput
-                style={[styles.input, styles.inlineInput]}
-                value={entry.to}
-                placeholder="Til (år/mnd)"
-                onChangeText={(value) => {
-                  const items = [...educationEntries];
-                  items[index].to = value;
-                  setEducationEntries(items);
-                }}
-              />
-            </View>
-            <TouchableOpacity
-              style={styles.removeButton}
-              onPress={() => {
-                const items = educationEntries.filter((_, i) => i !== index);
-                setEducationEntries(items);
-              }}
-            >
-              <Text style={styles.removeButtonText}>Fjern</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-        <TouchableOpacity style={styles.smallButton} onPress={() => setEducationEntries([...educationEntries, { school: '', degree: '', from: '', to: '' }])}>
-          <Text style={styles.smallButtonText}>Legg til utdanning</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.profileField}>
-        <Text style={styles.inputLabel}>Ferdigheter</Text>
-        <TextInput style={styles.input} value={skills} onChangeText={setSkills} placeholder="Stikkord som AI bruker i søknaden" autoCapitalize="none" />
-      </View>
-      <View style={styles.profileField}>
-        <Text style={styles.inputLabel}>Språk</Text>
-        <View style={{ marginBottom: 8 }}>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-            {languagesList.map((lang, i) => (
-              <TouchableOpacity key={i} style={[styles.smallButton, { marginRight: 8, marginBottom: 8 }]} onPress={() => setLanguagesList(languagesList.filter((l) => l !== lang))}>
-                <Text style={styles.smallButtonText}>{lang} ✕</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          ))}
+          <TouchableOpacity
+            style={[styles.smallButton, styles.aerligSmallButton]}
+            onPress={() => setExperienceEntries([...experienceEntries, { title: '', company: '', from: '', to: '', current: false }])}
+          >
+            <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>Legg til erfaring</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.input} onPress={() => setShowLanguageList(!showLanguageList)}>
-          <Text style={styles.placeholderText}>Legg til språk</Text>
-        </TouchableOpacity>
-        {showLanguageList && (
-          <View style={styles.dropdownList}>
-            <TextInput
-              style={[styles.input, { margin: 8 }]}
-              placeholder="Legg til eget språk (skriv og trykk 'Legg til')"
-              value={customLanguageInput}
-              onChangeText={setCustomLanguageInput}
-              autoCapitalize="words"
-            />
-            <TouchableOpacity
-              style={[styles.smallButton, { marginHorizontal: 8, marginTop: 0, marginBottom: 8 }]}
-              onPress={() => {
-                const v = (customLanguageInput || '').trim();
-                if (!v) return;
-                if (!languagesList.includes(v)) {
-                  setLanguagesList([...languagesList, v]);
-                }
-                setCustomLanguageInput('');
-                setShowLanguageList(false);
-              }}
-            >
-              <Text style={styles.smallButtonText}>Legg til</Text>
-            </TouchableOpacity>
 
-            {languageOptions.map((lang) => (
+        <View style={styles.profileField}>
+          <Text style={[styles.inputLabel, styles.aerligLabel]}>Utdanning</Text>
+          {educationEntries.map((entry, index) => (
+            <View key={index} style={styles.aerligCard}>
               <TouchableOpacity
-                key={lang}
-                style={styles.dropdownItem}
+                style={[styles.input, styles.aerligInput]}
                 onPress={() => {
-                  if (!languagesList.includes(lang)) setLanguagesList([...languagesList, lang]);
+                  setShowSchoolListIndex(index);
+                  setSchoolFilter('');
+                  setSchoolKindFilter('all');
+                  setSchoolResults([]);
+                }}
+              >
+                <Text style={entry.school ? styles.aerligInputText : styles.aerligPlaceholderText}>
+                  {entry.school || 'Velg skole'}
+                </Text>
+              </TouchableOpacity>
+              {showSchoolListIndex === index && (
+                <View style={[styles.dropdownList, styles.aerligDropdownList]}>
+                  <TextInput
+                    style={[styles.input, styles.aerligInput, { margin: 8 }]}
+                    placeholder="Søk: videregående, universitet eller nettskole..."
+                    value={schoolFilter}
+                    onChangeText={setSchoolFilter}
+                    autoCapitalize="words"
+                  />
+
+                  <View style={[styles.filterChipRow, styles.aerligFilterChipRow]}>
+                    {[
+                      { key: 'all', label: 'Alle' },
+                      { key: 'vgs', label: 'VGS' },
+                      { key: 'universitet', label: 'Uni/høyskole' },
+                      { key: 'nettskole', label: 'Nettskole' },
+                    ].map((item) => {
+                      const active = schoolKindFilter === item.key;
+                      return (
+                        <TouchableOpacity
+                          key={item.key}
+                          style={[styles.filterChip, styles.aerligFilterChip, active && styles.aerligFilterChipActive]}
+                          onPress={() => setSchoolKindFilter(item.key)}
+                        >
+                          <Text style={[styles.filterChipText, styles.aerligFilterChipText, active && styles.aerligFilterChipTextActive]}>{item.label}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  {schoolFilter.trim().length < 2 ? (
+                    <Text style={[styles.helpText, styles.aerligHelpText, { marginLeft: 12, marginBottom: 8 }]}>Skriv minst 2 bokstaver for forslag.</Text>
+                  ) : null}
+
+                  {schoolResultsLoading ? (
+                    <Text style={[styles.helpText, styles.aerligHelpText, { marginLeft: 12, marginBottom: 8 }]}>Laster skoler...</Text>
+                  ) : null}
+
+                  {!schoolResultsLoading && schoolFilter.trim().length >= 2 && (
+                    (schoolResults.length === 0 &&
+                      schoolOptions.filter((s) => s.toLowerCase().includes(schoolFilter.toLowerCase())).length === 0)
+                  ) ? (
+                    <Text style={[styles.helpText, styles.aerligHelpText, { marginLeft: 12, marginBottom: 8 }]}>Ingen treff.</Text>
+                  ) : null}
+
+                  {(schoolFilter.trim().length >= 2
+                    ? (schoolResults.length > 0
+                        ? schoolResults
+                        : schoolOptions
+                            .filter((s) => s.toLowerCase().includes(schoolFilter.toLowerCase()))
+                            .map((name) => ({ name, kind: 'lokal', kommune: null })))
+                    : [])
+                    .map((option) => (
+                      <TouchableOpacity
+                        key={option.name}
+                        style={styles.dropdownItem}
+                        onPress={() => {
+                          const items = [...educationEntries];
+                          items[index].school = option.name;
+                          setEducationEntries(items);
+                          setShowSchoolListIndex(-1);
+                          setSchoolFilter('');
+                        }}
+                      >
+                        <Text style={[styles.dropdownItemText, styles.aerligDropdownItemText]}>{option.name}</Text>
+                        {option.kind || option.kommune ? (
+                          <Text style={[styles.dropdownItemSub, styles.aerligDropdownItemSub]}>
+                            {[option.kind, option.kommune].filter(Boolean).join(' • ')}
+                          </Text>
+                        ) : null}
+                      </TouchableOpacity>
+                    ))}
+                </View>
+              )}
+              <TextInput
+                style={[styles.input, styles.aerligInput]}
+                value={entry.degree}
+                placeholder="Grad / studieretning"
+                onChangeText={(value) => {
+                  const items = [...educationEntries];
+                  items[index].degree = value;
+                  setEducationEntries(items);
+                }}
+              />
+              <View style={styles.inlineRow}>
+                <TextInput
+                  style={[styles.input, styles.aerligInput, styles.inlineInput]}
+                  value={entry.from}
+                  placeholder="Fra (år/mnd)"
+                  onChangeText={(value) => {
+                    const items = [...educationEntries];
+                    items[index].from = value;
+                    setEducationEntries(items);
+                  }}
+                />
+                <TextInput
+                  style={[styles.input, styles.aerligInput, styles.inlineInput]}
+                  value={entry.to}
+                  placeholder="Til (år/mnd)"
+                  onChangeText={(value) => {
+                    const items = [...educationEntries];
+                    items[index].to = value;
+                    setEducationEntries(items);
+                  }}
+                />
+              </View>
+              <TouchableOpacity
+                style={[styles.removeButton, styles.aerligRemoveButton]}
+                onPress={() => {
+                  const items = educationEntries.filter((_, i) => i !== index);
+                  setEducationEntries(items);
+                }}
+              >
+                <Text style={[styles.removeButtonText, styles.aerligRemoveButtonText]}>Fjern</Text>
+              </TouchableOpacity>
+          </View>
+          ))}
+          <TouchableOpacity style={[styles.smallButton, styles.aerligSmallButton]} onPress={() => setEducationEntries([...educationEntries, { school: '', degree: '', from: '', to: '' }])}>
+            <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>Legg til utdanning</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.profileField}>
+          <Text style={[styles.inputLabel, styles.aerligLabel]}>Ferdigheter</Text>
+          <TextInput style={[styles.input, styles.aerligInput]} value={skills} onChangeText={setSkills} placeholder="Stikkord som AI bruker i søknaden" autoCapitalize="none" />
+        </View>
+
+        <View style={styles.profileField}>
+          <Text style={[styles.inputLabel, styles.aerligLabel]}>Språk</Text>
+          <View style={{ marginBottom: 8 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+              {languagesList.map((lang, i) => (
+                <TouchableOpacity key={i} style={[styles.smallButton, styles.aerligSmallButton, { marginRight: 8, marginBottom: 8 }]} onPress={() => setLanguagesList(languagesList.filter((l) => l !== lang))}>
+                  <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>{lang} ✕</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          <TouchableOpacity style={[styles.input, styles.aerligInput]} onPress={() => setShowLanguageList(!showLanguageList)}>
+            <Text style={styles.aerligPlaceholderText}>Legg til språk</Text>
+          </TouchableOpacity>
+          {showLanguageList && (
+            <View style={[styles.dropdownList, styles.aerligDropdownList]}>
+              <TextInput
+                style={[styles.input, styles.aerligInput, { margin: 8 }]}
+                placeholder="Legg til eget språk (skriv og trykk 'Legg til')"
+                value={customLanguageInput}
+                onChangeText={setCustomLanguageInput}
+                autoCapitalize="words"
+              />
+              <TouchableOpacity
+                style={[styles.smallButton, styles.aerligSmallButton, { marginHorizontal: 8, marginTop: 0, marginBottom: 8 }]}
+                onPress={() => {
+                  const v = (customLanguageInput || '').trim();
+                  if (!v) return;
+                  if (!languagesList.includes(v)) {
+                    setLanguagesList([...languagesList, v]);
+                  }
                   setCustomLanguageInput('');
                   setShowLanguageList(false);
                 }}
               >
-                <Text style={styles.dropdownItemText}>{lang}</Text>
+                <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>Legg til</Text>
               </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </View>
-      <View style={styles.profileField}>
-        <Text style={styles.inputLabel}>Hull i CV</Text>
-        <Text style={styles.helpText}>Skriv kort om pauser eller hull i arbeids- eller utdanningshistorikken.</Text>
-        <TextInput style={[styles.input, styles.textArea]} value={cvGaps} onChangeText={setCvGaps} placeholder="Hull i CV" multiline />
-      </View>
-      <View style={styles.profileField}>
-        <Text style={styles.inputLabel}>Referanser</Text>
-        <Text style={styles.helpText}>Legg inn referanser du kan oppgi ved behov (navn, relasjon og kontaktinfo).</Text>
 
-        {referenceEntries.map((ref, index) => (
-          <View key={index} style={styles.listItem}>
-            <TextInput
-              style={styles.input}
-              value={ref.name}
-              placeholder="Navn"
-              onChangeText={(value) => {
-                const items = [...referenceEntries];
-                items[index].name = value;
-                setReferenceEntries(items);
-              }}
-            />
-            <TextInput
-              style={styles.input}
-              value={ref.relation}
-              placeholder="Relasjon (f.eks. Leder i X / Kollega)"
-              onChangeText={(value) => {
-                const items = [...referenceEntries];
-                items[index].relation = value;
-                setReferenceEntries(items);
-              }}
-            />
-            <TextInput
-              style={styles.input}
-              value={ref.contact}
-              placeholder="Kontakt (telefon eller e-post)"
-              onChangeText={(value) => {
-                const items = [...referenceEntries];
-                items[index].contact = value;
-                setReferenceEntries(items);
-              }}
-              autoCapitalize="none"
-            />
-            <TouchableOpacity
-              style={styles.removeButton}
-              onPress={() => {
-                const items = referenceEntries.filter((_, i) => i !== index);
-                setReferenceEntries(items);
-              }}
-            >
-              <Text style={styles.removeButtonText}>Fjern</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
+              {languageOptions.map((lang) => (
+                <TouchableOpacity
+                  key={lang}
+                  style={styles.dropdownItem}
+                  onPress={() => {
+                    if (!languagesList.includes(lang)) setLanguagesList([...languagesList, lang]);
+                    setCustomLanguageInput('');
+                    setShowLanguageList(false);
+                  }}
+                >
+                  <Text style={[styles.dropdownItemText, styles.aerligDropdownItemText]}>{lang}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
 
-        <TouchableOpacity
-          style={styles.smallButton}
-          onPress={() => setReferenceEntries([...(referenceEntries || []), { name: '', relation: '', contact: '' }])}
-        >
-          <Text style={styles.smallButtonText}>Legg til referanse</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.profileField}>
+          <Text style={[styles.inputLabel, styles.aerligLabel]}>Hull i CV</Text>
+          <Text style={[styles.helpText, styles.aerligHelpText]}>Skriv kort om pauser eller hull i arbeids- eller utdanningshistorikken.</Text>
+          <TextInput style={[styles.input, styles.aerligInput, styles.textArea]} value={cvGaps} onChangeText={setCvGaps} placeholder="Hull i CV" multiline />
+        </View>
 
-      <View style={styles.profileField}>
-        <Text style={styles.inputLabel}>Anonym statistikk</Text>
-        <Text style={styles.helpText}>Hjelper oss å se om appen faktisk øker sjansen for intervju og jobb. Vi bruker kun status (søkt/intervju/fikk jobb), ikke navn eller kontaktinfo.</Text>
-        <TouchableOpacity
-          style={{ marginBottom: 10 }}
-          onPress={async () => {
-            try {
-              await Linking.openURL(PRIVACY_URL);
-            } catch (e) {
-              Alert.alert('Lenke', PRIVACY_URL);
-            }
-          }}
-        >
-          <Text style={{ color: THEME.colors.primary, fontWeight: '700' }}>{t('privacyLink')}</Text>
-        </TouchableOpacity>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={styles.messageText}>{consentAnalytics ? 'På' : 'Av'}</Text>
-          <Switch
-            value={consentAnalytics}
-            onValueChange={async (v) => {
-              setConsentAnalytics(v);
+        <View style={styles.profileField}>
+          <Text style={[styles.inputLabel, styles.aerligLabel]}>Referanser</Text>
+          <Text style={[styles.helpText, styles.aerligHelpText]}>Legg inn referanser du kan oppgi ved behov (navn, relasjon og kontaktinfo).</Text>
+
+          {referenceEntries.map((ref, index) => (
+            <View key={index} style={styles.aerligCard}>
+              <TextInput
+                style={[styles.input, styles.aerligInput]}
+                value={ref.name}
+                placeholder="Navn"
+                onChangeText={(value) => {
+                  const items = [...referenceEntries];
+                  items[index].name = value;
+                  setReferenceEntries(items);
+                }}
+              />
+              <TextInput
+                style={[styles.input, styles.aerligInput]}
+                value={ref.relation}
+                placeholder="Relasjon (f.eks. Leder i X / Kollega)"
+                onChangeText={(value) => {
+                  const items = [...referenceEntries];
+                  items[index].relation = value;
+                  setReferenceEntries(items);
+                }}
+              />
+              <TextInput
+                style={[styles.input, styles.aerligInput]}
+                value={ref.contact}
+                placeholder="Kontakt (telefon eller e-post)"
+                onChangeText={(value) => {
+                  const items = [...referenceEntries];
+                  items[index].contact = value;
+                  setReferenceEntries(items);
+                }}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={[styles.removeButton, styles.aerligRemoveButton]}
+                onPress={() => {
+                  const items = referenceEntries.filter((_, i) => i !== index);
+                  setReferenceEntries(items);
+                }}
+              >
+                <Text style={[styles.removeButtonText, styles.aerligRemoveButtonText]}>Fjern</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+
+          <TouchableOpacity
+            style={[styles.smallButton, styles.aerligSmallButton]}
+            onPress={() => setReferenceEntries([...(referenceEntries || []), { name: '', relation: '', contact: '' }])}
+          >
+            <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>Legg til referanse</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.profileField}>
+          <Text style={[styles.inputLabel, styles.aerligLabel]}>Anonym statistikk</Text>
+          <Text style={[styles.helpText, styles.aerligHelpText]}>Hjelper oss å se om appen faktisk øker sjansen for intervju og jobb. Vi bruker kun status (søkt/intervju/fikk jobb), ikke navn eller kontaktinfo.</Text>
+          <TouchableOpacity
+            style={{ marginBottom: 10 }}
+            onPress={async () => {
               try {
-                await AsyncStorage.setItem('analyticsConsentPrompted', 'yes');
+                await Linking.openURL(PRIVACY_URL);
               } catch (e) {
-                // ignore
-              }
-              if (profileId) {
-                saveProfile({ silent: true, override: { consent_analytics: v } });
+                Alert.alert('Lenke', PRIVACY_URL);
               }
             }}
-          />
+          >
+            <Text style={styles.aerligLinkText}>{t('privacyLink')}</Text>
+          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={[styles.messageText, styles.aerligMessageText]}>{consentAnalytics ? 'På' : 'Av'}</Text>
+            <Switch
+              value={consentAnalytics}
+              onValueChange={async (v) => {
+                setConsentAnalytics(v);
+                try {
+                  await AsyncStorage.setItem('analyticsConsentPrompted', 'yes');
+                } catch (e) {
+                  // ignore
+                }
+                if (profileId) {
+                  saveProfile({ silent: true, override: { consent_analytics: v } });
+                }
+              }}
+            />
+          </View>
         </View>
+
+        <TouchableOpacity style={styles.aerligSecondaryButton} onPress={() => setActiveTab('documents')}> 
+          <Text style={styles.aerligSecondaryButtonText}>Dokumenter</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.aerligSecondaryButton} onPress={() => setActiveTab('settings')}> 
+          <Text style={styles.aerligSecondaryButtonText}>E-postinnstillinger</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.aerligPrimaryButton} onPress={saveProfile}>
+          <Text style={styles.aerligPrimaryButtonText}>{savingProfile ? 'Lagrer...' : 'Lagre profil'}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.aerligDangerButton}
+          onPress={deleteAccount}
+        >
+          <Text style={styles.aerligDangerButtonText}>Slett konto og data</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.aerligDangerButton}
+          onPress={logout}
+        >
+          <Text style={styles.aerligDangerButtonText}>Logg ut</Text>
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity style={styles.secondaryButton} onPress={() => setActiveTab('documents')}> 
-        <Text style={styles.secondaryButtonText}>Dokumenter</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.secondaryButton} onPress={() => setActiveTab('settings')}> 
-        <Text style={styles.secondaryButtonText}>E-postinnstillinger</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.primaryButton} onPress={saveProfile}>
-        <Text style={styles.primaryButtonText}>{savingProfile ? 'Lagrer...' : 'Lagre profil'}</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.secondaryButton, { borderColor: THEME.colors.danger }]}
-        onPress={deleteAccount}
-      >
-        <Text style={[styles.secondaryButtonText, { color: THEME.colors.danger }]}>Slett konto og data</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.secondaryButton, { borderColor: THEME.colors.danger }]}
-        onPress={logout}
-      >
-        <Text style={[styles.secondaryButtonText, { color: THEME.colors.danger }]}>Logg ut</Text>
-      </TouchableOpacity>
     </View>
   );
 
@@ -4055,5 +4068,142 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     color: 'rgba(26, 26, 46, 0.76)',
+  },
+
+  // Profile (Ærlig. styling)
+  aerligPageCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(26, 26, 46, 0.12)',
+    marginBottom: 14,
+  },
+  aerligPageTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#1A1A2E',
+    marginBottom: 6,
+  },
+  aerligPageSubtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: 'rgba(26, 26, 46, 0.72)',
+    marginBottom: 14,
+  },
+  aerligLabel: {
+    color: 'rgba(26, 26, 46, 0.66)',
+    fontWeight: '900',
+  },
+  aerligHelpText: {
+    color: 'rgba(26, 26, 46, 0.70)',
+  },
+  aerligMessageText: {
+    color: 'rgba(26, 26, 46, 0.76)',
+    fontWeight: '800',
+  },
+  aerligInput: {
+    backgroundColor: '#FFFFFF',
+    borderColor: 'rgba(26, 26, 46, 0.16)',
+    borderRadius: 16,
+    color: '#1A1A2E',
+  },
+  aerligInputText: {
+    color: '#1A1A2E',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  aerligPlaceholderText: {
+    color: 'rgba(26, 26, 46, 0.50)',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  aerligSmallButton: {
+    backgroundColor: '#FFFFFF',
+    borderColor: 'rgba(26, 26, 46, 0.16)',
+    borderRadius: 16,
+    marginBottom: 12,
+  },
+  aerligSmallButtonText: {
+    color: '#1A1A2E',
+    fontWeight: '900',
+  },
+  aerligRemoveButton: {
+    borderRadius: 16,
+  },
+  aerligRemoveButtonText: {
+    fontWeight: '900',
+  },
+  aerligDropdownList: {
+    backgroundColor: '#FFFFFF',
+    borderColor: 'rgba(26, 26, 46, 0.12)',
+    borderRadius: 18,
+  },
+  aerligDropdownItemText: {
+    color: '#1A1A2E',
+    fontWeight: '800',
+  },
+  aerligDropdownItemSub: {
+    color: 'rgba(26, 26, 46, 0.60)',
+  },
+  aerligFilterChipRow: {
+    paddingHorizontal: 0,
+  },
+  aerligFilterChip: {
+    backgroundColor: '#FFFFFF',
+    borderColor: 'rgba(26, 26, 46, 0.16)',
+  },
+  aerligFilterChipActive: {
+    backgroundColor: '#1A1A2E',
+    borderColor: '#1A1A2E',
+  },
+  aerligFilterChipText: {
+    color: '#1A1A2E',
+    fontWeight: '900',
+  },
+  aerligFilterChipTextActive: {
+    color: '#FFFFFF',
+  },
+  aerligCheckbox: {
+    borderColor: 'rgba(26, 26, 46, 0.20)',
+    backgroundColor: '#FFFFFF',
+  },
+  aerligCheckboxOn: {
+    backgroundColor: '#1A1A2E',
+    borderColor: '#1A1A2E',
+  },
+  aerligCheckboxText: {
+    color: '#1A1A2E',
+  },
+  aerligCheckboxTextOn: {
+    color: '#FFFFFF',
+  },
+  aerligInlineNote: {
+    marginLeft: 10,
+    color: 'rgba(26, 26, 46, 0.70)',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  aerligLinkText: {
+    color: '#E8622A',
+    fontWeight: '900',
+  },
+  aerligDangerButton: {
+    marginTop: 12,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    minHeight: 50,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.55)',
+  },
+  aerligDangerButtonText: {
+    color: THEME.colors.danger,
+    fontSize: 15,
+    fontWeight: '900',
+    letterSpacing: 0.2,
   },
 });
