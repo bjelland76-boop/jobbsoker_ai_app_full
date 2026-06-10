@@ -1,0 +1,178 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.app { display: flex; height: 100vh; min-height: 680px; background: #F5F4F1; font-family: var(--font-sans); }
+
+.sidebar { width: 200px; min-width: 200px; background: #1A1A2E; display: flex; flex-direction: column; padding: 28px 16px; }
+.logo { color: #fff; font-size: 17px; font-weight: 500; letter-spacing: -0.3px; margin-bottom: 40px; padding-left: 8px; }
+.logo span { color: #E8622A; }
+
+.nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--border-radius-md); cursor: pointer; font-size: 13px; color: rgba(255,255,255,0.45); transition: all 0.15s; }
+.nav-item:hover { color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.06); }
+.nav-item.active { color: #fff; background: rgba(255,255,255,0.1); }
+.nav-item i { font-size: 16px; }
+
+.sidebar-bottom { border-top: 0.5px solid rgba(255,255,255,0.1); padding-top: 16px; }
+.user-row { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: var(--border-radius-md); cursor: pointer; }
+.user-row:hover { background: rgba(255,255,255,0.06); }
+.av { width: 30px; height: 30px; border-radius: 50%; background: #E8622A; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; color: #fff; flex-shrink: 0; }
+.user-name { font-size: 12.5px; color: rgba(255,255,255,0.7); }
+
+.main { flex: 1; overflow-y: auto; }
+.topbar { padding: 24px 32px 0; display: flex; align-items: center; justify-content: space-between; }
+.page-title { font-size: 20px; font-weight: 500; color: #1A1A2E; }
+.new-btn { background: #E8622A; color: #fff; border: none; border-radius: var(--border-radius-md); padding: 9px 18px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: var(--font-sans); display: flex; align-items: center; gap: 6px; }
+
+.content { padding: 24px 32px 32px; }
+
+.featured { background: #1A1A2E; border-radius: var(--border-radius-lg); padding: 24px 28px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+.featured:hover .feat-arrow { transform: translateX(3px); }
+.feat-label { font-size: 11px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+.feat-title { font-size: 17px; font-weight: 500; color: #fff; margin-bottom: 4px; }
+.feat-sub { font-size: 13px; color: rgba(255,255,255,0.5); }
+.feat-score { text-align: right; }
+.feat-num { font-size: 40px; font-weight: 500; color: #3A7D44; line-height: 1; }
+.feat-pct { font-size: 13px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+.feat-arrow { font-size: 20px; color: rgba(255,255,255,0.3); transition: transform 0.15s; margin-left: 20px; }
+
+.meter-row { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.meter-track { flex: 1; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
+.meter-fill { height: 100%; border-radius: 2px; background: #3A7D44; }
+.meter-ends { display: flex; justify-content: space-between; font-size: 10px; color: rgba(255,255,255,0.25); margin-top: 4px; }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+.card { background: #fff; border-radius: var(--border-radius-lg); padding: 20px 22px; border: 0.5px solid var(--color-border-tertiary); cursor: pointer; transition: border-color 0.15s; }
+.card:hover { border-color: var(--color-border-secondary); }
+.card-label { font-size: 11px; color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
+.card-main { font-size: 22px; font-weight: 500; color: #1A1A2E; line-height: 1; margin-bottom: 4px; }
+.card-sub { font-size: 12px; color: var(--color-text-tertiary); }
+.card-icon { float: right; font-size: 20px; color: var(--color-border-secondary); margin-top: -2px; }
+
+.jobs-panel { background: #fff; border-radius: var(--border-radius-lg); border: 0.5px solid var(--color-border-tertiary); overflow: hidden; }
+.jobs-header { padding: 16px 22px; display: flex; justify-content: space-between; align-items: center; border-bottom: 0.5px solid var(--color-border-tertiary); }
+.jobs-title { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
+.jobs-link { font-size: 12px; color: #E8622A; background: none; border: none; cursor: pointer; font-family: var(--font-sans); }
+
+.job-row { display: flex; align-items: center; padding: 14px 22px; border-bottom: 0.5px solid var(--color-border-tertiary); cursor: pointer; transition: background 0.12s; gap: 14px; }
+.job-row:last-child { border-bottom: none; }
+.job-row:hover { background: #FAFAF8; }
+.job-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-green { background: #3A7D44; }
+.dot-yellow { background: #C98E00; }
+.dot-red { background: #C0392B; }
+.job-info { flex: 1; }
+.job-name { font-size: 13.5px; color: #1A1A2E; font-weight: 500; }
+.job-co { font-size: 12px; color: var(--color-text-tertiary); margin-top: 1px; }
+.job-pct { font-size: 13px; font-weight: 500; color: var(--color-text-secondary); }
+.job-chevron { font-size: 14px; color: var(--color-border-secondary); }
+</style>
+
+<h2 class="sr-only">Ærlig jobbcoach – minimalistisk dashbord</h2>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="logo">Ærlig<span>.</span></div>
+    <nav class="nav">
+      <div class="nav-item active"><i class="ti ti-layout-dashboard" aria-hidden="true"></i> Oversikt</div>
+      <div class="nav-item"><i class="ti ti-search" aria-hidden="true"></i> Analyser jobb</div>
+      <div class="nav-item"><i class="ti ti-user" aria-hidden="true"></i> Min profil</div>
+      <div class="nav-item"><i class="ti ti-messages" aria-hidden="true"></i> Intervjuøving</div>
+      <div class="nav-item"><i class="ti ti-file-text" aria-hidden="true"></i> Søknad & CV</div>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="user-row">
+        <div class="av">FK</div>
+        <div class="user-name">Frank K.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="page-title">Oversikt</div>
+      <button class="new-btn" onclick="sendPrompt('Analyser en ny stillingsannonse for meg')">
+        <i class="ti ti-plus" aria-hidden="true"></i> Analyser jobb ↗
+      </button>
+    </div>
+
+    <div class="content">
+
+      <div class="featured">
+        <div style="flex:1">
+          <div class="feat-label">Siste analyse</div>
+          <div class="feat-title">Systemutvikler – Bouvet ASA</div>
+          <div class="feat-sub">Kristiansand · Analysert i dag</div>
+          <div class="meter-row">
+            <div class="meter-track"><div class="meter-fill" style="width:84%"></div></div>
+          </div>
+          <div class="meter-ends"><span>Lett match</span><span>Stor strekk</span></div>
+        </div>
+        <div class="feat-score">
+          <div class="feat-num">84</div>
+          <div class="feat-pct">% match</div>
+        </div>
+        <i class="ti ti-arrow-right feat-arrow" aria-hidden="true"></i>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <i class="ti ti-chart-bar card-icon" aria-hidden="true"></i>
+          <div class="card-label">Analyserte jobber</div>
+          <div class="card-main">12</div>
+          <div class="card-sub">Siste 30 dager</div>
+        </div>
+        <div class="card">
+          <i class="ti ti-send card-icon" aria-hidden="true"></i>
+          <div class="card-label">Sendte søknader</div>
+          <div class="card-main">3</div>
+          <div class="card-sub">2 venter på svar</div>
+        </div>
+      </div>
+
+      <div class="jobs-panel">
+        <div class="jobs-header">
+          <span class="jobs-title">Tidligere analyser</span>
+          <button class="jobs-link">Se alle</button>
+        </div>
+        <div class="job-row">
+          <div class="job-dot dot-green"></div>
+          <div class="job-info">
+            <div class="job-name">Systemutvikler</div>
+            <div class="job-co">Bouvet ASA · Kristiansand</div>
+          </div>
+          <div class="job-pct">84%</div>
+          <i class="ti ti-chevron-right job-chevron" aria-hidden="true"></i>
+        </div>
+        <div class="job-row">
+          <div class="job-dot dot-yellow"></div>
+          <div class="job-info">
+            <div class="job-name">Prosjektleder IT</div>
+            <div class="job-co">Agder Energi · Kristiansand</div>
+          </div>
+          <div class="job-pct">61%</div>
+          <i class="ti ti-chevron-right job-chevron" aria-hidden="true"></i>
+        </div>
+        <div class="job-row">
+          <div class="job-dot dot-yellow"></div>
+          <div class="job-info">
+            <div class="job-name">Frontend-utvikler</div>
+            <div class="job-co">Atea Norge · Oslo</div>
+          </div>
+          <div class="job-pct">58%</div>
+          <i class="ti ti-chevron-right job-chevron" aria-hidden="true"></i>
+        </div>
+        <div class="job-row">
+          <div class="job-dot dot-red"></div>
+          <div class="job-info">
+            <div class="job-name">Salgssjef</div>
+            <div class="job-co">Nordic Semiconductor · Oslo</div>
+          </div>
+          <div class="job-pct">34%</div>
+          <i class="ti ti-chevron-right job-chevron" aria-hidden="true"></i>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
