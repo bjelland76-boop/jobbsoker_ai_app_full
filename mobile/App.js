@@ -20,6 +20,8 @@ import {
 } from 'react-native';
 
 import { THEME } from './styles/theme';
+import { I18N } from './i18n/no';
+import { INTERVIEW_QUESTIONS, CAREER_TIPS } from './constants/content';
 
 function guessDevHost() {
   // In Expo/React Native dev, this usually contains something like:
@@ -157,158 +159,9 @@ async function apiFetch(path, options) {
 // TODO: Må være publisert og korrekt før Google Play intern testing.
 const PRIVACY_URL = 'https://frankbjelland.no/personvern-aerlig-jobbcoach';
 
-const I18N = {
-  no: {
-    appName: 'Ærlig JobbCoach',
-    hi: 'Hei',
-    loading: 'Laster...',
-
-    // Auth
-    loginTitle: 'Logg inn',
-    registerTitle: 'Lag konto',
-    authSubtitle: 'Demo-innlogging med e-post og passord.',
-    appLanguage: 'Språk i appen',
-    norwegian: 'Norsk',
-    english: 'Engelsk',
-    name: 'Navn',
-    email: 'E-post',
-    password: 'Passord (minst 6 tegn)',
-    working: 'Jobber...',
-    createAccount: 'Opprett konto',
-    noAccount: 'Ingen konto? Lag ny',
-    haveAccount: 'Har du konto? Logg inn',
-
-    // Tabs
-    tabHome: 'Hjem',
-    tabAnalyze: 'Analyser',
-    tabApplications: 'Søknader',
-    tabProfile: 'Profil',
-
-    // Home
-    quickActions: 'Hurtigvalg',
-    welcomeQuestion: 'Klar for neste karrieresteg?',
-    welcomeBody: 'Få hjelp med CV, stillingsanalyse, søknader og intervjuforberedelser — samlet på ett sted.',
-    interviewPractice: 'Intervju-øving',
-    interviewPracticeSubtitle: 'Øv på vanlige intervjuspørsmål.',
-
-    // GDPR
-    privacyLink: 'GDPR / personvern',
-    privacyRead: 'Les GDPR/personvern',
-
-    // Interview
-    interviewTitle: 'Intervju-øving',
-    interviewSubtitle: 'Øv på vanlige intervjuspørsmål. Skriv stikkord og øv høyt.',
-    yourNotes: 'Dine stikkord/svar',
-    next: 'Neste',
-    previous: 'Forrige',
-  },
-  en: {
-    appName: 'Honest JobCoach',
-    hi: 'Hi',
-    loading: 'Loading...',
-
-    // Auth
-    loginTitle: 'Log in',
-    registerTitle: 'Create account',
-    authSubtitle: 'Demo login with email and password.',
-    appLanguage: 'App language',
-    norwegian: 'Norwegian',
-    english: 'English',
-    name: 'Name',
-    email: 'Email',
-    password: 'Password (min 6 chars)',
-    working: 'Working...',
-    createAccount: 'Create account',
-    noAccount: "Don't have an account? Sign up",
-    haveAccount: 'Already have an account? Log in',
-
-    // Tabs
-    tabHome: 'Home',
-    tabAnalyze: 'Analyze',
-    tabApplications: 'Applications',
-    tabProfile: 'Profile',
-
-    // Home
-    quickActions: 'Quick actions',
-    welcomeQuestion: 'Ready for your next career step?',
-    welcomeBody: 'Get help with your CV, job analysis, applications, and interview prep — all in one place.',
-    interviewPractice: 'Interview practice',
-    interviewPracticeSubtitle: 'Practice common interview questions.',
-
-    // GDPR
-    privacyLink: 'GDPR / privacy',
-    privacyRead: 'Read GDPR/privacy',
-
-    // Interview
-    interviewTitle: 'Interview practice',
-    interviewSubtitle: 'Practice common interview questions. Write bullet points and practice out loud.',
-    yourNotes: 'Your notes/answer',
-    next: 'Next',
-    previous: 'Previous',
-  },
-};
-
-const INTERVIEW_QUESTIONS = {
-  no: [
-    'Fortell litt om deg selv.',
-    'Hvorfor søker du denne jobben?',
-    'Hva er dine største styrker?',
-    'Hva vil du si er dine utviklingsområder?',
-    'Fortell om en gang du løste et vanskelig problem.',
-    'Hvordan håndterer du stress og høyt tempo?',
-    'Hvordan liker du å jobbe i team?',
-    'Hva motiverer deg i hverdagen?',
-    'Hvor ser du deg selv om 2–3 år?',
-    'Har du noen spørsmål til oss?',
-  ],
-  en: [
-    'Tell me about yourself.',
-    'Why do you want this job?',
-    'What are your biggest strengths?',
-    'What would you like to improve?',
-    'Tell me about a time you solved a difficult problem.',
-    'How do you handle stress and high workload?',
-    'How do you like working in a team?',
-    'What motivates you day to day?',
-    'Where do you see yourself in 2–3 years?',
-    'Do you have any questions for us?',
-  ],
-};
-
 // Career tips shown on the Home screen.
 // We keep them locally and rotate them every few hours.
 const TIP_REFRESH_MS = 2 * 60 * 60 * 1000; // 2 hours
-
-const CAREER_TIPS = {
-  no: [
-    'Skriv søknaden for arbeidsgiveren, ikke for deg selv. Vis hva du kan bidra med.',
-    'Bruk tall når du kan: «behandlet 40–60 henvendelser per dag» slår «jobbet i kundeservice».',
-    'Start CV-punkter med verb: «Planla», «koordinerte», «leverte», «forbedret».',
-    'Skreddersy overskriften i CV-en til rollen du søker, ikke bare «CV».',
-    'Bytt ut generelle ord («ansvarsfull») med konkrete eksempler og resultater.',
-    'Hold deg til 3–6 punkt per jobb: velg det som er mest relevant for stillingen.',
-    'Legg inn søkeord fra annonsen i CV-en (på en naturlig måte).',
-    'Skriv kort om «hull i CV» før arbeidsgiver spør – 1–2 linjer er nok.',
-    'Har du lite erfaring? Fremhev ansvar i skole/prosjekt/frivillig arbeid og overførbare ferdigheter.',
-    'Kutt fyllord. Kortere setninger gjør teksten mer profesjonell.',
-    'Sørg for at e-post og telefon er synlig og riktig (test å ringe deg selv).',
-    'Be en venn lese søknaden: én runde med korrektur løfter helhetsinntrykket mye.',
-  ],
-  en: [
-    'Write for the employer, not for yourself. Show what you can contribute.',
-    'Use numbers when possible: “handled 40–60 requests/day” beats “customer service experience”.',
-    'Start CV bullets with action verbs: “Built”, “Improved”, “Delivered”, “Coordinated”.',
-    'Tailor your CV headline to the role you apply for, not just “Resume”.',
-    'Replace generic words (“hard-working”) with concrete examples and outcomes.',
-    'Keep 3–6 bullets per job and focus on what’s most relevant to the position.',
-    'Add keywords from the job ad to your CV (naturally).',
-    'Explain employment gaps briefly before you’re asked — 1–2 lines is enough.',
-    'New to the field? Highlight transferable skills from school/projects/volunteering.',
-    'Cut filler words. Shorter sentences read more professional.',
-    'Make sure your email and phone are correct and easy to find.',
-    'Ask someone to proofread — one quick review improves the overall impression a lot.',
-  ],
-};
 
 export default function App() {
   function errText(e) {
