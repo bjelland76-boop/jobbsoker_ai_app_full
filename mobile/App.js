@@ -1623,6 +1623,13 @@ export default function App() {
 
   const renderCv = () => (
     <View style={styles.pageCard}>
+      <Pressable
+        android_ripple={{ color: 'rgba(26, 26, 46, 0.10)' }}
+        style={styles.aerligBackButton}
+        onPress={() => setActiveTab('home')}
+      >
+        <Text style={styles.aerligBackButtonText}>← Tilbake</Text>
+      </Pressable>
       <Text style={styles.pageTitle}>Analyser CV / profil</Text>
       <Text style={styles.pageSubtitle}>Få forslag til relevante jobber og råd basert på utdanning og erfaring.</Text>
 
@@ -1708,6 +1715,13 @@ export default function App() {
 
     return (
       <View style={styles.aerligHomeWrap}>
+        <Pressable
+          android_ripple={{ color: 'rgba(26, 26, 46, 0.10)' }}
+          style={styles.aerligBackButton}
+          onPress={() => setActiveTab('home')}
+        >
+          <Text style={styles.aerligBackButtonText}>← Tilbake</Text>
+        </Pressable>
         <View style={styles.aerligPageCard}>
           <Text style={styles.aerligPageTitle}>Analyser jobbannonse</Text>
           <Text style={styles.aerligPageSubtitle}>Lim inn en jobbannonse for rask match og forbedringstips.</Text>
@@ -1990,6 +2004,13 @@ export default function App() {
 
   const renderNew = () => (
     <View style={styles.aerligHomeWrap}>
+      <Pressable
+        android_ripple={{ color: 'rgba(26, 26, 46, 0.10)' }}
+        style={styles.aerligBackButton}
+        onPress={() => setActiveTab('home')}
+      >
+        <Text style={styles.aerligBackButtonText}>← Tilbake</Text>
+      </Pressable>
       <View style={styles.aerligPageCard}>
         <Text style={styles.aerligPageTitle}>Ny søknad</Text>
         <Text style={styles.aerligPageSubtitle}>Start ny jobbprosjekt med en annonse-URL.</Text>
@@ -2044,6 +2065,13 @@ export default function App() {
 
     return (
       <View style={styles.pageCard}>
+        <Pressable
+          android_ripple={{ color: 'rgba(26, 26, 46, 0.10)' }}
+          style={styles.aerligBackButton}
+          onPress={() => setActiveTab('home')}
+        >
+          <Text style={styles.aerligBackButtonText}>← Tilbake</Text>
+        </Pressable>
         <Text style={styles.pageTitle}>Søknader</Text>
         <Text style={styles.pageSubtitle}>Én linje per jobb. Huk av status etter hvert.</Text>
 
@@ -2120,6 +2148,13 @@ export default function App() {
 
   const renderDocuments = () => (
     <View style={styles.pageCard}>
+      <Pressable
+        android_ripple={{ color: 'rgba(26, 26, 46, 0.10)' }}
+        style={styles.aerligBackButton}
+        onPress={() => setActiveTab('home')}
+      >
+        <Text style={styles.aerligBackButtonText}>← Tilbake</Text>
+      </Pressable>
       <Text style={styles.pageTitle}>Dokumenter</Text>
       <Text style={styles.pageSubtitle}>Her finner du genererte PDF-er (søknad + CV i samme fil).</Text>
 
@@ -2192,6 +2227,13 @@ export default function App() {
 
   const renderSettings = () => (
     <View style={styles.pageCard}>
+      <Pressable
+        android_ripple={{ color: 'rgba(26, 26, 46, 0.10)' }}
+        style={styles.aerligBackButton}
+        onPress={() => setActiveTab('home')}
+      >
+        <Text style={styles.aerligBackButtonText}>← Tilbake</Text>
+      </Pressable>
       <Text style={styles.pageTitle}>E-postinnstillinger</Text>
       <Text style={styles.pageSubtitle}>Brukes når du sender søknad/CV på e-post fra en analyse.</Text>
 
@@ -2238,6 +2280,13 @@ export default function App() {
 
     return (
       <View style={styles.aerligHomeWrap}>
+        <Pressable
+          android_ripple={{ color: 'rgba(26, 26, 46, 0.10)' }}
+          style={styles.aerligBackButton}
+          onPress={() => setActiveTab('home')}
+        >
+          <Text style={styles.aerligBackButtonText}>← Tilbake</Text>
+        </Pressable>
         <View style={styles.aerligPageCard}>
           <Text style={styles.aerligPageTitle}>{t('interviewTitle')}</Text>
           <Text style={styles.aerligPageSubtitle}>{t('interviewSubtitle')}</Text>
@@ -2881,17 +2930,6 @@ export default function App() {
         <TouchableOpacity style={styles.bottomButton} onPress={() => setActiveTab('home')}>
           <Text style={[styles.bottomIcon, activeTab === 'home' && styles.bottomIconActive]}>🏠</Text>
           <Text style={[styles.bottomLabel, activeTab === 'home' && styles.bottomLabelActive]}>{t('tabHome')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.bottomButton} onPress={() => setActiveTab('analysis')}>
-          <Text style={[styles.bottomIcon, activeTab === 'analysis' && styles.bottomIconActive]}>🔍</Text>
-          <Text style={[styles.bottomLabel, activeTab === 'analysis' && styles.bottomLabelActive]}>{t('tabAnalyze')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.fabButton} onPress={() => setActiveTab('new')}>
-          <Text style={styles.fabIcon}>＋</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.bottomButton} onPress={() => setActiveTab('applications')}>
-          <Text style={[styles.bottomIcon, activeTab === 'applications' && styles.bottomIconActive]}>📬</Text>
-          <Text style={[styles.bottomLabel, activeTab === 'applications' && styles.bottomLabelActive]}>{t('tabApplications')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.bottomButton} onPress={() => setActiveTab('profile')}>
           <Text style={[styles.bottomIcon, activeTab === 'profile' && styles.bottomIconActive]}>👤</Text>
@@ -4387,5 +4425,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 12,
+  },
+
+  // Back button (simple navigation cleanup)
+  aerligBackButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(26, 26, 46, 0.16)',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  aerligBackButtonText: {
+    color: '#1A1A2E',
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 0.2,
   },
 });
