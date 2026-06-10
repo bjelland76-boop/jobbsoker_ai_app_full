@@ -1397,168 +1397,205 @@ export default function App() {
 
   const renderHome = () => {
     const ripple = Platform.OS === 'android'
-      ? { android_ripple: { color: 'rgba(139, 92, 246, 0.18)' } }
+      ? { android_ripple: { color: 'rgba(26, 26, 46, 0.10)' } }
       : {};
 
     const firstName = (name || '').trim().split(' ')[0] || '';
 
-    const mascotBob = mascotAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, -4],
-    });
+    const latestFromHistory = (Array.isArray(jobAnalyses) && jobAnalyses.length > 0)
+      ? jobAnalyses[0]
+      : null;
 
-    const mascotHeadTilt = mascotAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: ['-2deg', '2deg'],
-    });
+    const latestJob = latestFromHistory?.job || analysis?.job || null;
+    const latestJobId = latestJob?.id || latestFromHistory?.job?.id || null;
+    const latestUrl = latestJob?.url || latestFromHistory?.job?.url || null;
 
-    const mascotArmRotate = mascotAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: ['-28deg', '34deg'],
-    });
+    const rawMatch = latestFromHistory?.match_score ?? latestJob?.match_score ?? analysis?.match_score;
+    const latestMatch = (typeof rawMatch === 'number' && !Number.isNaN(rawMatch))
+      ? Math.max(0, Math.min(100, Math.round(rawMatch)))
+      : null;
 
-    const mascotBlink = mascotAnim.interpolate({
-      inputRange: [0, 0.44, 0.5, 0.56, 1],
-      outputRange: [1, 1, 0.12, 1, 1],
-    });
+    const latestShouldApply = (typeof latestFromHistory?.should_apply === 'boolean')
+      ? latestFromHistory.should_apply
+      : (typeof analysis?.should_apply === 'boolean' ? analysis.should_apply : null);
 
-    const mascotShadowScale = mascotAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [1, 0.86],
-    });
+    const honestText = latestFromHistory?.honest_assessment || analysis?.honest_assessment || '';
 
-    const mascotShadowOpacity = mascotAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0.28, 0.16],
-    });
+    const hasAnyAnalysis = !!latestFromHistory || (!!analysis && (analysis.match_score != null || analysis.honest_assessment));
+
+    const analysedJobsCount = Array.isArray(jobAnalyses) ? jobAnalyses.length : 0;
+
+    const sentApplicationsCount = (statsMe && typeof statsMe.applied === 'number')
+      ? statsMe.applied
+      : (Array.isArray(applications) && applications.length > 0)
+        ? applications.filter((it) => !!it?.applied).length
+        : null;
+
+    const profileSignals = [
+      !!profileId,
+      !!(name && String(name).trim()),
+      !!(profileEmail && String(profileEmail).trim()),
+      !!(phone && String(phone).trim()),
+      ((skills || '').trim().length > 0),
+      (Array.isArray(experienceEntries) && experienceEntries.some((e) => (((e?.title || '').trim()) || ((e?.company || '').trim())))),
+    ];
+
+    const profilePercent = profileId
+      ? Math.round((profileSignals.filter(Boolean).length / profileSignals.length) * 100)
+      : 0;
+
+    const profileStatus = !profileId
+      ? 'Ikke lagret'
+      : (profilePercent >= 85 ? 'Sterk' : (profilePercent >= 60 ? 'OK' : 'Trenger mer'));
+
+    const matchMeterStyle = (latestMatch != null && latestMatch >= 70)
+      ? styles.aerligMeterGood
+      : styles.aerligMeterWarn;
 
     return (
-      <>
-        <View style={styles.homeTopBar}>
-          <View style={styles.homeTopBarLeft}>
-            <View style={styles.homeBrandRow}>
-              <Text style={styles.homeBrandName}>{t('appName')}</Text>
-              {(jobAnalyses.length > 0) ? (
-                <View style={styles.notificationBadge}>
-                  <Text style={styles.notificationCount}>{jobAnalyses.length}</Text>
-                </View>
-              ) : null}
-            </View>
-            <Text style={styles.homeGreeting}>{t('hi')}, {firstName}.</Text>
-            <Text style={styles.homeTagline}>{t('welcomeQuestion')}</Text>
-            <Text style={styles.homeSub}>{t('welcomeBody')}</Text>
+      <View style={styles.aerligHomeWrap}>
+        <View style={styles.aerligHeroCard}>
+          <View style={styles.aerligHeroHeader}>
+            <Text style={styles.aerligLogo}>Ærlig.</Text>
+            {analysedJobsCount > 0 ? (
+              <View style={styles.aerligBadge}>
+                <Text style={styles.aerligBadgeText}>{analysedJobsCount}</Text>
+              </View>
+            ) : null}
           </View>
+
+          <Text style={styles.aerligHeroGreeting}>
+            {t('hi')}{firstName ? `, ${firstName}` : ''}.
+          </Text>
+          <Text style={styles.aerligHeroSubtitle}>
+            Oversikt over analyser og søknader — med ærlige råd.
+          </Text>
+
+          <TouchableOpacity style={styles.aerligPrimaryButton} onPress={() => setActiveTab('new')}>
+            <Text style={styles.aerligPrimaryButtonText}>Analyser jobb</Text>
+          </TouchableOpacity>
+
+          <View style={styles.aerligQuickRow}>
+            <Pressable
+              {...ripple}
+              style={[styles.aerligQuickButton, { marginRight: 10 }]}
+              onPress={() => setActiveTab('cv')}
+            >
+              <Text style={styles.aerligQuickButtonText}>Analyser CV</Text>
+            </Pressable>
+            <Pressable
+              {...ripple}
+              style={styles.aerligQuickButton}
+              onPress={() => setActiveTab('interview')}
+            >
+              <Text style={styles.aerligQuickButtonText}>Intervju-øving</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {hasAnyAnalysis ? (
+          <Pressable
+            {...ripple}
+            style={styles.aerligCard}
+            onPress={() => {
+              if (latestJobId) {
+                openSavedAnalysis(latestJobId, latestUrl);
+              } else {
+                setActiveTab('analysis');
+              }
+            }}
+          >
+            <Text style={styles.aerligCardEyebrow}>Siste analyse</Text>
+            <Text style={styles.aerligCardTitle} numberOfLines={1}>
+              {latestJob?.title || 'Siste analyse'}
+            </Text>
+            <Text style={styles.aerligCardMeta} numberOfLines={1}>
+              {latestJob?.company || 'Ukjent bedrift'}
+            </Text>
+
+            {(latestMatch != null) ? (
+              <>
+                <View style={styles.aerligMeterRow}>
+                  <Text style={styles.aerligMeterLabel}>Matchmeter</Text>
+                  <Text style={styles.aerligMeterValue}>{latestMatch}%</Text>
+                </View>
+                <View style={styles.aerligMeterOuter}>
+                  <View style={[styles.aerligMeterInner, matchMeterStyle, { width: `${latestMatch}%` }]} />
+                </View>
+              </>
+            ) : null}
+
+            {(typeof latestShouldApply === 'boolean') ? (
+              <View style={[styles.aerligPill, latestShouldApply ? styles.aerligPillYes : styles.aerligPillNo]}>
+                <Text style={[styles.aerligPillText, latestShouldApply ? styles.aerligPillTextYes : styles.aerligPillTextNo]}>
+                  Anbefaling: {latestShouldApply ? 'SØK' : 'VENT'}
+                </Text>
+              </View>
+            ) : null}
+
+            {honestText ? (
+              <>
+                <Text style={styles.aerligCardSectionTitle}>Ærlig vurdering</Text>
+                <Text style={styles.aerligCardBody} numberOfLines={4}>{honestText}</Text>
+              </>
+            ) : null}
+
+            <Text style={styles.aerligCardLink}>Åpne analyse ›</Text>
+          </Pressable>
+        ) : (
+          <View style={[styles.aerligCard, styles.aerligEmptyCard]}>
+            <Text style={styles.aerligCardTitle}>Ingen analyser ennå</Text>
+            <Text style={[styles.aerligCardBody, { marginTop: 6 }]}>
+              Lim inn en jobbannonse-URL og få en ærlig vurdering av match og mangler.
+            </Text>
+            <TouchableOpacity style={styles.aerligSecondaryButton} onPress={() => setActiveTab('new')}>
+              <Text style={styles.aerligSecondaryButtonText}>Analyser jobb</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <View style={styles.aerligGrid}>
+          <Pressable
+            {...ripple}
+            style={styles.aerligMiniCard}
+            onPress={() => setActiveTab('analysis')}
+          >
+            <Text style={styles.aerligMiniLabel}>Analyserte jobber</Text>
+            <Text style={styles.aerligMiniValue}>{analysedJobsCount}</Text>
+            <Text style={styles.aerligMiniHint}>Se historikk ›</Text>
+          </Pressable>
 
           <Pressable
             {...ripple}
-            style={styles.homeMascotButton}
-            onPress={() => setActiveTab('interview')}
+            style={styles.aerligMiniCard}
+            onPress={() => setActiveTab('applications')}
           >
-            <View style={styles.mascotStage}>
-              <Animated.View
-                pointerEvents="none"
-                style={[
-                  styles.mascotShadow,
-                  {
-                    opacity: mascotShadowOpacity,
-                    transform: [{ scale: mascotShadowScale }],
-                  },
-                ]}
-              />
+            <Text style={styles.aerligMiniLabel}>Sendte søknader</Text>
+            <Text style={styles.aerligMiniValue}>
+              {(sentApplicationsCount == null) ? '—' : String(sentApplicationsCount)}
+            </Text>
+            <Text style={styles.aerligMiniHint}>Oppdater status ›</Text>
+          </Pressable>
 
-              <Animated.View style={[styles.mascotWrap, { transform: [{ translateY: mascotBob }] }]}>
-                <Animated.View style={[styles.mascotHead, { transform: [{ rotate: mascotHeadTilt }] }]}>
-                  <View style={styles.mascotHair} />
-                </Animated.View>
-
-                <View style={styles.mascotNeck} />
-                <View style={styles.mascotBody} />
-
-                <Animated.View style={[styles.mascotArmWave, { transform: [{ rotate: mascotArmRotate }] }]} />
-                <View style={styles.mascotHand} />
-                <View style={styles.mascotArmStatic} />
-
-                <View style={styles.mascotEyesRow}>
-                  <Animated.View style={[styles.mascotEye, { transform: [{ scaleY: mascotBlink }] }]} />
-                  <Animated.View style={[styles.mascotEye, { transform: [{ scaleY: mascotBlink }] }]} />
-                </View>
-
-                <View style={styles.mascotMouth} />
-              </Animated.View>
+          <Pressable
+            {...ripple}
+            style={[styles.aerligMiniCard, styles.aerligMiniCardFull]}
+            onPress={() => setActiveTab('profile')}
+          >
+            <Text style={styles.aerligMiniLabel}>Profilstatus</Text>
+            <Text style={styles.aerligProfileValue}>{profilePercent}%</Text>
+            <Text style={styles.aerligProfileHint}>{profileStatus} • Åpne profil</Text>
+            <View style={styles.aerligProfileMeter}>
+              <View style={[styles.aerligProfileMeterFill, { width: `${Math.max(0, Math.min(100, profilePercent))}%` }]} />
             </View>
           </Pressable>
         </View>
 
-        <View style={styles.pageCard}>
-          <Text style={styles.sectionTitle}>Start her</Text>
-          <Text style={[styles.helpText, { marginBottom: 10 }]}>Kjør en rask analyse eller oppdater status på søknadene dine.</Text>
-
-          <TouchableOpacity style={[styles.primaryButton, { marginTop: 0 }]} onPress={() => setActiveTab('new')}>
-            <Text style={styles.primaryButtonText}>Ny annonse-analyse</Text>
-          </TouchableOpacity>
-
-          <View style={styles.homePrimaryRow}>
-            <TouchableOpacity style={[styles.secondaryButton, { flex: 1, marginTop: 10, marginRight: 8 }]} onPress={() => setActiveTab('cv')}>
-              <Text style={styles.secondaryButtonText}>Analyser CV</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.secondaryButton, { flex: 1, marginTop: 10 }]} onPress={() => setActiveTab('applications')}>
-              <Text style={styles.secondaryButtonText}>Søknadsstatus</Text>
-            </TouchableOpacity>
-          </View>
+        <View style={styles.aerligTipCard}>
+          <Text style={styles.aerligTipTitle}>Karrieretips</Text>
+          <Text style={styles.aerligTipText}>{tipText}</Text>
         </View>
-
-        <Text style={styles.sectionTitle}>{t('quickActions')}</Text>
-        <View style={styles.actionList}>
-          {actionButtons.map((item) => (
-            <Pressable
-              key={item.key}
-              {...ripple}
-              style={styles.actionRow}
-              onPress={item.onPress}
-            >
-              <View style={styles.actionRowLeft}>
-                <View style={[styles.actionIconPill, { backgroundColor: item.tint }]}>
-                  <Text style={styles.actionIcon}>{item.icon}</Text>
-                </View>
-                <View style={styles.actionRowText}>
-                  <Text style={styles.actionRowTitle}>{item.title}</Text>
-                  <Text style={styles.actionRowSubtitle}>{item.subtitle}</Text>
-                </View>
-              </View>
-              <Text style={styles.actionChevron}>›</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <Text style={styles.sectionTitle}>Progressoverblikk</Text>
-        <View style={styles.progressList}>
-          {progressItems.map((item) => (
-            <Pressable
-              key={item.title}
-              {...ripple}
-              style={styles.progressRow}
-              onPress={() => setActiveTab(item.tab)}
-            >
-              <View style={styles.progressHeader}>
-                <Text style={styles.progressCardTitle}>{item.title}</Text>
-                <Text style={styles.progressCardPercent}>{item.value}</Text>
-              </View>
-              <View style={styles.progressOuter}>
-                <View style={[styles.progressInner, { width: `${item.percent}%` }]} />
-              </View>
-              <Text style={styles.progressStatus}>{item.status}</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <View style={styles.tipCard}>
-          <Text style={styles.tipTitle}>Dagens karrieretips</Text>
-          <Text style={styles.tipText}>{tipText}</Text>
-          <Pressable {...ripple} style={styles.tipLink} onPress={() => setActiveTab('applications')}>
-            <Text style={styles.tipLinkText}>Se søknadsstatus</Text>
-          </Pressable>
-        </View>
-      </>
+      </View>
     );
   };
 
@@ -3715,5 +3752,308 @@ const styles = StyleSheet.create({
     fontSize: 32,
     lineHeight: 34,
     fontWeight: '700',
+  },
+
+  // Home (Ærlig. minimal dashboard)
+  aerligHomeWrap: {
+    marginHorizontal: -20,
+    marginTop: -20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 20,
+    backgroundColor: '#F5F4F1',
+  },
+  aerligHeroCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(26, 26, 46, 0.12)',
+    marginBottom: 14,
+  },
+  aerligHeroHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  aerligLogo: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#1A1A2E',
+    letterSpacing: 0.2,
+  },
+  aerligBadge: {
+    minWidth: 30,
+    height: 26,
+    borderRadius: 13,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(232, 98, 42, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(232, 98, 42, 0.28)',
+  },
+  aerligBadgeText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#E8622A',
+  },
+  aerligHeroGreeting: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#1A1A2E',
+    marginBottom: 6,
+  },
+  aerligHeroSubtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: 'rgba(26, 26, 46, 0.72)',
+    marginBottom: 14,
+  },
+  aerligPrimaryButton: {
+    backgroundColor: '#E8622A',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    minHeight: 54,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aerligPrimaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 0.2,
+  },
+  aerligQuickRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  aerligQuickButton: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(26, 26, 46, 0.14)',
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aerligQuickButtonText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#1A1A2E',
+  },
+  aerligSecondaryButton: {
+    marginTop: 12,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    minHeight: 50,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(26, 26, 46, 0.22)',
+  },
+  aerligSecondaryButtonText: {
+    color: '#1A1A2E',
+    fontSize: 15,
+    fontWeight: '900',
+    letterSpacing: 0.2,
+  },
+  aerligCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(26, 26, 46, 0.12)',
+    marginBottom: 14,
+  },
+  aerligEmptyCard: {
+    borderStyle: 'dashed',
+  },
+  aerligCardEyebrow: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: 'rgba(26, 26, 46, 0.58)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
+    marginBottom: 8,
+  },
+  aerligCardTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#1A1A2E',
+    marginBottom: 2,
+  },
+  aerligCardMeta: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: 'rgba(26, 26, 46, 0.66)',
+    marginBottom: 12,
+  },
+  aerligCardSectionTitle: {
+    marginTop: 2,
+    marginBottom: 6,
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#1A1A2E',
+  },
+  aerligCardBody: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: 'rgba(26, 26, 46, 0.76)',
+  },
+  aerligCardLink: {
+    marginTop: 12,
+    color: '#E8622A',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  aerligMeterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  aerligMeterLabel: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#1A1A2E',
+  },
+  aerligMeterValue: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#1A1A2E',
+  },
+  aerligMeterOuter: {
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(26, 26, 46, 0.10)',
+    overflow: 'hidden',
+    marginBottom: 10,
+  },
+  aerligMeterInner: {
+    height: '100%',
+    borderRadius: 999,
+  },
+  aerligMeterGood: {
+    backgroundColor: '#3A7D44',
+  },
+  aerligMeterWarn: {
+    backgroundColor: '#E8622A',
+  },
+  aerligPill: {
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  aerligPillYes: {
+    backgroundColor: 'rgba(58, 125, 68, 0.10)',
+    borderColor: 'rgba(58, 125, 68, 0.35)',
+  },
+  aerligPillNo: {
+    backgroundColor: 'rgba(232, 98, 42, 0.10)',
+    borderColor: 'rgba(232, 98, 42, 0.35)',
+  },
+  aerligPillText: {
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  aerligPillTextYes: {
+    color: '#3A7D44',
+  },
+  aerligPillTextNo: {
+    color: '#E8622A',
+  },
+  aerligGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  aerligMiniCard: {
+    width: '48%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(26, 26, 46, 0.12)',
+    marginBottom: 14,
+    minHeight: 116,
+  },
+  aerligMiniCardFull: {
+    width: '100%',
+    minHeight: 108,
+  },
+  aerligMiniLabel: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: 'rgba(26, 26, 46, 0.60)',
+  },
+  aerligMiniValue: {
+    marginTop: 8,
+    marginBottom: 6,
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#1A1A2E',
+  },
+  aerligMiniHint: {
+    marginTop: 'auto',
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#E8622A',
+  },
+  aerligProfileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  aerligProfileValue: {
+    marginTop: 8,
+    marginBottom: 4,
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#1A1A2E',
+  },
+  aerligProfileHint: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: 'rgba(26, 26, 46, 0.66)',
+    marginBottom: 10,
+  },
+  aerligProfileMeter: {
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(26, 26, 46, 0.10)',
+    overflow: 'hidden',
+  },
+  aerligProfileMeterFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: '#1A1A2E',
+  },
+  aerligTipCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(26, 26, 46, 0.12)',
+    marginBottom: 8,
+  },
+  aerligTipTitle: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#1A1A2E',
+    marginBottom: 8,
+  },
+  aerligTipText: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: 'rgba(26, 26, 46, 0.76)',
   },
 });
