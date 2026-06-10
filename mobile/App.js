@@ -1622,7 +1622,7 @@ export default function App() {
   }
 
   const renderCv = () => (
-    <View style={styles.pageCard}>
+    <View style={styles.aerligHomeWrap}>
       <Pressable
         android_ripple={{ color: 'rgba(26, 26, 46, 0.10)' }}
         style={styles.aerligBackButton}
@@ -1630,69 +1630,72 @@ export default function App() {
       >
         <Text style={styles.aerligBackButtonText}>← Tilbake</Text>
       </Pressable>
-      <Text style={styles.pageTitle}>Analyser CV / profil</Text>
-      <Text style={styles.pageSubtitle}>Få forslag til relevante jobber og råd basert på utdanning og erfaring.</Text>
 
-      <TouchableOpacity style={styles.primaryButton} onPress={analyzeCv}>
-        <Text style={styles.primaryButtonText}>{cvLoading ? 'Analyserer...' : 'Analyser profilen min'}</Text>
-      </TouchableOpacity>
+      <View style={styles.aerligPageCard}>
+        <Text style={styles.aerligPageTitle}>Analyser CV / profil</Text>
+        <Text style={styles.aerligPageSubtitle}>Få forslag til relevante jobber og råd basert på utdanning og erfaring.</Text>
+
+        <TouchableOpacity style={styles.aerligPrimaryButton} onPress={analyzeCv}>
+          <Text style={styles.aerligPrimaryButtonText}>{cvLoading ? 'Analyserer...' : 'Analyser profilen min'}</Text>
+        </TouchableOpacity>
+      </View>
 
       {cvAnalysis ? (
-        <View style={styles.analysisCard}>
+        <View style={[styles.aerligCard, styles.aerligAccentNavy]}>
           {cvAnalysis.summary ? (
             <>
-              <Text style={styles.analysisSubheading}>Oppsummering</Text>
-              <Text style={styles.analysisList}>{cvAnalysis.summary}</Text>
+              <Text style={styles.aerligCardSectionTitle}>Oppsummering</Text>
+              <Text style={styles.aerligCardBody}>{cvAnalysis.summary}</Text>
             </>
           ) : null}
 
           {cvAnalysis.education_fit ? (
             <>
-              <Text style={styles.analysisSubheading}>Hva du er kvalifisert til</Text>
-              <Text style={styles.analysisList}>{cvAnalysis.education_fit}</Text>
+              <Text style={styles.aerligCardSectionTitle}>Hva du er kvalifisert til</Text>
+              <Text style={styles.aerligCardBody}>{cvAnalysis.education_fit}</Text>
             </>
           ) : null}
 
           {cvAnalysis.suggested_roles?.length > 0 ? (
             <>
-              <Text style={styles.analysisSubheading}>Jobbtyper du kan søke på</Text>
+              <Text style={styles.aerligCardSectionTitle}>Jobbtyper du kan søke på</Text>
               {cvAnalysis.suggested_roles.map((item, idx) => (
-                <Text key={idx} style={styles.analysisList}>• {item}</Text>
+                <Text key={idx} style={styles.aerligCardBody}>• {item}</Text>
               ))}
             </>
           ) : null}
 
           {cvAnalysis.strengths?.length > 0 ? (
             <>
-              <Text style={styles.analysisSubheading}>Styrker</Text>
+              <Text style={styles.aerligCardSectionTitle}>Styrker</Text>
               {cvAnalysis.strengths.map((item, idx) => (
-                <Text key={idx} style={styles.analysisList}>• {item}</Text>
+                <Text key={idx} style={styles.aerligCardBody}>• {item}</Text>
               ))}
             </>
           ) : null}
 
           {cvAnalysis.gaps?.length > 0 ? (
             <>
-              <Text style={styles.analysisSubheading}>Mulige hull / svakheter</Text>
+              <Text style={styles.aerligCardSectionTitle}>Mulige hull / svakheter</Text>
               {cvAnalysis.gaps.map((item, idx) => (
-                <Text key={idx} style={styles.analysisList}>• {item}</Text>
+                <Text key={idx} style={styles.aerligCardBody}>• {item}</Text>
               ))}
             </>
           ) : null}
 
           {cvAnalysis.improvement_tips?.length > 0 ? (
             <>
-              <Text style={styles.analysisSubheading}>Konkrete råd</Text>
+              <Text style={styles.aerligCardSectionTitle}>Konkrete råd</Text>
               {cvAnalysis.improvement_tips.map((item, idx) => (
-                <Text key={idx} style={styles.analysisList}>• {item}</Text>
+                <Text key={idx} style={styles.aerligCardBody}>• {item}</Text>
               ))}
             </>
           ) : null}
 
           {cvAnalysis.search_keywords?.length > 0 ? (
             <>
-              <Text style={styles.analysisSubheading}>Søkeord</Text>
-              <Text style={styles.analysisList}>{cvAnalysis.search_keywords.join(', ')}</Text>
+              <Text style={styles.aerligCardSectionTitle}>Søkeord</Text>
+              <Text style={styles.aerligCardBody}>{cvAnalysis.search_keywords.join(', ')}</Text>
             </>
           ) : null}
         </View>
@@ -3588,30 +3591,37 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: 86,
+    height: 88,
     paddingHorizontal: 16,
-    backgroundColor: THEME.colors.surface,
-    borderTopColor: THEME.colors.border,
-    borderTopWidth: 1,
+    paddingTop: 10,
+    paddingBottom: 14,
+
+    backgroundColor: '#1A1A2E',
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    borderTopWidth: 0,
+
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
 
-    // Material-ish elevation
+    // Premium-ish elevation
     shadowColor: '#000',
-    shadowOpacity: 0.16,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: -2 },
-    elevation: 8,
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: -6 },
+    elevation: 12,
   },
   bottomButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 58,
+    flex: 1,
+    paddingVertical: 6,
+    borderRadius: 16,
   },
   bottomIcon: {
     fontSize: 20,
-    color: '#a1a1aa',
+    color: 'rgba(245, 244, 241, 0.72)',
   },
 
   // Home (new)
@@ -3869,15 +3879,17 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   bottomIconActive: {
-    color: THEME.colors.primary,
+    color: '#E8622A',
   },
   bottomLabel: {
     fontSize: 11,
-    color: '#a1a1aa',
+    color: 'rgba(245, 244, 241, 0.70)',
     marginTop: 4,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   bottomLabelActive: {
-    color: THEME.colors.primary,
+    color: '#E8622A',
   },
   fabButton: {
     width: 68,
