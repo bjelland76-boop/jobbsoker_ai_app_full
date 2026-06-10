@@ -1989,22 +1989,27 @@ export default function App() {
 
 
   const renderNew = () => (
-    <View style={styles.pageCard}>
-      <Text style={styles.pageTitle}>Ny søknad</Text>
-      <Text style={styles.pageSubtitle}>Start ny jobbprosjekt med en annonse-URL.</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Lim inn jobbannonse-URL"
-        value={jobUrl}
-        onChangeText={setJobUrl}
-        autoCapitalize="none"
-      />
-      <TouchableOpacity style={styles.primaryButton} onPress={analyzeJob}>
-        <Text style={styles.primaryButtonText}>{loading ? 'Analyserer...' : 'Start analyse'}</Text>
-      </TouchableOpacity>
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryName}>Hva skjer nå?</Text>
-        <Text style={styles.summaryText}>Du får oversikt over krav, match og hva du bør fremheve i søknaden.</Text>
+    <View style={styles.aerligHomeWrap}>
+      <View style={styles.aerligPageCard}>
+        <Text style={styles.aerligPageTitle}>Ny søknad</Text>
+        <Text style={styles.aerligPageSubtitle}>Start ny jobbprosjekt med en annonse-URL.</Text>
+
+        <TextInput
+          style={[styles.input, styles.aerligInput]}
+          placeholder="Lim inn jobbannonse-URL"
+          value={jobUrl}
+          onChangeText={setJobUrl}
+          autoCapitalize="none"
+        />
+
+        <TouchableOpacity style={styles.aerligPrimaryButton} onPress={analyzeJob}>
+          <Text style={styles.aerligPrimaryButtonText}>{loading ? 'Analyserer...' : 'Start analyse'}</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.aerligCard}>
+        <Text style={styles.aerligCardTitle}>Hva skjer nå?</Text>
+        <Text style={[styles.aerligCardBody, { marginTop: 6 }]}>Du får oversikt over krav, match og hva du bør fremheve i søknaden.</Text>
       </View>
     </View>
   );
