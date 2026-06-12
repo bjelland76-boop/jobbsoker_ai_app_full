@@ -209,6 +209,7 @@ export default function App() {
   const [postalPlace, setPostalPlace] = useState('');
   const [profilePhotoData, setProfilePhotoData] = useState('');
   const [skills, setSkills] = useState('');
+  const [skillInput, setSkillInput] = useState('');
   const [consentAnalytics, setConsentAnalytics] = useState(false);
   const [languagesList, setLanguagesList] = useState([]);
   const [customLanguageInput, setCustomLanguageInput] = useState('');
@@ -473,6 +474,7 @@ export default function App() {
     setIncludePhotoDefault(true);
     setIncludePhotoInPdf(true);
     setSkills('');
+    setSkillInput('');
     setConsentAnalytics(false);
     setLanguagesList([]);
     setCvGaps('');
@@ -2104,7 +2106,7 @@ export default function App() {
     }
 
     return (
-      <View style={styles.pageCard}>
+      <View style={styles.aerligHomeWrap}>
         <Pressable
           android_ripple={{ color: 'rgba(26, 26, 46, 0.10)' }}
           style={styles.aerligBackButton}
@@ -2112,71 +2114,77 @@ export default function App() {
         >
           <Text style={styles.aerligBackButtonText}>← Tilbake</Text>
         </Pressable>
-        <Text style={styles.pageTitle}>Søknader</Text>
-        <Text style={styles.pageSubtitle}>Én linje per jobb. Huk av status etter hvert.</Text>
+
+        <View style={styles.aerligPageCard}>
+          <Text style={styles.aerligPageTitle}>Søknader</Text>
+          <Text style={styles.aerligPageSubtitle}>Én linje per jobb. Huk av status etter hvert.</Text>
+
+          <TouchableOpacity style={styles.aerligSecondaryButton} onPress={loadApplications}>
+            <Text style={styles.aerligSecondaryButtonText}>{applicationsLoading ? 'Laster...' : 'Oppdater liste'}</Text>
+          </TouchableOpacity>
+
+          {applicationsLoading ? (
+            <Text style={[styles.helpText, styles.aerligHelpText, { marginTop: 10, marginBottom: 0 }]}>Laster søknader...</Text>
+          ) : null}
+        </View>
 
         {!consentAnalytics ? (
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryName}>Anonym statistikk: AV</Text>
-            <Text style={styles.summaryText}>Hvis du skrur på anonym statistikk i Profil, kan resultatene dine inngå i samlet statistikk.</Text>
+          <View style={[styles.aerligCard, styles.aerligAccentOrange]}>
+            <Text style={styles.aerligCardTitle}>Anonym statistikk: AV</Text>
+            <Text style={[styles.aerligCardBody, { marginTop: 6 }]}>Hvis du skrur på anonym statistikk i Profil, kan resultatene dine inngå i samlet statistikk.</Text>
           </View>
         ) : null}
 
         {statsMe ? (
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryName}>Din statistikk</Text>
-            <Text style={styles.summaryText}>Totalt: {statsMe.total} • Sendt: {statsMe.applied} • Intervju: {statsMe.interviewed} • Fikk jobb: {statsMe.got_job}</Text>
-            <Text style={styles.summaryText}>Intervju-rate: {Math.round((statsMe.interview_rate || 0) * 100)}% • Jobb-rate: {Math.round((statsMe.hire_rate || 0) * 100)}%</Text>
+          <View style={[styles.aerligCard, styles.aerligAccentNavy]}>
+            <Text style={styles.aerligCardTitle}>Din statistikk</Text>
+            <Text style={[styles.aerligCardBody, { marginTop: 6 }]}>Totalt: {statsMe.total} • Sendt: {statsMe.applied} • Intervju: {statsMe.interviewed} • Fikk jobb: {statsMe.got_job}</Text>
+            <Text style={[styles.aerligCardBody, { marginTop: 6 }]}>Intervju-rate: {Math.round((statsMe.interview_rate || 0) * 100)}% • Jobb-rate: {Math.round((statsMe.hire_rate || 0) * 100)}%</Text>
           </View>
         ) : null}
 
-        <TouchableOpacity style={styles.secondaryButton} onPress={loadApplications}>
-          <Text style={styles.secondaryButtonText}>{applicationsLoading ? 'Laster...' : 'Oppdater liste'}</Text>
-        </TouchableOpacity>
-
-        {applicationsLoading ? (
-          <Text style={[styles.helpText, { marginTop: 12 }]}>Laster søknader...</Text>
-        ) : null}
-
         {!applicationsLoading && applications.length === 0 ? (
-          <Text style={[styles.helpText, { marginTop: 12 }]}>Ingen søknader ennå. Tips: bruk "Legg til i Søknader" fra en analyse.</Text>
+          <View style={styles.aerligCard}>
+            <Text style={styles.aerligCardTitle}>Ingen søknader ennå</Text>
+            <Text style={[styles.aerligCardBody, { marginTop: 6 }]}>Ingen søknader ennå. Tips: bruk "Legg til i Søknader" fra en analyse.</Text>
+          </View>
         ) : null}
 
         {applications.length > 0 ? (
-          <View style={styles.tableCard}>
-            <View style={styles.tableHeaderRow}>
-              <Text style={[styles.tableHeaderCell, styles.tableJobHeader]}>Jobb</Text>
-              <Text style={styles.tableHeaderCell}>Søkt</Text>
-              <Text style={styles.tableHeaderCell}>Intervju</Text>
-              <Text style={styles.tableHeaderCell}>Jobb</Text>
+          <View style={styles.aerligAppsTableCard}>
+            <View style={styles.aerligAppsTableHeaderRow}>
+              <Text style={[styles.aerligAppsTableHeaderCell, styles.aerligAppsTableJobHeader]}>Jobb</Text>
+              <Text style={styles.aerligAppsTableHeaderCell}>Søkt</Text>
+              <Text style={styles.aerligAppsTableHeaderCell}>Intervju</Text>
+              <Text style={styles.aerligAppsTableHeaderCell}>Jobb</Text>
             </View>
 
             {applications.map((item) => (
-              <View key={item.job.id} style={styles.tableRow}>
-                <View style={styles.tableJobCell}>
-                  <Text style={styles.tableJobTitle} numberOfLines={1}>{item.job.title}</Text>
-                  <Text style={styles.tableJobCompany} numberOfLines={1}>{item.job.company || 'Ukjent bedrift'}</Text>
+              <View key={item.job.id} style={styles.aerligAppsTableRow}>
+                <View style={styles.aerligAppsTableJobCell}>
+                  <Text style={styles.aerligAppsTableJobTitle} numberOfLines={1}>{item.job.title}</Text>
+                  <Text style={styles.aerligAppsTableJobCompany} numberOfLines={1}>{item.job.company || 'Ukjent bedrift'}</Text>
                 </View>
 
                 <TouchableOpacity
-                  style={[styles.checkbox, item.applied && styles.checkboxOn]}
+                  style={[styles.aerligAppsCheckbox, item.applied && styles.aerligAppsCheckboxOn]}
                   onPress={() => toggle(item, 'applied')}
                 >
-                  <Text style={[styles.checkboxText, item.applied && styles.checkboxTextOn]}>{item.applied ? '✓' : ''}</Text>
+                  <Text style={[styles.aerligAppsCheckboxText, item.applied && styles.aerligAppsCheckboxTextOn]}>{item.applied ? '✓' : ''}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.checkbox, item.interviewed && styles.checkboxOn]}
+                  style={[styles.aerligAppsCheckbox, item.interviewed && styles.aerligAppsCheckboxOn]}
                   onPress={() => toggle(item, 'interviewed')}
                 >
-                  <Text style={[styles.checkboxText, item.interviewed && styles.checkboxTextOn]}>{item.interviewed ? '✓' : ''}</Text>
+                  <Text style={[styles.aerligAppsCheckboxText, item.interviewed && styles.aerligAppsCheckboxTextOn]}>{item.interviewed ? '✓' : ''}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.checkbox, item.got_job && styles.checkboxOn]}
+                  style={[styles.aerligAppsCheckbox, item.got_job && styles.aerligAppsCheckboxOn]}
                   onPress={() => toggle(item, 'got_job')}
                 >
-                  <Text style={[styles.checkboxText, item.got_job && styles.checkboxTextOn]}>{item.got_job ? '✓' : ''}</Text>
+                  <Text style={[styles.aerligAppsCheckboxText, item.got_job && styles.aerligAppsCheckboxTextOn]}>{item.got_job ? '✓' : ''}</Text>
                 </TouchableOpacity>
               </View>
             ))}
@@ -2387,6 +2395,17 @@ export default function App() {
       </View>
     );
   };
+
+  const skillsItems = String(skills || '')
+    .split(/[\n,]+/)
+    .map((s) => String(s || '').trim())
+    .filter(Boolean);
+
+  function setSkillsItems(nextItems) {
+    const arr = Array.isArray(nextItems) ? nextItems : [];
+    const normalized = arr.map((s) => String(s || '').trim()).filter(Boolean);
+    setSkills(normalized.join(', '));
+  }
 
   async function pickProfilePhoto() {
     try {
@@ -2882,10 +2901,47 @@ export default function App() {
           ) : null}
         </View>
 
-        <View style={styles.profileField}>
-          <Text style={[styles.inputLabel, styles.aerligLabel]}>Ferdigheter</Text>
+                <View style={styles.profileField}>
+          <Text style={[styles.inputLabel, styles.aerligLabel]}>Ferdigheter og sertifiseringer</Text>
 
-          <TextInput style={[styles.input, styles.aerligInput]} value={skills} onChangeText={setSkills} placeholder="Stikkord som AI bruker i søknaden" autoCapitalize="none" />
+          <View style={{ marginBottom: 8 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+              {skillsItems.map((item, i) => (
+                <TouchableOpacity
+                  key={`${item}-${i}`}
+                  style={[styles.smallButton, styles.aerligSmallButton, { marginRight: 8, marginBottom: 8 }]}
+                  onPress={() => setSkillsItems(skillsItems.filter((_, idx) => idx !== i))}
+                >
+                  <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>{item} ✕</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <TextInput
+            style={[styles.input, styles.aerligInput]}
+            value={skillInput}
+            onChangeText={setSkillInput}
+            placeholder="Skriv én ferdighet/sertifisering"
+            autoCapitalize="sentences"
+          />
+
+          <TouchableOpacity
+            style={[styles.smallButton, styles.aerligSmallButton, { marginTop: 0 }]}
+            onPress={() => {
+              const v = String(skillInput || '').trim();
+              if (!v) return;
+
+              const exists = skillsItems.some((it) => String(it).toLowerCase() === v.toLowerCase());
+              if (!exists) {
+                setSkillsItems([...skillsItems, v]);
+              }
+
+              setSkillInput('');
+            }}
+          >
+            <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>Legg til</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.profileField}>
@@ -3754,6 +3810,83 @@ const styles = StyleSheet.create({
   },
   checkboxTextOn: {
     color: '#ffffff',
+  },
+
+  // Applications (Ærlig. styling)
+  aerligAppsTableCard: {
+    marginTop: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(26, 26, 46, 0.12)',
+    overflow: 'hidden',
+  },
+  aerligAppsTableHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(26, 26, 46, 0.04)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(26, 26, 46, 0.10)',
+  },
+  aerligAppsTableHeaderCell: {
+    width: 56,
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '900',
+    color: 'rgba(26, 26, 46, 0.58)',
+  },
+  aerligAppsTableJobHeader: {
+    flex: 1,
+    width: 'auto',
+    textAlign: 'left',
+  },
+  aerligAppsTableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(26, 26, 46, 0.10)',
+  },
+  aerligAppsTableJobCell: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  aerligAppsTableJobTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#1A1A2E',
+  },
+  aerligAppsTableJobCompany: {
+    marginTop: 2,
+    fontSize: 12,
+    fontWeight: '800',
+    color: 'rgba(26, 26, 46, 0.66)',
+  },
+  aerligAppsCheckbox: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(26, 26, 46, 0.20)',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+  aerligAppsCheckboxOn: {
+    backgroundColor: '#E8622A',
+    borderColor: '#E8622A',
+  },
+  aerligAppsCheckboxText: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#1A1A2E',
+  },
+  aerligAppsCheckboxTextOn: {
+    color: '#FFFFFF',
   },
 
   profileField: {
