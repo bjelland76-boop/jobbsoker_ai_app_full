@@ -1770,7 +1770,7 @@ export default function App() {
         style={styles.aerligBackButton}
         onPress={() => setActiveTab('home')}
       >
-        <Text style={styles.aerligBackButtonText}>← Tilbake</Text>
+        <Text style={styles.aerligBackButtonText}>‹ Tilbake</Text>
       </Pressable>
 
       <View style={styles.aerligPageCard}>
@@ -1875,7 +1875,7 @@ export default function App() {
           style={styles.aerligBackButton}
           onPress={() => setActiveTab('home')}
         >
-          <Text style={styles.aerligBackButtonText}>← Tilbake</Text>
+          <Text style={styles.aerligBackButtonText}>‹ Tilbake</Text>
         </Pressable>
         <View style={styles.aerligPageCard}>
           <Text style={styles.aerligPageTitle}>Analyser jobbannonse</Text>
@@ -2193,7 +2193,7 @@ export default function App() {
         style={styles.aerligBackButton}
         onPress={() => setActiveTab('home')}
       >
-        <Text style={styles.aerligBackButtonText}>← Tilbake</Text>
+        <Text style={styles.aerligBackButtonText}>‹ Tilbake</Text>
       </Pressable>
       <View style={styles.aerligPageCard}>
         <Text style={styles.aerligPageTitle}>Ny søknad</Text>
@@ -2254,7 +2254,7 @@ export default function App() {
           style={styles.aerligBackButton}
           onPress={() => setActiveTab('home')}
         >
-          <Text style={styles.aerligBackButtonText}>← Tilbake</Text>
+          <Text style={styles.aerligBackButtonText}>‹ Tilbake</Text>
         </Pressable>
 
         <View style={styles.aerligPageCard}>
@@ -2278,10 +2278,36 @@ export default function App() {
         ) : null}
 
         {statsMe ? (
-          <View style={[styles.aerligCard, styles.aerligAccentNavy]}>
-            <Text style={styles.aerligCardTitle}>Din statistikk</Text>
-            <Text style={[styles.aerligCardBody, { marginTop: 6 }]}>Totalt: {statsMe.total} • Sendt: {statsMe.applied} • Intervju: {statsMe.interviewed} • Fikk jobb: {statsMe.got_job}</Text>
-            <Text style={[styles.aerligCardBody, { marginTop: 6 }]}>Intervju-rate: {Math.round((statsMe.interview_rate || 0) * 100)}% • Jobb-rate: {Math.round((statsMe.hire_rate || 0) * 100)}%</Text>
+          <View style={styles.aerligCard}>
+            <Text style={[styles.aerligCardTitle, { marginBottom: 12 }]}>Din statistikk</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+              {[
+                { icon: '📋', value: statsMe.total, label: 'Totalt' },
+                { icon: '📤', value: statsMe.applied, label: 'Sendt' },
+                { icon: '💬', value: statsMe.interviewed, label: 'Intervju' },
+                { icon: '⭐', value: statsMe.got_job, label: 'Fikk jobb' },
+              ].map((item) => (
+                <View key={item.label} style={{
+                  flex: 1, minWidth: '40%',
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: 12,
+                  padding: 14,
+                  shadowColor: '#000',
+                  shadowOpacity: 0.06,
+                  shadowRadius: 8,
+                  shadowOffset: { width: 0, height: 2 },
+                  elevation: 2,
+                  alignItems: 'flex-start',
+                }}>
+                  <Text style={{ fontSize: 18, marginBottom: 4 }}>{item.icon}</Text>
+                  <Text style={{ fontSize: 24, fontWeight: '600', color: '#1a1a1a', lineHeight: 28 }}>{item.value ?? 0}</Text>
+                  <Text style={{ fontSize: 12, color: '#888888', marginTop: 2 }}>{item.label}</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={{ fontSize: 12, color: '#aaaaaa', marginTop: 10 }}>
+              Intervju-rate: {Math.round((statsMe.interview_rate || 0) * 100)}% · Jobb-rate: {Math.round((statsMe.hire_rate || 0) * 100)}%
+            </Text>
           </View>
         ) : null}
 
@@ -2349,7 +2375,7 @@ export default function App() {
         style={styles.aerligBackButton}
         onPress={() => setActiveTab('home')}
       >
-        <Text style={styles.aerligBackButtonText}>← Tilbake</Text>
+        <Text style={styles.aerligBackButtonText}>‹ Tilbake</Text>
       </Pressable>
       <Text style={styles.pageTitle}>Dokumenter</Text>
       <Text style={styles.pageSubtitle}>Her finner du genererte PDF-er (søknad + CV i samme fil).</Text>
@@ -2428,7 +2454,7 @@ export default function App() {
         style={styles.aerligBackButton}
         onPress={() => setActiveTab('home')}
       >
-        <Text style={styles.aerligBackButtonText}>← Tilbake</Text>
+        <Text style={styles.aerligBackButtonText}>‹ Tilbake</Text>
       </Pressable>
       <Text style={styles.pageTitle}>E-postinnstillinger</Text>
       <Text style={styles.pageSubtitle}>Brukes når du sender søknad/CV på e-post fra en analyse.</Text>
@@ -4856,20 +4882,17 @@ const styles = StyleSheet.create({
   // Back button (simple navigation cleanup)
   aerligBackButton: {
     alignSelf: 'flex-start',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(26, 26, 46, 0.16)',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     marginBottom: 12,
     overflow: 'hidden',
   },
   aerligBackButtonText: {
-    color: '#1A1A2E',
+    color: '#555555',
     fontSize: 14,
-    fontWeight: '900',
-    letterSpacing: 0.2,
+    fontWeight: '500',
   },
 
   // Profile list compaction (experience / education)

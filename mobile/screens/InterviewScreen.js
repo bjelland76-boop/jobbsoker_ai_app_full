@@ -273,7 +273,7 @@ export default function InterviewScreen({
             style={styles.aerligBackButton}
             onPress={() => setActiveTab('home')}
           >
-            <Text style={styles.aerligBackButtonText}>← Tilbake</Text>
+            <Text style={styles.aerligBackButtonText}>‹ Tilbake</Text>
           </Pressable>
 
           {/* Header card */}
@@ -329,19 +329,23 @@ export default function InterviewScreen({
             {!interviewStarted ? (
               <>
                 <View style={{
-                  backgroundColor: 'rgba(139, 92, 246, 0.06)',
-                  borderRadius: 10,
-                  padding: 14,
+                  backgroundColor: '#F7F5F0',
+                  borderRadius: 12,
+                  padding: 16,
                   marginBottom: 16,
                   marginTop: 8,
+                  gap: 12,
                 }}>
-                  <Text style={{ fontSize: 22, textAlign: 'center', marginBottom: 8 }}>🎤</Text>
-                  <Text style={{ fontSize: 15, fontWeight: '600', color: '#1a1a1a', textAlign: 'center', marginBottom: 6 }}>
-                    Klar for intervjutrening?
-                  </Text>
-                  <Text style={{ fontSize: 14, color: '#888888', textAlign: 'center', lineHeight: 21 }}>
-                    Du får spørsmål én om gangen. Svar ærlig — så får du tilbakemelding på hva du kan forbedre.
-                  </Text>
+                  {[
+                    'Du får spørsmål én om gangen tilpasset stillingen',
+                    'Svar ærlig — appen gir deg konkret tilbakemelding',
+                    'Øv så mange ganger du vil før den virkelige samtalen',
+                  ].map((point) => (
+                    <View key={point} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+                      <Text style={{ fontSize: 14, color: '#E8501A', fontWeight: '700', lineHeight: 20 }}>✓</Text>
+                      <Text style={{ fontSize: 14, color: '#555555', lineHeight: 20, flex: 1 }}>{point}</Text>
+                    </View>
+                  ))}
                 </View>
                 <TouchableOpacity
                   style={[styles.aerligPrimaryButton, interviewLoading ? { opacity: 0.6 } : null]}
