@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import {
   SafeAreaView,
   ScrollView,
+  KeyboardAvoidingView,
   View,
   Text,
   TextInput,
@@ -3106,17 +3107,20 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
-        {activeTab === 'home' && renderHome()}
-        {activeTab === 'cv' && renderCv()}
-        {activeTab === 'analysis' && renderAnalysis()}
-        {activeTab === 'new' && renderNew()}
-        {activeTab === 'applications' && renderApplications()}
-        {activeTab === 'documents' && renderDocuments()}
-        {activeTab === 'settings' && renderSettings()}
-        {activeTab === 'interview' && renderInterview()}
-        {activeTab === 'profile' && renderProfile()}
-      </ScrollView>
+      {activeTab === 'interview' ? (
+        renderInterview()
+      ) : (
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+          {activeTab === 'home' && renderHome()}
+          {activeTab === 'cv' && renderCv()}
+          {activeTab === 'analysis' && renderAnalysis()}
+          {activeTab === 'new' && renderNew()}
+          {activeTab === 'applications' && renderApplications()}
+          {activeTab === 'documents' && renderDocuments()}
+          {activeTab === 'settings' && renderSettings()}
+          {activeTab === 'profile' && renderProfile()}
+        </ScrollView>
+      )}
       <View style={styles.bottomBar}>
         <TouchableOpacity style={styles.bottomButton} onPress={() => setActiveTab('home')}>
           <Text style={[styles.bottomIcon, activeTab === 'home' && styles.bottomIconActive]}>🏠</Text>

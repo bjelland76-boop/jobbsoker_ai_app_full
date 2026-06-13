@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   KeyboardAvoidingView,
+  ScrollView,
   View,
   Text,
   TextInput,
@@ -29,6 +30,8 @@ export default function InterviewScreen({
   setInterviewStarted,
   styles,
 }) {
+  const scrollRef = React.useRef(null);
+
   const ripple = Platform.OS === 'android'
     ? { android_ripple: { color: 'rgba(26, 26, 46, 0.10)' } }
     : {};
@@ -146,8 +149,15 @@ export default function InterviewScreen({
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={{ flex: 1 }}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
     >
-      <View style={styles.aerligHomeWrap}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 260 }]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
+        <View style={styles.aerligHomeWrap}>
       <Pressable
         android_ripple={{ color: 'rgba(26, 26, 46, 0.10)' }}
         style={styles.aerligBackButton}
@@ -215,6 +225,11 @@ export default function InterviewScreen({
             placeholder={t('yourNotes')}
             multiline
             editable={!interviewLoading}
+            onFocus={() => {
+              setTimeout(() => {
+                scrollRef.current?.scrollToEnd?.({ animated: true });
+              }, 250);
+            }}
           />
 
           <Pressable
@@ -236,6 +251,7 @@ export default function InterviewScreen({
         <Text style={styles.aerligSecondaryButtonText}>Tilbake</Text>
       </Pressable>
     </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
