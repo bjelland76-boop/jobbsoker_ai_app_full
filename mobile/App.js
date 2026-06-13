@@ -1816,31 +1816,53 @@ export default function App() {
         </View>
 
         {jobAnalyses.map((item) => (
-          <View key={item.job.id} style={styles.aerligCard}>
-            <Text style={styles.aerligCardTitle}>{item.job.title}</Text>
-            <Text style={styles.aerligCardMeta}>{item.job.company || 'Ukjent bedrift'}</Text>
-            <Text style={[styles.helpText, styles.aerligHelpText, { marginTop: 0 }]}>Matchscore: {Math.round(item.match_score || item.job.match_score || 0)}%</Text>
+          <View key={item.job.id} style={[styles.aerligCard, { paddingVertical: 12 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={[styles.aerligCardTitle, { fontSize: 15 }]} numberOfLines={2}>{item.job.title}</Text>
+                <Text style={[styles.aerligCardMeta, { marginTop: 2 }]}>
+                  {item.job.company || 'Ukjent bedrift'} · {Math.round(item.match_score || item.job.match_score || 0)}%
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => hideJobAnalysis(item.job.id)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={{
+                  width: 28, height: 28, borderRadius: 14,
+                  backgroundColor: 'rgba(239,68,68,0.10)',
+                  alignItems: 'center', justifyContent: 'center',
+                  marginTop: 2,
+                }}
+              >
+                <Text style={{ color: '#ef4444', fontSize: 16, fontWeight: '700', lineHeight: 18 }}>✕</Text>
+              </TouchableOpacity>
+            </View>
 
-            <TouchableOpacity
-              style={[styles.aerligSecondaryButton, { marginTop: 10, paddingVertical: 12 }]}
-              onPress={() => openSavedAnalysis(item.job.id, item?.job?.url)}
-            >
-              <Text style={styles.aerligSecondaryButtonText}>Åpne analyse</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1, paddingVertical: 9, borderRadius: 12,
+                  backgroundColor: '#FFFFFF', borderWidth: 1,
+                  borderColor: 'rgba(26,26,46,0.22)',
+                  alignItems: 'center', justifyContent: 'center',
+                }}
+                onPress={() => openSavedAnalysis(item.job.id, item?.job?.url)}
+              >
+                <Text style={[styles.aerligSecondaryButtonText, { fontSize: 13 }]}>Åpne analyse</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.aerligSecondaryButton, { marginTop: 10, paddingVertical: 12 }]}
-              onPress={() => moveAnalysisToApplications(item.job.id)}
-            >
-              <Text style={styles.aerligSecondaryButtonText}>Legg til i Søknader</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.aerligDangerButton, { marginTop: 10 }]}
-              onPress={() => hideJobAnalysis(item.job.id)}
-            >
-              <Text style={styles.aerligDangerButtonText}>Fjern fra listen</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  flex: 1, paddingVertical: 9, borderRadius: 12,
+                  backgroundColor: '#FFFFFF', borderWidth: 1,
+                  borderColor: 'rgba(26,26,46,0.22)',
+                  alignItems: 'center', justifyContent: 'center',
+                }}
+                onPress={() => moveAnalysisToApplications(item.job.id)}
+              >
+                <Text style={[styles.aerligSecondaryButtonText, { fontSize: 13 }]}>+ Søknader</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ))}
 
