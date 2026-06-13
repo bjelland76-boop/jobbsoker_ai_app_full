@@ -1047,6 +1047,31 @@ export default function App() {
     setJobAnalysesLoading(false);
   }
 
+  async function toggleFavoriteAnalysis(jobId) {
+    if (!profileId) return;
+    // Optimistic update
+    setJobAnalyses((prev) =>
+      prev.map((it) =>
+        it?.job?.id === jobId ? { ...it, is_favorite: !it.is_favorite } : it
+      )
+    );
+    try {
+      await apiFetch(`/job-analyses/${jobId}/favorite/${profileId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+    } catch (e) {
+      // Revert on error
+      setJobAnalyses((prev) =>
+        prev.map((it) =>
+          it?.job?.id === jobId ? { ...it, is_favorite: !it.is_favorite } : it
+        )
+      );
+      console.error('[Assistant] toggleFavoriteAnalysis failed', e);
+    }
+  }
+
   async function hideJobAnalysis(jobId) {
     if (!profileId) return;
 
@@ -1916,7 +1941,16 @@ export default function App() {
           ) : null}
         </View>
 
-        {jobAnalyses.map((item) => (
+        {jobAnalyses.map((item) => {
+          const heartScale = new Animated.Value(1);
+          const onHeartPress = () => {
+            Animated.sequence([
+              Animated.timing(heartScale, { toValue: 1.3, duration: 100, useNativeDriver: true }),
+              Animated.timing(heartScale, { toValue: 1, duration: 100, useNativeDriver: true }),
+            ]).start();
+            toggleFavoriteAnalysis(item.job.id);
+          };
+          return (
           <View key={item.job.id} style={[styles.aerligCard, { paddingVertical: 12 }]}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <View style={{ flex: 1, marginRight: 8 }}>
@@ -1925,18 +1959,27 @@ export default function App() {
                   {item.job.company || 'Ukjent bedrift'} · {Math.round(item.match_score || item.job.match_score || 0)}%
                 </Text>
               </View>
-              <TouchableOpacity
-                onPress={() => hideJobAnalysis(item.job.id)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={{
-                  width: 28, height: 28, borderRadius: 14,
-                  backgroundColor: 'rgba(239,68,68,0.10)',
-                  alignItems: 'center', justifyContent: 'center',
-                  marginTop: 2,
-                }}
-              >
-                <Text style={{ color: '#ef4444', fontSize: 16, fontWeight: '700', lineHeight: 18 }}>✕</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                <TouchableOpacity
+                  onPress={onHeartPress}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Animated.Text style={{ fontSize: 20, transform: [{ scale: heartScale }], color: item.is_favorite ? '#E8501A' : '#CCCCCC' }}>
+                    {item.is_favorite ? '♥' : '♡'}
+                  </Animated.Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => hideJobAnalysis(item.job.id)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={{
+                    width: 28, height: 28, borderRadius: 14,
+                    backgroundColor: 'rgba(239,68,68,0.10)',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ color: '#ef4444', fontSize: 16, fontWeight: '700', lineHeight: 18 }}>✕</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
@@ -1965,7 +2008,8 @@ export default function App() {
               </TouchableOpacity>
             </View>
           </View>
-        ))}
+          );
+        })}
 
         {analysis ? (
           <>

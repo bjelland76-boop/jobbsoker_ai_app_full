@@ -133,6 +133,11 @@ def ensure_profile_columns() -> None:
             "analysis_json",
             "analysis_json TEXT DEFAULT ''",
         )
+        ensure_col(
+            "job_analysis_history",
+            "is_favorite",
+            "is_favorite INTEGER DEFAULT 0",
+        )
 
         # login_codes (passwordless)
         ensure_col("login_codes", "ip", "ip TEXT DEFAULT ''")
@@ -1191,6 +1196,7 @@ def list_job_analyses(
                 "job": job_to_dict(job),
                 "match_score": float(hist.match_score or 0),
                 "analyzed_at": hist.updated_at,
+                "is_favorite": bool(hist.is_favorite),
             }
         )
 
@@ -1460,6 +1466,37 @@ def hide_job_analysis(
     db.commit()
 
     return {"hidden": True}
+
+
+@app.patch(
+    "/job-analyses/{job_id}/favorite/{profile_id}",
+    response_model=dict,
+    tags=["analysis"],
+)
+def toggle_favorite_analysis(
+    job_id: int,
+    profile_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    profile = db.get(Profile, profile_id)
+    if not profile or profile.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
+
+    row = db.scalars(
+        select(JobAnalysisHistory).where(
+            JobAnalysisHistory.profile_id == profile_id,
+            JobAnalysisHistory.job_id == job_id,
+        )
+    ).first()
+
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Analyse ikke funnet")
+
+    row.is_favorite = not row.is_favorite
+    db.commit()
+
+    return {"is_favorite": row.is_favorite}
 
 
 def generateApplicationPackage(

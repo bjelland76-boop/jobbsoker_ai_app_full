@@ -115,6 +115,7 @@ class JobAnalysisHistory(Base):
 
     match_score: Mapped[float] = mapped_column(Float, default=0)
     hidden: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_favorite: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Cache of the latest analysis result so the mobile app can re-open an
     # analysis without calling OpenAI again.

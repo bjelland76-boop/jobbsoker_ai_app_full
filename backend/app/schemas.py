@@ -135,6 +135,7 @@ class JobAnalysisItemOut(BaseModel):
     job: JobOut
     match_score: float = 0
     analyzed_at: Optional[datetime] = None
+    is_favorite: bool = False
 
 
 class StatsOut(BaseModel):
