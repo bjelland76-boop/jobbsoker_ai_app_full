@@ -571,31 +571,6 @@ export default function App() {
           Logg inn med engangskode på e-post. Ingen passord.
         </Text>
 
-        {/* Language picker */}
-        <Text style={[styles.aerligLabel, { marginBottom: 8 }]}>{t('appLanguage')}</Text>
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-          {[{ key: 'no', label: t('norwegian') }, { key: 'en', label: t('english') }].map((opt) => {
-            const active = uiLanguage === opt.key;
-            return (
-              <TouchableOpacity
-                key={opt.key}
-                onPress={() => setAndPersistUiLanguage(opt.key)}
-                style={{
-                  paddingVertical: 8, paddingHorizontal: 18, borderRadius: 20,
-                  backgroundColor: active ? '#E8622A' : '#FFFFFF',
-                  borderWidth: 1,
-                  borderColor: active ? '#E8622A' : 'rgba(26,26,46,0.22)',
-                }}
-              >
-                <Text style={{
-                  fontSize: 14, fontWeight: '700',
-                  color: active ? '#FFFFFF' : '#1A1A2E',
-                }}>{opt.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
         <TextInput
           style={[styles.input, styles.aerligInput]}
           placeholder={t('email')}
