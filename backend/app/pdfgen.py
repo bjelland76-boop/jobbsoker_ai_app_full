@@ -158,6 +158,20 @@ THEME = _Theme(
 )
 
 
+# CV section titles produced by the LLM (tailored_cv is plain text).
+# We only use these to improve rendering/layout; we do NOT change content.
+CV_SECTION_TITLES: list[str] = [
+    "Profesjonell oppsummering",
+    "Kjerneferdigheter",
+    "Arbeidserfaring",
+    "Utdanning",
+    "Sertifiseringer",
+    "Språk",
+    "Referanser",
+]
+CV_SECTION_TITLES_CF = {t.casefold(): t for t in CV_SECTION_TITLES}
+
+
 class _SidebarPdfDoc:
     def __init__(
         self,
@@ -356,6 +370,241 @@ class _SidebarPdfDoc:
         c.line(self.main_left, self.y - 0.18 * cm, self.main_left + 4.2 * cm, self.y - 0.18 * cm)
 
         self.y -= 0.75 * cm
+
+    # ---------- CV rendering (tailored_cv text) ----------
+    def _cv_subheader(self, title: str) -> None:
+        """Render a CV subsection header inside the main CV section."""
+
+        # Add a bit of air before subsections (but avoid extra gap at the very top).
+        self._ensure_space(1.0 * cm)
+        if self.y < (self.height - self.top_margin - 0.2 * cm):
+            self.y -= 0.35 * cm
+
+        c = self.c
+        c.setFillColor(THEME.section_accent)  # navy
+        c.setFont("Helvetica-Bold", 12.2)
+        c.drawString(self.main_left, self.y, title)
+
+        # Thin underline/accent
+        c.setStrokeColor(colors.HexColor("#cbd5e1"))
+        c.setLineWidth(0.8)
+        c.line(self.main_left, self.y - 0.18 * cm, self.main_left + self.main_w, self.y - 0.18 * cm)
+
+        self.y -= 0.65 * cm
+
+    def _cv_bullet_lines(
+        self,
+        lines: list[str],
+        *,
+        font: str = "Helvetica",
+        size: float = 10.1,
+        leading: float = 0.48 * cm,
+    ) -> None:
+        """Render bullet lines with consistent indent + wrap."""
+
+        c = self.c
+        bullet_x = self.main_left
+        text_x = self.main_left + 0.65 * cm
+        max_w = self.main_w - (text_x - self.main_left)
+
+        for raw in lines:
+            stripped = (raw or "").strip()
+            if not stripped:
+                self.y -= 0.18 * cm
+                continue
+
+            # Normalize bullets.
+            if stripped.startswith("•"):
+                stripped = stripped[1:].strip()
+            elif stripped.startswith("-"):
+                stripped = stripped[1:].strip()
+
+            wrapped = _wrap_lines(stripped, max_w, font, size)
+            for i, wline in enumerate(wrapped):
+                self._ensure_space(0.62 * cm)
+
+                c.setFillColor(THEME.muted)
+                c.setFont(font, size)
+
+                if i == 0:
+                    c.drawString(bullet_x, self.y, "•")
+                    c.drawString(text_x, self.y, wline)
+                else:
+                    c.drawString(text_x, self.y, wline)
+
+                self.y -= leading
+
+        self.y -= 0.12 * cm
+
+    def _cv_paragraph(self, text: str, *, font: str = "Helvetica", size: float = 10.2, leading: float = 0.50 * cm) -> None:
+        """Paragraph renderer for CV text (slightly tighter than cover letter)."""
+
+        c = self.c
+        max_w = self.main_w
+
+        for raw in (text or "").split("\n"):
+            line = raw.rstrip()
+            if not line.strip():
+                self.y -= 0.22 * cm
+                continue
+
+            wrapped = _wrap_lines(line.strip(), max_w, font, size)
+            for wline in wrapped:
+                self._ensure_space(0.62 * cm)
+                c.setFillColor(THEME.muted)
+                c.setFont(font, size)
+                c.drawString(self.main_left, self.y, wline)
+                self.y -= leading
+
+        self.y -= 0.18 * cm
+
+    def _extract_period_tail(self, line: str) -> tuple[str, str]:
+        """Try to split a line into (main_text, period_text) for right-aligned dates."""
+
+        s = " ".join((line or "").split()).strip()
+        if not s:
+            return ("", "")
+
+        # (2019–2023) style
+        m = re.search(r"\(([^)]*(?:19|20)\d{2}[^)]*)\)\s*$", s)
+        if m:
+            period = (m.group(1) or "").strip()
+            main = (s[: m.start()] or "").strip(" -–—|")
+            return (main, period)
+
+        # Trailing year range (2019 – 2023 / 2019-2023 / 2019 – Nå)
+        m = re.search(
+            r"((?:19|20)\d{2}[^\n]{0,18}(?:–|-)\s*(?:(?:19|20)\d{2}|nå|Nå|present|Present))\s*$",
+            s,
+        )
+        if m:
+            period = (m.group(1) or "").strip()
+            main = (s[: m.start()] or "").strip(" -–—|")
+            return (main, period)
+
+        return (s, "")
+
+    def _cv_entry_header(self, title_line: str) -> None:
+        """Render one entry header line with optional right-aligned period."""
+
+        c = self.c
+        left, period = self._extract_period_tail(title_line)
+
+        self._ensure_space(0.95 * cm)
+
+        c.setFillColor(THEME.text)
+        c.setFont("Helvetica-Bold", 10.8)
+        c.drawString(self.main_left, self.y, left or title_line)
+
+        if period:
+            c.setFillColor(colors.HexColor("#64748b"))
+            c.setFont("Helvetica", 9)
+            c.drawRightString(self.main_left + self.main_w, self.y, period)
+
+        self.y -= 0.55 * cm
+
+    def _draw_cv_text(self, text: str) -> None:
+        """Render the AI-produced tailored_cv with improved layout.
+
+        - Detect known CV section headings (on their own lines)
+        - Render headings with navy accent
+        - Render bullets with consistent indent
+        - Render experience/education entries with clearer headers + muted dates
+        """
+
+        src = (text or "").replace("\r\n", "\n").replace("\r", "\n")
+        lines = src.split("\n")
+
+        # Detect whether the CV contains the expected headings at all.
+        has_any_heading = any((ln or "").strip().casefold() in CV_SECTION_TITLES_CF for ln in lines)
+        if not has_any_heading:
+            # Fallback to existing renderer (keeps behavior for older/free-form CV text).
+            self._paragraph(text)
+            return
+
+        cur_section: str | None = None
+        buf: list[str] = []
+
+        def flush() -> None:
+            nonlocal buf, cur_section
+            if cur_section is None:
+                buf = []
+                return
+
+            content = [x.rstrip() for x in buf]
+            # Trim outer blank lines.
+            while content and not content[0].strip():
+                content.pop(0)
+            while content and not content[-1].strip():
+                content.pop()
+
+            if not content:
+                buf = []
+                return
+
+            sec_cf = cur_section.casefold()
+
+            # Experience / education: treat non-bullet lines as entry headers.
+            if sec_cf in {"arbeidserfaring", "utdanning"}:
+                entry_bullets: list[str] = []
+                first_entry = True
+
+                for ln in content:
+                    s = (ln or "").strip()
+                    if not s:
+                        # Paragraph break inside an entry.
+                        if entry_bullets:
+                            self._cv_bullet_lines(entry_bullets)
+                            entry_bullets = []
+                        continue
+
+                    is_bullet = s.startswith("•") or s.startswith("-")
+
+                    if is_bullet:
+                        entry_bullets.append(s)
+                        continue
+
+                    # New entry header
+                    if entry_bullets:
+                        self._cv_bullet_lines(entry_bullets)
+                        entry_bullets = []
+
+                    if not first_entry:
+                        self.y -= 0.20 * cm
+                    first_entry = False
+
+                    self._cv_entry_header(s)
+
+                if entry_bullets:
+                    self._cv_bullet_lines(entry_bullets)
+
+            # Skills/languages/certs/references: bullets when possible.
+            elif sec_cf in {"kjerneferdigheter", "språk", "sertifiseringer", "referanser"}:
+                bulletish = [ln for ln in content if (ln or "").strip().startswith(("•", "-"))]
+                if bulletish:
+                    self._cv_bullet_lines(content)
+                else:
+                    self._cv_paragraph("\n".join(content))
+
+            # Summary: normal paragraph.
+            else:
+                self._cv_paragraph("\n".join(content))
+
+            buf = []
+
+        for ln in lines:
+            key = (ln or "").strip()
+            key_cf = key.casefold()
+
+            if key_cf in CV_SECTION_TITLES_CF:
+                flush()
+                cur_section = CV_SECTION_TITLES_CF[key_cf]
+                self._cv_subheader(cur_section)
+                continue
+
+            buf.append(ln)
+
+        flush()
 
     def _paragraph(self, text: str, *, font: str = "Helvetica", size: float = 10.2, leading: float = 0.50 * cm) -> None:
         c = self.c
@@ -621,7 +870,7 @@ class _SidebarPdfDoc:
         # CV content
         if (self.cv_text or "").strip():
             self._section_header("CV")
-            self._paragraph(self.cv_text)
+            self._draw_cv_text(self.cv_text)
         else:
             # Fallback: render from profile if AI CV text is missing.
             self._section_header("Erfaring")
@@ -663,7 +912,7 @@ class _SidebarCvOnlyDoc(_SidebarPdfDoc):
 
         if (self.cv_text or "").strip():
             self._section_header("CV")
-            self._paragraph(self.cv_text)
+            self._draw_cv_text(self.cv_text)
         else:
             # Fallback: render from profile if AI CV text is missing.
             self._section_header("Erfaring")
