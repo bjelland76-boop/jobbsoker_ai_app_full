@@ -557,23 +557,62 @@ export default function App() {
   }
 
   const renderAuth = () => (
-    <View style={styles.aerligHomeWrap}>
-      {/* Brand header */}
-      <View style={[styles.aerligHeroCard, { marginBottom: 14 }]}>
-        <Text style={[styles.aerligLogo, { fontSize: 28, marginBottom: 4 }]}>Ærlig.</Text>
-        <Text style={[styles.aerligPageSubtitle, { marginBottom: 0 }]}>Din ærlige jobbcoach</Text>
-      </View>
+    <View style={{
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 40,
+    }}>
+      <View style={{
+        width: '100%',
+        maxWidth: 380,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 32,
+        shadowColor: '#000',
+        shadowOpacity: 0.08,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 1 },
+        elevation: 2,
+      }}>
+        {/* Icon box */}
+        <View style={{
+          width: 44, height: 44, borderRadius: 12,
+          backgroundColor: '#FEF0EB',
+          alignItems: 'center', justifyContent: 'center',
+          marginBottom: 20,
+        }}>
+          <Text style={{ fontSize: 20 }}>💼</Text>
+        </View>
 
-      {/* Login card */}
-      <View style={styles.aerligPageCard}>
-        <Text style={styles.aerligPageTitle}>{t('loginTitle')}</Text>
-        <Text style={[styles.aerligPageSubtitle, { marginBottom: 16 }]}>
-          Logg inn med engangskode på e-post. Ingen passord.
+        {/* Logo */}
+        <Text style={{ fontSize: 28, fontWeight: '600', color: '#1a1a1a', letterSpacing: -0.5 }}>
+          Ærlig<Text style={{ color: '#E8501A' }}>.</Text>
         </Text>
 
+        {/* Tagline */}
+        <Text style={{ fontSize: 14, color: '#888', marginTop: 4, marginBottom: 28, lineHeight: 20 }}>
+          Din ærlige jobbcoach — søknader og intervjutrening som faktisk funker
+        </Text>
+
+        {/* E-post label + input */}
+        <Text style={{ fontSize: 12, fontWeight: '500', color: '#555', marginBottom: 6 }}>
+          {codeSent ? 'E-post' : 'E-post'}
+        </Text>
         <TextInput
-          style={[styles.input, styles.aerligInput]}
-          placeholder={t('email')}
+          style={{
+            width: '100%',
+            borderWidth: 1.5,
+            borderColor: '#e0e0e0',
+            borderRadius: 8,
+            paddingVertical: 10,
+            paddingHorizontal: 14,
+            fontSize: 14,
+            color: '#1a1a1a',
+            backgroundColor: '#FAFAFA',
+          }}
+          placeholder="navn@epost.no"
           value={authEmail}
           onChangeText={(v) => {
             setAuthEmail(v);
@@ -588,29 +627,53 @@ export default function App() {
         />
 
         {codeSent ? (
-          <TextInput
-            style={[styles.input, styles.aerligInput, { marginTop: 10 }]}
-            placeholder="Engangskode (6 siffer)"
-            value={authCode}
-            onChangeText={setAuthCode}
-            autoCapitalize="none"
-            keyboardType="numeric"
-          />
+          <>
+            <Text style={{ fontSize: 12, fontWeight: '500', color: '#555', marginTop: 14, marginBottom: 6 }}>
+              Engangskode
+            </Text>
+            <TextInput
+              style={{
+                width: '100%',
+                borderWidth: 1.5,
+                borderColor: '#e0e0e0',
+                borderRadius: 8,
+                paddingVertical: 10,
+                paddingHorizontal: 14,
+                fontSize: 14,
+                color: '#1a1a1a',
+                backgroundColor: '#FAFAFA',
+              }}
+              placeholder="6-sifret kode"
+              value={authCode}
+              onChangeText={setAuthCode}
+              autoCapitalize="none"
+              keyboardType="numeric"
+            />
+          </>
         ) : null}
 
+        {/* Primary button */}
         <TouchableOpacity
-          style={[styles.aerligPrimaryButton, authLoading ? { opacity: 0.6 } : null]}
+          style={{
+            width: '100%',
+            backgroundColor: authLoading ? '#f0a080' : '#E8501A',
+            borderRadius: 8,
+            paddingVertical: 12,
+            alignItems: 'center',
+            marginTop: 12,
+          }}
           onPress={doAuth}
           disabled={!!authLoading}
         >
-          <Text style={styles.aerligPrimaryButtonText}>
-            {authLoading ? t('working') : (codeSent ? 'Logg inn' : 'Send engangskode')}
+          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500' }}>
+            {authLoading ? 'Sender...' : (codeSent ? 'Logg inn' : 'Send engangskode')}
           </Text>
         </TouchableOpacity>
 
+        {/* Resend */}
         {codeSent ? (
           <TouchableOpacity
-            style={[styles.aerligSecondaryButton, resendCooldown ? { opacity: 0.6 } : null]}
+            style={{ marginTop: 10, alignItems: 'center', opacity: resendCooldown ? 0.5 : 1 }}
             disabled={!!resendCooldown || !!authLoading}
             onPress={async () => {
               if (!authEmail || resendCooldown) return;
@@ -630,11 +693,16 @@ export default function App() {
               setAuthLoading(false);
             }}
           >
-            <Text style={styles.aerligSecondaryButtonText}>
+            <Text style={{ fontSize: 13, color: '#E8501A' }}>
               {resendCooldown ? `Send ny kode (${resendCooldown}s)` : 'Send ny kode'}
             </Text>
           </TouchableOpacity>
         ) : null}
+
+        {/* Footer */}
+        <Text style={{ fontSize: 12, color: '#aaa', textAlign: 'center', marginTop: 20 }}>
+          Ingen passord. Ingen stress.
+        </Text>
       </View>
     </View>
   );
@@ -3115,8 +3183,8 @@ export default function App() {
 
   if (!authTokenState) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: '#F5F4F1' }]}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+      <SafeAreaView style={[styles.container, { backgroundColor: '#F7F5F0' }]}>
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
           {renderAuth()}
         </ScrollView>
       </SafeAreaView>
