@@ -1783,11 +1783,11 @@ async def interview_chat_api(
         history=history,
     )
 
-    # Keep a stable response contract for the UI.
     return {
         "feedback": str(out.get("feedback") or ""),
         "question": str(out.get("question") or ""),
         "tip": str(out.get("tip") or ""),
+        "is_final": bool(out.get("is_final")),
     }
 
 
