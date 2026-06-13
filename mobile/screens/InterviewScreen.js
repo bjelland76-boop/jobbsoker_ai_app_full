@@ -327,15 +327,32 @@ export default function InterviewScreen({
             ) : null}
 
             {!interviewStarted ? (
-              <TouchableOpacity
-                style={[styles.aerligPrimaryButton, interviewLoading ? { opacity: 0.6 } : null]}
-                onPress={startInterview}
-                disabled={interviewLoading}
-              >
-                <Text style={styles.aerligPrimaryButtonText}>
-                  {interviewLoading ? 'Forbereder intervju...' : 'Start intervju'}
-                </Text>
-              </TouchableOpacity>
+              <>
+                <View style={{
+                  backgroundColor: 'rgba(139, 92, 246, 0.06)',
+                  borderRadius: 10,
+                  padding: 14,
+                  marginBottom: 16,
+                  marginTop: 8,
+                }}>
+                  <Text style={{ fontSize: 22, textAlign: 'center', marginBottom: 8 }}>🎤</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '600', color: '#1a1a1a', textAlign: 'center', marginBottom: 6 }}>
+                    Klar for intervjutrening?
+                  </Text>
+                  <Text style={{ fontSize: 14, color: '#888888', textAlign: 'center', lineHeight: 21 }}>
+                    Du får spørsmål én om gangen. Svar ærlig — så får du tilbakemelding på hva du kan forbedre.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.aerligPrimaryButton, interviewLoading ? { opacity: 0.6 } : null]}
+                  onPress={startInterview}
+                  disabled={interviewLoading}
+                >
+                  <Text style={styles.aerligPrimaryButtonText}>
+                    {interviewLoading ? 'Forbereder intervju...' : 'Start intervju'}
+                  </Text>
+                </TouchableOpacity>
+              </>
             ) : null}
 
             {interviewStarted && interviewLoading ? (

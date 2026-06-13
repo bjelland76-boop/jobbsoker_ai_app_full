@@ -1676,13 +1676,14 @@ export default function App() {
             <Text style={styles.aerligCardLink}>Åpne analyse ›</Text>
           </Pressable>
         ) : (
-          <View style={[styles.aerligCard, styles.aerligEmptyCard]}>
-            <Text style={styles.aerligCardTitle}>Ingen analyser ennå</Text>
-            <Text style={[styles.aerligCardBody, { marginTop: 6 }]}>
-              Lim inn en jobbannonse-URL og få en ærlig vurdering av match og mangler.
+          <View style={[styles.aerligCard, styles.aerligEmptyCard, { alignItems: 'center', paddingVertical: 28 }]}>
+            <Text style={{ fontSize: 36, marginBottom: 12 }}>🔍</Text>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#1a1a1a', marginBottom: 6, textAlign: 'center' }}>Ingen analyser ennå</Text>
+            <Text style={{ fontSize: 14, color: '#888888', textAlign: 'center', lineHeight: 20, marginBottom: 16 }}>
+              Lim inn en FINN.no-lenke over for å{'\n'}analysere din første jobb
             </Text>
-            <TouchableOpacity style={styles.aerligSecondaryButton} onPress={() => setActiveTab('new')}>
-              <Text style={styles.aerligSecondaryButtonText}>Analyser jobb</Text>
+            <TouchableOpacity style={[styles.aerligPrimaryButton, { paddingHorizontal: 24 }]} onPress={() => setActiveTab('new')}>
+              <Text style={styles.aerligPrimaryButtonText}>Analyser jobb</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -1704,10 +1705,18 @@ export default function App() {
             onPress={() => setActiveTab('applications')}
           >
             <Text style={styles.aerligMiniLabel}>Sendte søknader</Text>
-            <Text style={styles.aerligMiniValue}>
-              {(sentApplicationsCount == null) ? '—' : String(sentApplicationsCount)}
-            </Text>
-            <Text style={styles.aerligMiniHint}>Oppdater status ›</Text>
+            {(sentApplicationsCount == null || sentApplicationsCount === 0) ? (
+              <>
+                <Text style={{ fontSize: 22, marginTop: 4, marginBottom: 2 }}>📭</Text>
+                <Text style={{ fontSize: 11, color: '#888', lineHeight: 15 }}>Ingen søknader{'\n'}sendt enda</Text>
+                <Text style={[styles.aerligMiniHint, { color: '#E8501A' }]}>Oppdater status ›</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.aerligMiniValue}>{String(sentApplicationsCount)}</Text>
+                <Text style={styles.aerligMiniHint}>Oppdater status ›</Text>
+              </>
+            )}
           </Pressable>
 
           <Pressable
@@ -1897,7 +1906,13 @@ export default function App() {
           ) : null}
 
           {!jobAnalysesLoading && jobAnalyses.length === 0 ? (
-            <Text style={[styles.helpText, styles.aerligHelpText, { marginTop: 8 }]}>Ingen analyser ennå. Analyser en jobb-URL for å få den inn her.</Text>
+            <View style={[styles.aerligCard, { alignItems: 'center', paddingVertical: 28, marginTop: 8 }]}>
+              <Text style={{ fontSize: 36, marginBottom: 12 }}>🔍</Text>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: '#1a1a1a', marginBottom: 6, textAlign: 'center' }}>Ingen analyser ennå</Text>
+              <Text style={{ fontSize: 14, color: '#888888', textAlign: 'center', lineHeight: 20 }}>
+                Lim inn en FINN.no-lenke over for å{'\n'}analysere din første jobb
+              </Text>
+            </View>
           ) : null}
         </View>
 
@@ -2271,9 +2286,15 @@ export default function App() {
         ) : null}
 
         {!applicationsLoading && applications.length === 0 ? (
-          <View style={styles.aerligCard}>
-            <Text style={styles.aerligCardTitle}>Ingen søknader ennå</Text>
-            <Text style={[styles.aerligCardBody, { marginTop: 6 }]}>Ingen søknader ennå. Tips: bruk "Legg til i Søknader" fra en analyse.</Text>
+          <View style={[styles.aerligCard, { alignItems: 'center', paddingVertical: 32 }]}>
+            <Text style={{ fontSize: 36, marginBottom: 12 }}>📋</Text>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#1a1a1a', marginBottom: 6, textAlign: 'center' }}>Ingen søknader ennå</Text>
+            <Text style={{ fontSize: 14, color: '#888888', textAlign: 'center', lineHeight: 20, marginBottom: 16 }}>
+              Start med å analysere en jobb for å komme i gang
+            </Text>
+            <TouchableOpacity style={[styles.aerligPrimaryButton, { paddingHorizontal: 24 }]} onPress={() => setActiveTab('new')}>
+              <Text style={styles.aerligPrimaryButtonText}>Analyser jobb</Text>
+            </TouchableOpacity>
           </View>
         ) : null}
 
