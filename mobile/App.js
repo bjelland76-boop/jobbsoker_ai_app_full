@@ -268,10 +268,10 @@ export default function App() {
   const t = (key) => strings[key] ?? I18N.no[key] ?? String(key);
 
   async function refreshCareerTip({ force = false } = {}) {
-    const tips = CAREER_TIPS[uiLanguage] || CAREER_TIPS.no;
+    const tips = CAREER_TIPS.no;
     const now = Date.now();
-    const kAt = `careerTip:lastAt:${uiLanguage}`;
-    const kText = `careerTip:lastText:${uiLanguage}`;
+    const kAt = 'careerTip:lastAt:no';
+    const kText = 'careerTip:lastText:no';
 
     try {
       const lastAt = parseInt((await AsyncStorage.getItem(kAt)) || '0', 10) || 0;
