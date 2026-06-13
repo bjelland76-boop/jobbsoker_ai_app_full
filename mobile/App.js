@@ -109,7 +109,7 @@ const AUTO_API = (Platform.OS === 'web'
 
 const API = validateApiBaseUrl(ENV_API || AUTO_API, { envProvided: !!ENV_API });
 
-console.log('API base URL:', API);
+if (__DEV__) console.log('API base URL:', API);
 
 let AUTH_TOKEN = null;
 let UNAUTHORIZED_HANDLER = null;
@@ -159,7 +159,6 @@ async function apiFetch(path, options) {
   return data;
 }
 
-// TODO: Må være publisert og korrekt før Google Play intern testing.
 const PRIVACY_URL = 'https://frankbjelland.no/personvern-aerlig-jobbcoach';
 
 // Career tips shown on the Home screen.
@@ -793,7 +792,7 @@ export default function App() {
           setReferenceEntries(references);
         }
       } catch (e) {
-        console.log('Kunne ikke laste profil:', e);
+        if (__DEV__) console.log('Kunne ikke laste profil:', e);
       }
     }
 
@@ -1387,7 +1386,7 @@ export default function App() {
       const st = await apiFetch(`/stats/me?profile_id=${profileId}`);
       setStatsMe(st);
     } catch (e) {
-      console.log('Kunne ikke laste søknader:', e);
+      if (__DEV__) console.log('Kunne ikke laste søknader:', e);
     }
     setApplicationsLoading(false);
   }
@@ -1426,7 +1425,7 @@ export default function App() {
       const items = await apiFetch(`/generated-applications?profile_id=${profileId}`);
       setDocuments(Array.isArray(items) ? items : []);
     } catch (e) {
-      console.log('Kunne ikke laste dokumenter:', e);
+      if (__DEV__) console.log('Kunne ikke laste dokumenter:', e);
       setDocuments([]);
     }
     setDocumentsLoading(false);
@@ -1471,7 +1470,7 @@ export default function App() {
       setNotificationEmail(s?.notification_email || '');
       setAutoEmail(s?.auto_email !== false);
     } catch (e) {
-      console.log('Kunne ikke laste settings:', e);
+      if (__DEV__) console.log('Kunne ikke laste settings:', e);
     }
     setSettingsLoading(false);
   }
