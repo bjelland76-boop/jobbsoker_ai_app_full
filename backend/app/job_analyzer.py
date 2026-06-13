@@ -90,6 +90,176 @@ def _build_cv_text_for_generation(profile: Any) -> str:
     return "\n".join(parts)
 
 
+def _parse_json_maybe(value: Any):
+    if value is None:
+        return None
+    if isinstance(value, (list, dict)):
+        return value
+    if not isinstance(value, str):
+        return None
+
+    s = value.strip()
+    if not s:
+        return None
+
+    try:
+        return json.loads(s)
+    except Exception:
+        return None
+
+
+def _estimate_years_experience(profile: Any) -> int | None:
+    """Best-effort estimate of total years of experience.
+
+    We only use structured experience entries (JSON list of dicts) to avoid
+    guessing from random years mentioned elsewhere.
+    """
+
+    exp_raw = getattr(profile, "experience", None)
+    parsed = _parse_json_maybe(exp_raw)
+    if not isinstance(parsed, list):
+        return None
+
+    def _year_from_text(v: Any) -> int | None:
+        s = str(v or "").strip()
+        if not s:
+            return None
+        m = re.search(r"\b(19|20)\d{2}\b", s)
+        if not m:
+            return None
+        try:
+            return int(m.group(0))
+        except Exception:
+            return None
+
+    years_from: list[int] = []
+    years_to: list[int] = []
+
+    now_year = datetime.utcnow().year
+
+    for it in parsed:
+        if not isinstance(it, dict):
+            continue
+
+        y_from = _year_from_text(it.get("from"))
+        y_to = _year_from_text(it.get("to"))
+
+        if bool(it.get("current")) and y_from:
+            y_to = now_year
+
+        if y_from and 1900 <= y_from <= now_year + 1:
+            years_from.append(y_from)
+        if y_to and 1900 <= y_to <= now_year + 1:
+            years_to.append(y_to)
+
+    if not years_from or not years_to:
+        return None
+
+    start = min(years_from)
+    end = max(years_to)
+    if end < start:
+        return None
+
+    years = end - start
+    if years < 1 or years > 60:
+        return None
+
+    return years
+
+
+def _extract_evidence_snippets(profile: Any, *, max_items: int = 5) -> list[str]:
+    """Extract candidate-provided concrete snippets to steer the summary away from generic fluff.
+
+    We do NOT invent facts here; we just pick short fragments that look like:
+    - numbers/quantities ("30 år", "%", "1 200")
+    - improvements/results ("reduserte svinn", "effektiviserte", "forbedret system")
+    - logistics/warehouse/system improvements
+    """
+
+    blob = "\n".join(
+        [
+            str(getattr(profile, "experience", "") or ""),
+            str(getattr(profile, "cv_text", "") or ""),
+            str(getattr(profile, "skills", "") or ""),
+            str(getattr(profile, "cv_gaps", "") or ""),
+        ]
+    )
+
+    # If experience is structured JSON, include a simplified view too.
+    parsed = _parse_json_maybe(getattr(profile, "experience", None))
+    if isinstance(parsed, list):
+        for it in parsed[:40]:
+            if isinstance(it, dict):
+                blob += "\n" + " ".join(
+                    [
+                        str(it.get("title") or ""),
+                        str(it.get("company") or ""),
+                        str(it.get("from") or ""),
+                        str(it.get("to") or ""),
+                    ]
+                ).strip()
+
+    # Split into short-ish candidate-provided fragments.
+    raw_parts = re.split(r"\n+|(?<=[.!?])\s+", blob)
+
+    keywords = [
+        "svinn",
+        "effektiv",
+        "effektiviser",
+        "forbedr",
+        "optimaliser",
+        "system",
+        "rutine",
+        "prosess",
+        "logist",
+        "lager",
+        "innkjøp",
+        "plukk",
+        "pakking",
+        "varemottak",
+        "inventar",
+        "erp",
+        "sap",
+        "visma",
+        "microsoft dynamics",
+        "power bi",
+        "excel",
+        "automatis",
+        "lean",
+        "kpi",
+        "led",
+        "ansvar",
+    ]
+
+    out: list[str] = []
+    seen: set[str] = set()
+    for part in raw_parts:
+        s = " ".join(str(part or "").split()).strip("-• ")
+        if not s:
+            continue
+
+        s_cf = s.casefold()
+        if s_cf in seen:
+            continue
+
+        has_number = bool(re.search(r"\b\d+[\d .,/]*\b", s))
+        has_kw = any(k in s_cf for k in keywords)
+
+        if not (has_number or has_kw):
+            continue
+
+        # Keep snippets reasonably short.
+        if len(s) > 220:
+            s = s[:220].rstrip()
+
+        seen.add(s_cf)
+        out.append(s)
+        if len(out) >= max_items:
+            break
+
+    return out
+
+
 def _guess_job_title_company(job_text: str) -> tuple[str, str]:
     t = _compress_text(job_text, 800)
 
@@ -131,6 +301,11 @@ def generate_application_texts(
     job_comp = _compress_text(job_text, 8000)
 
     # Include contact info for cover letter/email, but still keep it compact.
+    years = _estimate_years_experience(profile)
+    evidence = _extract_evidence_snippets(profile)
+
+    evidence_block = "\n".join([f"- {x}" for x in evidence]) if evidence else ""
+
     cand_comp = _compress_text(
         "\n".join(
             [
@@ -138,8 +313,14 @@ def generate_application_texts(
                 f"Email: {(getattr(profile, 'email', '') or '').strip()}",
                 f"Phone: {(getattr(profile, 'phone', '') or '').strip()}",
                 f"Address: {(getattr(profile, 'address', '') or '').strip()}",
+                (f"Estimated total years experience: {years}" if isinstance(years, int) else ""),
                 _build_cv_text_for_generation(profile),
                 f"References: {(getattr(profile, 'references_json', '') or '').strip()}",
+                (
+                    "Evidence (candidate-provided; use these BEFORE generic claims):\n" + evidence_block
+                    if evidence_block
+                    else "Evidence: (none provided)"
+                ),
             ]
         ),
         6000,
@@ -168,8 +349,30 @@ Regler:
 tailored_cv:
 - Ren tekst (ATS-vennlig): ingen markdown, ingen tabeller, ingen emojis.
 - IKKE inkluder kontaktinfo i tailored_cv.
-- Struktur (seksjonstitler på egne linjer):
+- Bruk KUN informasjon fra Candidate-blokken. Hvis noe ikke er oppgitt: skriv mer nøytralt, ikke gjett.
+- Struktur (seksjonstitler på egne linjer, i denne rekkefølgen):
   Profesjonell oppsummering\nKjerneferdigheter\nArbeidserfaring\nUtdanning\nSertifiseringer (hvis tilgjengelig)\nSpråk\nReferanser
+
+Profesjonell oppsummering (viktig):
+- 3–5 setninger (ikke punktliste).
+- Må fremstå som skrevet for en reell kandidat: konkret, faktabasert og relevant for jobben.
+- Prioriter i denne rekkefølgen når det finnes grunnlag i Candidate-data:
+  1) antall år erfaring (bruk "Estimated total years experience" hvis oppgitt, ellers ikke nevne årstall)
+  2) bransje (hva slags bransje/område erfaringen er fra)
+  3) ansvarsområder (drift, kundekontakt, logistikk/lagerstyring, innkjøp, varemottak, etc.)
+  4) dokumenterte resultater / forbedringer (bruk "Evidence"-punktene først)
+  5) systemforbedringer, prosessforbedringer, svinn/effektivitet, logistikk/lagerstyring
+  6) ledelse/spesialansvar (hvis oppgitt)
+- Unngå generiske uttrykk som "engasjert", "serviceinnstilt", "motivert", "positiv", "gode samarbeidsevner" med mindre du følger opp med et konkret eksempel fra Candidate-data.
+- Hvis Candidate-data inneholder konkrete prestasjoner (tall, forbedringer, systemer), bruk disse før generiske beskrivelser.
+
+Kjerneferdigheter:
+- 8–12 punkter (•), primært faglige/konkrete ferdigheter og systemer.
+- Soft skills kun hvis støttet av konkrete eksempler eller ansvar.
+
+Arbeidserfaring:
+- Kun roller som finnes i Candidate Experience.
+- For hver rolle: 2–5 korte punkter med ansvar/resultater (ikke oppfinn).
 """.strip()
 
     client = _get_client()
