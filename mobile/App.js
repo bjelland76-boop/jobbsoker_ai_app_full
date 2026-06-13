@@ -159,7 +159,7 @@ async function apiFetch(path, options) {
   return data;
 }
 
-const PRIVACY_URL = 'https://frankbjelland.no/personvern-aerlig-jobbcoach';
+const PRIVACY_URL = 'https://www.fandv.no';
 
 // Career tips shown on the Home screen.
 // We keep them locally and rotate them every few hours.
