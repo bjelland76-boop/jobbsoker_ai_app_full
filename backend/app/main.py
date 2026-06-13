@@ -37,6 +37,7 @@ from .models import (
 )
 from .pdf_dedupe import compute_pdf_content_hash
 from .pdfgen import OUT as GENERATED_PDFS_DIR, make_application_pdfs
+from .text_sanitize import sanitize_employer_text
 from .schemas import (
     AnalyzeAndSendOut,
     ApplicationItemOut,
@@ -1511,9 +1512,15 @@ def generateApplicationPackage(
     db.commit()
     db.refresh(job)
 
-    cover_letter = _to_text(result.get("cover_letter"))
-    tailored_cv = _to_text(result.get("tailored_cv"))
-    email_text = _to_text(result.get("email_text"))
+    # Keep RAW values for API response + DB storage.
+    # Employer-facing outputs (PDF + email body) will use sanitized variants.
+    cover_letter_raw = _to_text(result.get("cover_letter"))
+    tailored_cv_raw = _to_text(result.get("tailored_cv"))
+    email_text_raw = _to_text(result.get("email_text"))
+
+    cover_letter = cover_letter_raw
+    tailored_cv = tailored_cv_raw
+    email_text = email_text_raw
 
     # Persist analysis even if document generation is incomplete.
     _upsert_analysis_history(
@@ -1533,14 +1540,18 @@ def generateApplicationPackage(
     # Only generate PDFs when we have both texts (prevents PDF generator crashes).
     cover_pdf = ""
     cv_pdf = ""
-    if cover_letter.strip() and tailored_cv.strip():
-        pdf_tailored_cv = _inject_references_into_cv(profile, tailored_cv)
+    if cover_letter_raw.strip() and tailored_cv_raw.strip():
+        # Inject references first (still employer-safe). Then sanitize for employer-facing outputs.
+        pdf_tailored_cv_raw = _inject_references_into_cv(profile, tailored_cv_raw)
+
+        employer_cover_letter = sanitize_employer_text(cover_letter_raw)
+        employer_tailored_cv = sanitize_employer_text(pdf_tailored_cv_raw)
 
         cover_pdf, cv_pdf = make_application_pdfs(
             profile,
             job,
-            cover_letter,
-            pdf_tailored_cv,
+            employer_cover_letter,
+            employer_tailored_cv,
             include_photo=bool(include_photo),
         )
 
@@ -1548,21 +1559,23 @@ def generateApplicationPackage(
         template_id = "sidebar_v1"
         include_photo_flag = bool(include_photo)
 
+        # IMPORTANT: hash must match the actual employer-facing PDF content.
         content_hash = compute_pdf_content_hash(
             template_id=template_id,
             include_photo=include_photo_flag,
-            cover_letter=cover_letter,
-            rendered_cv_text=pdf_tailored_cv,
+            cover_letter=employer_cover_letter,
+            rendered_cv_text=employer_tailored_cv,
             profile=profile,
             job=job,
         )
 
+        # Store RAW texts in DB (app can re-open what the model produced), but PDFs are sanitized.
         approw = GeneratedApplication(
             job_id=job.id,
             profile_id=profile.id,
-            email_text=email_text,
-            cover_letter=cover_letter,
-            tailored_cv=tailored_cv,
+            email_text=email_text_raw,
+            cover_letter=cover_letter_raw,
+            tailored_cv=tailored_cv_raw,
             pdf_path=cover_pdf,
             cv_pdf_path=cv_pdf,
             template=template_id,
@@ -1581,7 +1594,9 @@ def generateApplicationPackage(
     # Email contract:
     # - Body: cover letter text (søknadstekst)
     # - Attachment: CV-only PDF
-    body = (cover_letter or "").strip() or (email_text or "").strip()
+    # Employer-facing: sanitize so internal analysis never leaks.
+    body_raw = (cover_letter_raw or "").strip() or (email_text_raw or "").strip()
+    body = sanitize_employer_text(body_raw)
 
     attachments: list[str] = []
     if cv_pdf:
