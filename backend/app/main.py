@@ -8,7 +8,18 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Union
 
-from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query, Request, status
+from fastapi import (
+    BackgroundTasks,
+    Depends,
+    FastAPI,
+    File,
+    Header,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+    status,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -38,6 +49,7 @@ from .models import (
 from .pdf_dedupe import compute_pdf_content_hash
 from .pdfgen import OUT as GENERATED_PDFS_DIR, make_application_pdfs
 from .text_sanitize import sanitize_employer_text
+from .transcribe import suffix_from_mime, transcribe_path, validate_upload
 from .schemas import (
     AnalyzeAndSendOut,
     ApplicationItemOut,
@@ -1777,6 +1789,52 @@ async def interview_chat_api(
         "question": str(out.get("question") or ""),
         "tip": str(out.get("tip") or ""),
     }
+
+
+@app.post("/interview/transcribe", tags=["interview"])
+async def interview_transcribe_api(
+    audio: UploadFile = File(..., description='Audio file (multipart/form-data field name: "audio")'),
+    current_user: User = Depends(get_current_user),
+):
+    """Transcribe a recorded interview answer.
+
+    Contract:
+      - Auth required
+      - multipart/form-data with file field name: `audio`
+      - Response: {"text": "..."}
+
+    Audio is NOT stored permanently (temp file is deleted).
+    """
+
+    # Auth-only dependency (avoid unused variable warnings).
+    _ = current_user
+
+    content_type = (audio.content_type or "").strip()
+
+    # Read into memory and validate size/type BEFORE sending to OpenAI.
+    raw = await audio.read()
+    size_bytes = len(raw or b"")
+
+    validate_upload(content_type=content_type, size_bytes=size_bytes)
+
+    import tempfile
+    from pathlib import Path
+
+    tmp_path: Path | None = None
+    try:
+        suf = suffix_from_mime(content_type)
+        with tempfile.NamedTemporaryFile(prefix="interview_", suffix=suf, delete=False) as f:
+            f.write(raw)
+            tmp_path = Path(f.name)
+
+        text = transcribe_path(tmp_path)
+        return {"text": str(text or "")}
+    finally:
+        if tmp_path:
+            try:
+                tmp_path.unlink(missing_ok=True)
+            except Exception:
+                pass
 
 
 
