@@ -1569,9 +1569,18 @@ export default function App() {
       ? 'Ikke lagret'
       : (profilePercent >= 85 ? 'Sterk' : (profilePercent >= 60 ? 'OK' : 'Trenger mer'));
 
-    const matchMeterStyle = (latestMatch != null && latestMatch >= 70)
-      ? styles.aerligMeterGood
-      : styles.aerligMeterWarn;
+    const matchMeterStyle = latestMatch == null ? styles.aerligMeterWarn
+      : latestMatch >= 70 ? styles.aerligMeterGood
+      : latestMatch >= 40 ? styles.aerligMeterWarn
+      : styles.aerligMeterBad;
+    const matchMeterColor = latestMatch == null ? '#D97706'
+      : latestMatch >= 70 ? '#16A34A'
+      : latestMatch >= 40 ? '#D97706'
+      : '#DC2626';
+    const matchMeterStatus = latestMatch == null ? ''
+      : latestMatch >= 70 ? 'Sterk match — søk denne jobben!'
+      : latestMatch >= 40 ? 'God match — søknaden kan fungere'
+      : 'Svak match — vurder å styrke profilen';
 
     return (
       <View style={styles.aerligHomeWrap}>
@@ -1638,11 +1647,14 @@ export default function App() {
               <>
                 <View style={styles.aerligMeterRow}>
                   <Text style={styles.aerligMeterLabel}>Matchmeter</Text>
-                  <Text style={styles.aerligMeterValue}>{latestMatch}%</Text>
+                  <Text style={[styles.aerligMeterValue, { color: matchMeterColor }]}>{latestMatch}%</Text>
                 </View>
                 <View style={styles.aerligMeterOuter}>
                   <View style={[styles.aerligMeterInner, matchMeterStyle, { width: `${latestMatch}%` }]} />
                 </View>
+                {matchMeterStatus ? (
+                  <Text style={[styles.aerligMeterStatus, { color: matchMeterColor }]}>{matchMeterStatus}</Text>
+                ) : null}
               </>
             ) : null}
 
@@ -1835,6 +1847,16 @@ export default function App() {
 
     const hasMatchScore = (analysis?.match_score != null);
 
+    const analysisMeterStyle = matchScore >= 70 ? styles.aerligMeterGood
+      : matchScore >= 40 ? styles.aerligMeterWarn
+      : styles.aerligMeterBad;
+    const analysisMeterColor = matchScore >= 70 ? '#16A34A'
+      : matchScore >= 40 ? '#D97706'
+      : '#DC2626';
+    const analysisMeterStatus = matchScore >= 70 ? 'Sterk match — søk denne jobben!'
+      : matchScore >= 40 ? 'God match — søknaden kan fungere'
+      : 'Svak match — vurder å styrke profilen';
+
     const strengths = Array.isArray(analysis?.strengths) ? analysis.strengths : [];
 
     return (
@@ -1939,17 +1961,18 @@ export default function App() {
                 <>
                   <View style={styles.aerligMeterRow}>
                     <Text style={styles.aerligMeterLabel}>Matchmeter</Text>
-                    <Text style={styles.aerligMeterValue}>{matchScore}%</Text>
+                    <Text style={[styles.aerligMeterValue, { color: analysisMeterColor }]}>{matchScore}%</Text>
                   </View>
                   <View style={styles.aerligMeterOuter}>
                     <View
                       style={[
                         styles.aerligMeterInner,
-                        (matchScore >= 70) ? styles.aerligMeterGood : styles.aerligMeterWarn,
+                        analysisMeterStyle,
                         { width: `${Math.max(0, Math.min(100, matchScore))}%` },
                       ]}
                     />
                   </View>
+                  <Text style={[styles.aerligMeterStatus, { color: analysisMeterColor }]}>{analysisMeterStatus}</Text>
                 </>
               ) : null}
 
@@ -4457,10 +4480,19 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   aerligMeterGood: {
-    backgroundColor: '#3A7D44',
+    backgroundColor: '#16A34A',
   },
   aerligMeterWarn: {
-    backgroundColor: '#E8622A',
+    backgroundColor: '#D97706',
+  },
+  aerligMeterBad: {
+    backgroundColor: '#DC2626',
+  },
+  aerligMeterStatus: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
+    marginBottom: 6,
   },
   aerligPill: {
     alignSelf: 'flex-start',
