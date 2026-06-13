@@ -172,6 +172,74 @@ CV_SECTION_TITLES: list[str] = [
 CV_SECTION_TITLES_CF = {t.casefold(): t for t in CV_SECTION_TITLES}
 
 
+def _clean_company_for_pdf(company: str) -> str:
+    s = " ".join((company or "").split()).strip()
+    if not s:
+        return ""
+
+    # Remove common site suffixes.
+    s = re.sub(r"\s*[|–-]\s*finn(?:\.no)?\s*$", "", s, flags=re.IGNORECASE).strip()
+    return s
+
+
+def _is_probably_job_title(title: str) -> bool:
+    s = " ".join((title or "").split()).strip()
+    if not s:
+        return False
+
+    # Very common noise/boilerplate
+    if re.search(r"\bfinn(?:\.no)?\b", s, flags=re.IGNORECASE):
+        return False
+
+    # If it looks like a full sentence/marketing line, drop it.
+    if any(ch in s for ch in ["?", "!", "."]):
+        return False
+
+    # Too long => likely ingress/slogan.
+    if len(s) > 60:
+        return False
+
+    # Too many words => likely not a title.
+    if len(s.split()) > 8:
+        return False
+
+    # Common marketing openers (Norwegian).
+    starters = [
+        "klar for",
+        "vil du",
+        "ønsker du",
+        "er du",
+        "bli med",
+        "drømmer du",
+        "har du lyst",
+    ]
+    s_cf = s.casefold()
+    if any(s_cf.startswith(x) for x in starters):
+        return False
+
+    return True
+
+
+def _clean_job_title_for_pdf(title: str) -> str:
+    """Reduce job title noise for PDF subtitle.
+
+    Goal: keep a short, job-title-like string. Drop ingress/slogan lines.
+    """
+
+    s = " ".join((title or "").split()).strip()
+    if not s:
+        return ""
+
+    # Remove common FINN/site suffixes.
+    s = re.sub(r"\s*[|–-]\s*finn(?:\.no)?\s*$", "", s, flags=re.IGNORECASE).strip()
+
+    # If the whole string doesn't look like a title, don't show it.
+    if not _is_probably_job_title(s):
+        return ""
+
+    return s
+
+
 class _SidebarPdfDoc:
     def __init__(
         self,
@@ -506,10 +574,9 @@ class _SidebarPdfDoc:
     def _draw_cv_text(self, text: str) -> None:
         """Render the AI-produced tailored_cv with improved layout.
 
-        - Detect known CV section headings (on their own lines)
-        - Render headings with navy accent
-        - Render bullets with consistent indent
-        - Render experience/education entries with clearer headers + muted dates
+        Notes:
+        - We do NOT change the CV text content.
+        - We only improve rendering and hide empty/noise sections.
         """
 
         src = (text or "").replace("\r\n", "\n").replace("\r", "\n")
@@ -522,16 +589,77 @@ class _SidebarPdfDoc:
             self._paragraph(text)
             return
 
+        def _strip_bullet_prefix(s: str) -> str:
+            s2 = (s or "").strip()
+            if s2.startswith("•"):
+                return s2[1:].strip()
+            if s2.startswith("-"):
+                return s2[1:].strip()
+            return s2
+
+        def _is_placeholder_line(line: str) -> bool:
+            s = _strip_bullet_prefix(line)
+            s_cf = " ".join(s.split()).casefold().strip(". ")
+            if not s_cf:
+                return True
+            if s_cf in {"—", "-", "ikke oppgitt", "ikke dokumentert"}:
+                return True
+            if s_cf.startswith("ingen referanser"):
+                return True
+            if s_cf.startswith("ingen sertifisering"):
+                return True
+            if s_cf.startswith("referanser oppgis ved forespørsel"):
+                return True
+            if s_cf.startswith("ikke tilgjengelig"):
+                return True
+            if s_cf.startswith("ikke dokumentert"):
+                return True
+            if s_cf.startswith("ikke oppgitt"):
+                return True
+            # English placeholders (just in case)
+            if s_cf in {"not provided", "not documented", "n/a"}:
+                return True
+            return False
+
+        def _section_has_real_content(content_lines: list[str]) -> bool:
+            for ln in content_lines:
+                if not (ln or "").strip():
+                    continue
+                if _is_placeholder_line(ln):
+                    continue
+                return True
+            return False
+
+        # ---- Parse sections first (so we can skip empty sections without changing layout) ----
+        sections: list[tuple[str, list[str]]] = []
         cur_section: str | None = None
         buf: list[str] = []
 
-        def flush() -> None:
-            nonlocal buf, cur_section
-            if cur_section is None:
-                buf = []
-                return
+        for ln in lines:
+            key = (ln or "").strip()
+            key_cf = key.casefold()
 
-            content = [x.rstrip() for x in buf]
+            if key_cf in CV_SECTION_TITLES_CF:
+                # Commit previous section (if any)
+                if cur_section is not None:
+                    sections.append((cur_section, buf))
+                cur_section = CV_SECTION_TITLES_CF[key_cf]
+                buf = []
+                continue
+
+            # Keep the old behavior: discard any preamble before the first recognized heading.
+            if cur_section is None:
+                continue
+
+            buf.append(ln)
+
+        if cur_section is not None:
+            sections.append((cur_section, buf))
+
+        # ---- Render sections (skip empty/noise) ----
+        for section_title, raw_content in sections:
+            content = [x.rstrip() for x in (raw_content or [])]
+
             # Trim outer blank lines.
             while content and not content[0].strip():
                 content.pop(0)
@@ -539,10 +667,15 @@ class _SidebarPdfDoc:
                 content.pop()
 
             if not content:
-                buf = []
-                return
+                continue
 
-            sec_cf = cur_section.casefold()
+            # Hide empty/noise sections (e.g. "Ikke dokumentert.", "Ingen referanser oppgitt.")
+            if not _section_has_real_content(content):
+                continue
+
+            self._cv_subheader(section_title)
+
+            sec_cf = section_title.casefold()
 
             # Experience / education: treat non-bullet lines as entry headers.
             if sec_cf in {"arbeidserfaring", "utdanning"}:
@@ -552,10 +685,13 @@ class _SidebarPdfDoc:
                 for ln in content:
                     s = (ln or "").strip()
                     if not s:
-                        # Paragraph break inside an entry.
                         if entry_bullets:
                             self._cv_bullet_lines(entry_bullets)
                             entry_bullets = []
+                        continue
+
+                    # Skip placeholder/noise lines inside the section.
+                    if _is_placeholder_line(s):
                         continue
 
                     is_bullet = s.startswith("•") or s.startswith("-")
@@ -564,7 +700,6 @@ class _SidebarPdfDoc:
                         entry_bullets.append(s)
                         continue
 
-                    # New entry header
                     if entry_bullets:
                         self._cv_bullet_lines(entry_bullets)
                         entry_bullets = []
@@ -578,33 +713,17 @@ class _SidebarPdfDoc:
                 if entry_bullets:
                     self._cv_bullet_lines(entry_bullets)
 
-            # Skills/languages/certs/references: bullets when possible.
+            # Bullet-friendly sections.
             elif sec_cf in {"kjerneferdigheter", "språk", "sertifiseringer", "referanser"}:
                 bulletish = [ln for ln in content if (ln or "").strip().startswith(("•", "-"))]
                 if bulletish:
-                    self._cv_bullet_lines(content)
+                    self._cv_bullet_lines([ln for ln in content if not _is_placeholder_line(ln)])
                 else:
-                    self._cv_paragraph("\n".join(content))
+                    self._cv_paragraph("\n".join([ln for ln in content if not _is_placeholder_line(ln)]))
 
-            # Summary: normal paragraph.
+            # Summary and other text sections.
             else:
-                self._cv_paragraph("\n".join(content))
-
-            buf = []
-
-        for ln in lines:
-            key = (ln or "").strip()
-            key_cf = key.casefold()
-
-            if key_cf in CV_SECTION_TITLES_CF:
-                flush()
-                cur_section = CV_SECTION_TITLES_CF[key_cf]
-                self._cv_subheader(cur_section)
-                continue
-
-            buf.append(ln)
-
-        flush()
+                self._cv_paragraph("\n".join([ln for ln in content if not _is_placeholder_line(ln)]))
 
     def _paragraph(self, text: str, *, font: str = "Helvetica", size: float = 10.2, leading: float = 0.50 * cm) -> None:
         c = self.c
@@ -860,8 +979,15 @@ class _SidebarPdfDoc:
     def build(self) -> str:
         self._new_page()
 
-        job_title = (getattr(self.job, "title", "") or "").strip()
-        company = (getattr(self.job, "company", "") or "").strip()
+        job_title_raw = (getattr(self.job, "title", "") or "").strip()
+        company_raw = (getattr(self.job, "company", "") or "").strip()
+
+        # Reduce job-ad noise in the subtitle. We only want:
+        # - stillingstittel (when it looks like an actual title)
+        # - bedriftsnavn
+        job_title = _clean_job_title_for_pdf(job_title_raw)
+        company = _clean_company_for_pdf(company_raw)
+
         subtitle = " / ".join([x for x in [job_title, company] if x])
 
         self._draw_main_title("Søknad + CV", subtitle=subtitle or None)
