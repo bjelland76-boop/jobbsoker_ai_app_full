@@ -557,89 +557,110 @@ export default function App() {
   }
 
   const renderAuth = () => (
-    <View style={styles.pageCard}>
-      <Text style={styles.pageTitle}>{t('loginTitle')}</Text>
-      <Text style={styles.pageSubtitle}>Logg inn med engangskode på e-post. Ingen passord.</Text>
-
-      <Text style={styles.inputLabel}>{t('appLanguage')}</Text>
-      <View style={styles.filterChipRow}>
-        {[{ key: 'no', label: t('norwegian') }, { key: 'en', label: t('english') }].map((opt) => {
-          const active = uiLanguage === opt.key;
-          return (
-            <TouchableOpacity
-              key={opt.key}
-              style={[styles.filterChip, active && styles.filterChipActive]}
-              onPress={() => setAndPersistUiLanguage(opt.key)}
-            >
-              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{opt.label}</Text>
-            </TouchableOpacity>
-          );
-        })}
+    <View style={styles.aerligHomeWrap}>
+      {/* Brand header */}
+      <View style={[styles.aerligHeroCard, { marginBottom: 14 }]}>
+        <Text style={[styles.aerligLogo, { fontSize: 28, marginBottom: 4 }]}>Ærlig.</Text>
+        <Text style={[styles.aerligPageSubtitle, { marginBottom: 0 }]}>Din ærlige jobbcoach</Text>
       </View>
 
-      <TextInput
-        style={styles.input}
-        placeholder={t('email')}
-        value={authEmail}
-        onChangeText={(v) => {
-          setAuthEmail(v);
-          // If the email changes after we've sent a code, reset the flow.
-          if (codeSent) {
-            setCodeSent(false);
-            setResendCooldown(0);
-            setAuthCode('');
-          }
-        }}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
-
-      {codeSent ? (
-        <TextInput
-          style={styles.input}
-          placeholder="Engangskode (6 siffer)"
-          value={authCode}
-          onChangeText={setAuthCode}
-          autoCapitalize="none"
-          keyboardType="numeric"
-        />
-      ) : null}
-
-      <TouchableOpacity style={styles.primaryButton} onPress={doAuth}>
-        <Text style={styles.primaryButtonText}>
-          {authLoading
-            ? t('working')
-            : (codeSent ? 'Logg inn' : 'Send engangskode')}
+      {/* Login card */}
+      <View style={styles.aerligPageCard}>
+        <Text style={styles.aerligPageTitle}>{t('loginTitle')}</Text>
+        <Text style={[styles.aerligPageSubtitle, { marginBottom: 16 }]}>
+          Logg inn med engangskode på e-post. Ingen passord.
         </Text>
-      </TouchableOpacity>
 
-      {codeSent ? (
-        <TouchableOpacity
-          style={[styles.secondaryButton, resendCooldown ? { opacity: 0.6 } : null]}
-          disabled={!!resendCooldown || !!authLoading}
-          onPress={async () => {
-            if (!authEmail || resendCooldown) return;
-            setAuthLoading(true);
-            try {
-              await apiFetch('/auth/request-code', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: authEmail }),
-              });
+        {/* Language picker */}
+        <Text style={[styles.aerligLabel, { marginBottom: 8 }]}>{t('appLanguage')}</Text>
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+          {[{ key: 'no', label: t('norwegian') }, { key: 'en', label: t('english') }].map((opt) => {
+            const active = uiLanguage === opt.key;
+            return (
+              <TouchableOpacity
+                key={opt.key}
+                onPress={() => setAndPersistUiLanguage(opt.key)}
+                style={{
+                  paddingVertical: 8, paddingHorizontal: 18, borderRadius: 20,
+                  backgroundColor: active ? '#E8622A' : '#FFFFFF',
+                  borderWidth: 1,
+                  borderColor: active ? '#E8622A' : 'rgba(26,26,46,0.22)',
+                }}
+              >
+                <Text style={{
+                  fontSize: 14, fontWeight: '700',
+                  color: active ? '#FFFFFF' : '#1A1A2E',
+                }}>{opt.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <TextInput
+          style={[styles.input, styles.aerligInput]}
+          placeholder={t('email')}
+          value={authEmail}
+          onChangeText={(v) => {
+            setAuthEmail(v);
+            if (codeSent) {
+              setCodeSent(false);
+              setResendCooldown(0);
               setAuthCode('');
-              setResendCooldown(30);
-              Alert.alert('Kode sendt', 'Vi har sendt en ny engangskode på e-post.');
-            } catch (e) {
-              Alert.alert('Feil', errText(e));
             }
-            setAuthLoading(false);
           }}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
+
+        {codeSent ? (
+          <TextInput
+            style={[styles.input, styles.aerligInput, { marginTop: 10 }]}
+            placeholder="Engangskode (6 siffer)"
+            value={authCode}
+            onChangeText={setAuthCode}
+            autoCapitalize="none"
+            keyboardType="numeric"
+          />
+        ) : null}
+
+        <TouchableOpacity
+          style={[styles.aerligPrimaryButton, authLoading ? { opacity: 0.6 } : null]}
+          onPress={doAuth}
+          disabled={!!authLoading}
         >
-          <Text style={styles.secondaryButtonText}>
-            {resendCooldown ? `Send ny kode (${resendCooldown}s)` : 'Send ny kode'}
+          <Text style={styles.aerligPrimaryButtonText}>
+            {authLoading ? t('working') : (codeSent ? 'Logg inn' : 'Send engangskode')}
           </Text>
         </TouchableOpacity>
-      ) : null}
+
+        {codeSent ? (
+          <TouchableOpacity
+            style={[styles.aerligSecondaryButton, resendCooldown ? { opacity: 0.6 } : null]}
+            disabled={!!resendCooldown || !!authLoading}
+            onPress={async () => {
+              if (!authEmail || resendCooldown) return;
+              setAuthLoading(true);
+              try {
+                await apiFetch('/auth/request-code', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email: authEmail }),
+                });
+                setAuthCode('');
+                setResendCooldown(30);
+                Alert.alert('Kode sendt', 'Vi har sendt en ny engangskode på e-post.');
+              } catch (e) {
+                Alert.alert('Feil', errText(e));
+              }
+              setAuthLoading(false);
+            }}
+          >
+            <Text style={styles.aerligSecondaryButtonText}>
+              {resendCooldown ? `Send ny kode (${resendCooldown}s)` : 'Send ny kode'}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
     </View>
   );
 
@@ -3119,7 +3140,7 @@ export default function App() {
 
   if (!authTokenState) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: '#F5F4F1' }]}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {renderAuth()}
         </ScrollView>
