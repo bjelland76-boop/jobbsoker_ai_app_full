@@ -189,6 +189,7 @@ export default function App() {
   const [jobAnalysesLoading, setJobAnalysesLoading] = useState(false);
   const [cvAnalysis, setCvAnalysis] = useState(null);
   const [cvLoading, setCvLoading] = useState(false);
+  const [appSortOrder, setAppSortOrder] = useState('newest');
   const [applicationStyle, setApplicationStyle] = useState('vanlig'); // kort | vanlig | profesjonell
   const [applicationEmail, setApplicationEmail] = useState('');
   // Unified output from backend generator (used by both "Send email" and "Generate PDF").
@@ -2305,6 +2306,25 @@ export default function App() {
           <Text style={styles.aerligPageTitle}>Søknader</Text>
           <Text style={styles.aerligPageSubtitle}>Én linje per jobb. Huk av status etter hvert.</Text>
 
+          <View style={{ flexDirection: 'row', gap: 6, marginTop: 12, marginBottom: 4 }}>
+            {[
+              { key: 'newest', label: 'Nyeste først' },
+              { key: 'status', label: 'Status' },
+              { key: 'name', label: 'Navn A-Å' },
+            ].map(({ key, label }) => (
+              <TouchableOpacity key={key} onPress={() => setAppSortOrder(key)}
+                style={{ paddingVertical: 5, paddingHorizontal: 10, borderRadius: 8,
+                  backgroundColor: appSortOrder === key ? 'rgba(232,80,26,0.08)' : 'transparent' }}>
+                <Text style={{ fontSize: 13, fontWeight: appSortOrder === key ? '600' : '400',
+                  color: appSortOrder === key ? '#E8501A' : '#888888',
+                  borderBottomWidth: appSortOrder === key ? 1.5 : 0,
+                  borderBottomColor: '#E8501A' }}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
           <TouchableOpacity style={styles.aerligSecondaryButton} onPress={loadApplications}>
             <Text style={styles.aerligSecondaryButtonText}>{applicationsLoading ? 'Laster...' : 'Oppdater liste'}</Text>
           </TouchableOpacity>
@@ -2368,7 +2388,19 @@ export default function App() {
           </View>
         ) : null}
 
-        {applications.length > 0 ? (
+        {applications.length > 0 ? (() => {
+          const sorted = [...applications].sort((a, b) => {
+            if (appSortOrder === 'name') {
+              return (a.job.title || '').localeCompare(b.job.title || '', 'no');
+            }
+            if (appSortOrder === 'status') {
+              const rank = (i) => i.got_job ? 3 : i.interviewed ? 2 : i.applied ? 1 : 0;
+              return rank(b) - rank(a);
+            }
+            // newest: by updated_at desc
+            return new Date(b.updated_at || 0) - new Date(a.updated_at || 0);
+          });
+          return (
           <View style={styles.aerligAppsTableCard}>
             <View style={styles.aerligAppsTableHeaderRow}>
               <Text style={[styles.aerligAppsTableHeaderCell, styles.aerligAppsTableJobHeader]}>Jobb</Text>
@@ -2377,7 +2409,7 @@ export default function App() {
               <Text style={styles.aerligAppsTableHeaderCell}>Jobb</Text>
             </View>
 
-            {applications.map((item) => (
+            {sorted.map((item) => (
               <View key={item.job.id} style={styles.aerligAppsTableRow}>
                 <View style={styles.aerligAppsTableJobCell}>
                   <Text style={styles.aerligAppsTableJobTitle} numberOfLines={1}>{item.job.title}</Text>
@@ -2407,7 +2439,8 @@ export default function App() {
               </View>
             ))}
           </View>
-        ) : null}
+          );
+        })() : null}
       </View>
     );
   };
