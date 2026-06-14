@@ -636,7 +636,7 @@ def request_login_code(
     # - prevent rapid-fire sends
     # - prevent mass-spam from one IP
     email_min_interval_seconds = 30
-    email_max_per_hour = 5
+    email_max_per_hour = 15
     ip_max_per_hour = 20
 
     recent = db.scalars(
