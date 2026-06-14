@@ -187,6 +187,7 @@ export default function App() {
   const [tailoredCvJobTitle, setTailoredCvJobTitle] = useState('');
   const [cvTemplate, setCvTemplate] = useState('profesjonell');
   const [cvLanguage, setCvLanguage] = useState('no'); // 'no' | 'en'
+  const [profileUpdatedSinceAnalysis, setProfileUpdatedSinceAnalysis] = useState(false);
   const [loading, setLoading] = useState(false);
   const [jobAnalyses, setJobAnalyses] = useState([]);
   const [jobAnalysesLoading, setJobAnalysesLoading] = useState(false);
@@ -910,6 +911,7 @@ export default function App() {
       });
 
       setProfileId(data.id);
+      if (analysis && jobUrl) setProfileUpdatedSinceAnalysis(true);
       if (!silent) {
         Alert.alert('Profil lagret', 'Din profil er lagret til backend.');
       }
@@ -1236,6 +1238,7 @@ export default function App() {
 
       setAnalysis(data);
       if (data?.cv_mal) setCvTemplate(data.cv_mal);
+      setProfileUpdatedSinceAnalysis(false);
       // If triggered from "Ny søknad" we still want to show the analysis screen.
       setActiveTab('analysis');
       // Refresh the history list (best-effort).
@@ -2189,6 +2192,18 @@ export default function App() {
           );
         })}
 
+        {profileUpdatedSinceAnalysis && analysis && jobUrl ? (
+          <View style={[styles.aerligCard, { borderWidth: 1.5, borderColor: '#E8501A', backgroundColor: '#FFF8F4' }]}>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: '#E8501A', marginBottom: 4 }}>Profilen er oppdatert</Text>
+            <Text style={{ fontSize: 13, color: '#334155', lineHeight: 19, marginBottom: 12 }}>
+              Du har endret profilen din siden siste analyse. Kjør analysen på nytt for å se om matchen er bedre nå.
+            </Text>
+            <TouchableOpacity style={styles.aerligPrimaryButton} onPress={analyzeJob}>
+              <Text style={styles.aerligPrimaryButtonText}>{loading ? 'Analyserer...' : 'Analyser på nytt'}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         {analysis ? (
           <>
             <View style={[styles.aerligCard, styles.aerligAccentNavy]}>
@@ -2276,6 +2291,12 @@ export default function App() {
                 {analysis.missing_requirements.map((item, index) => (
                   <Text key={index} style={styles.aerligCardBody}>• {item}</Text>
                 ))}
+                <TouchableOpacity
+                  style={[styles.aerligSecondaryButton, { marginTop: 12 }]}
+                  onPress={() => setActiveTab('profile')}
+                >
+                  <Text style={styles.aerligSecondaryButtonText}>Oppdater profilen din →</Text>
+                </TouchableOpacity>
               </View>
             ) : null}
 
