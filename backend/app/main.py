@@ -1269,7 +1269,7 @@ def generate_pdfs_from_saved_analysis(
         detail="Deprecated. Use POST /analyze-url-and-send",
     )
 
-    profile = db.get(Profile, profile_id)
+    profile = db.get(Profile, profile_id)  # unreachable — kept for reference
     if not profile or profile.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
 
@@ -1497,6 +1497,132 @@ def toggle_favorite_analysis(
     db.commit()
 
     return {"is_favorite": row.is_favorite}
+
+
+@app.post(
+    "/job-analyses/{job_id}/generate-tailored-cv",
+    response_model=ApplicationPackageOut,
+    tags=["analysis"],
+)
+def generate_tailored_cv(
+    job_id: int,
+    profile_id: int = Query(..., ge=1),
+    application_style: str = Query(default="vanlig"),
+    include_photo: bool = Query(default=True),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate a job-tailored CV using the stored match analysis for this job."""
+    from .job_analyzer import generate_application_texts, fetch_job_text
+
+    profile = db.get(Profile, profile_id)
+    if not profile or profile.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
+
+    job = db.get(Job, job_id)
+    if not job or job.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke jobb")
+
+    row = db.scalars(
+        select(JobAnalysisHistory).where(
+            JobAnalysisHistory.profile_id == profile_id,
+            JobAnalysisHistory.job_id == job_id,
+            JobAnalysisHistory.hidden == False,  # noqa: E712
+        )
+    ).first()
+
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kjør jobbanalyse først")
+
+    try:
+        stored = json.loads(row.analysis_json) if row.analysis_json else {}
+    except Exception:
+        stored = {}
+
+    match_context = {
+        "score": stored.get("match_score"),
+        "strengths": stored.get("strengths") or [],
+        "missing": stored.get("missing_requirements") or [],
+        "top_reason": stored.get("top_reason") or "",
+        "main_risk": stored.get("main_risk") or "",
+    }
+
+    job_text = (job.description or "").strip()
+    if not job_text:
+        try:
+            job_text = fetch_job_text(job.url)
+            job.description = " ".join(job_text.split())[:3000]
+            db.commit()
+        except Exception:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Kunne ikke hente jobbannonse")
+
+    style_norm = (application_style or "vanlig").strip().lower()
+    if style_norm not in {"kort", "vanlig", "profesjonell"}:
+        style_norm = "vanlig"
+
+    try:
+        gen = generate_application_texts(
+            profile,
+            job_title=job.title or "",
+            company=job.company or "",
+            job_text=job_text,
+            application_style=style_norm,
+            match_context=match_context,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+    cover_letter = _to_text(gen.get("cover_letter"))
+    tailored_cv = _to_text(gen.get("tailored_cv"))
+    email_text_val = _to_text(gen.get("email_text"))
+
+    # Persist generated texts back into the stored analysis
+    stored["cover_letter"] = cover_letter
+    stored["tailored_cv"] = tailored_cv
+    stored["email_text"] = email_text_val
+    stored["tailored_for_job"] = True
+    row.analysis_json = json.dumps(stored, ensure_ascii=False)
+    row.updated_at = datetime.utcnow()
+
+    pdf_tailored_cv = _inject_references_into_cv(profile, tailored_cv)
+    include_photo_bool = bool(include_photo) and bool(getattr(profile, "photo_data", ""))
+
+    pdf_url = ""
+    try:
+        template_id = "sidebar_v1"
+        content_hash = compute_pdf_content_hash(
+            template_id=template_id,
+            include_photo=include_photo_bool,
+            cover_letter=cover_letter,
+            rendered_cv_text=pdf_tailored_cv,
+            profile=profile,
+            job=job,
+        )
+        cover_pdf, cv_pdf = make_application_pdfs(
+            profile, job, cover_letter, pdf_tailored_cv,
+            include_photo=include_photo_bool,
+        )
+        approw = GeneratedApplication(
+            job_id=job.id,
+            profile_id=profile.id,
+            email_text=email_text_val,
+            cover_letter=cover_letter,
+            tailored_cv=tailored_cv,
+            pdf_path=cover_pdf,
+            cv_pdf_path=cv_pdf,
+            template=template_id,
+            include_photo=include_photo_bool,
+            content_hash=content_hash,
+        )
+        db.add(approw)
+        db.commit()
+        db.refresh(approw)
+        _upsert_progress(db, profile.id, job.id)
+        pdf_url = f"/generated-applications/{approw.id}/pdf/cover"
+    except Exception:
+        db.commit()
+
+    return {"cv": tailored_cv, "coverLetter": cover_letter, "pdfUrl": pdf_url}
 
 
 def generateApplicationPackage(

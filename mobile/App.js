@@ -183,6 +183,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [jobUrl, setJobUrl] = useState('');
   const [analysis, setAnalysis] = useState(null);
+  const [tailoredCvJobTitle, setTailoredCvJobTitle] = useState('');
   const [loading, setLoading] = useState(false);
   const [jobAnalyses, setJobAnalyses] = useState([]);
   const [jobAnalysesLoading, setJobAnalysesLoading] = useState(false);
@@ -1186,6 +1187,7 @@ export default function App() {
     // New analysis => clear any previously generated package view.
     setApplicationPackage(null);
     setGenerationBanner('');
+    setTailoredCvJobTitle('');
 
     setLoading(true);
     try {
@@ -1316,19 +1318,29 @@ export default function App() {
     setGenerationBanner('');
     // Only clear UI AFTER request is confirmed started.
     setApplicationPackage(null);
+    setTailoredCvJobTitle('');
 
     try {
-      // Use the same unified backend generator as the "Send email" flow.
-      const pkg = await apiFetch('/analyze-url-and-send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          profile_id: profileId,
-          url: jobUrl,
-          application_style: applicationStyle,
-          include_photo: includePhoto,
-        }),
-      });
+      let pkg;
+      if (analysis?.job_id) {
+        // Use stored analysis to build a CV tailored to this specific job.
+        pkg = await apiFetch(
+          `/job-analyses/${analysis.job_id}/generate-tailored-cv?profile_id=${profileId}&application_style=${encodeURIComponent(applicationStyle)}&include_photo=${includePhoto}`,
+          { method: 'POST' },
+        );
+      } else {
+        // No saved analysis — fall back to full re-analysis + generation.
+        pkg = await apiFetch('/analyze-url-and-send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            profile_id: profileId,
+            url: jobUrl,
+            application_style: applicationStyle,
+            include_photo: includePhoto,
+          }),
+        });
+      }
 
       const isValidPackage = (
         pkg
@@ -1350,6 +1362,9 @@ export default function App() {
 
         if (hasAnyText) {
           setApplicationPackage(safePkg);
+          if (analysis?.job_id) {
+            setTailoredCvJobTitle(analysis?.job_title || 'denne stillingen');
+          }
 
           // Only navigate/open documents when a PDF was actually created.
           if (safePkg.pdfUrl && safePkg.pdfUrl.trim()) {
@@ -2191,6 +2206,11 @@ export default function App() {
 
               {applicationPackage ? (
                 <View style={{ marginTop: 12 }}>
+                  {tailoredCvJobTitle ? (
+                    <View style={{ backgroundColor: '#e8f4e8', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5, marginBottom: 10, alignSelf: 'flex-start' }}>
+                      <Text style={{ color: '#2a7a2a', fontSize: 12, fontWeight: '600' }}>Tilpasset: {tailoredCvJobTitle}</Text>
+                    </View>
+                  ) : null}
                   {(typeof applicationPackage?.pdfUrl === 'string' && applicationPackage.pdfUrl.trim()) ? (
                     <TouchableOpacity
                       style={[styles.aerligSecondaryButton, { marginTop: 0 }]}

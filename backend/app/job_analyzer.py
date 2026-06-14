@@ -291,6 +291,7 @@ def generate_application_texts(
     company: str,
     job_text: str,
     application_style: str = "vanlig",
+    match_context: dict | None = None,
 ) -> dict:
     """Generate cover letter + tailored CV + email text.
 
@@ -329,6 +330,26 @@ def generate_application_texts(
         6000,
     )
 
+    match_block = ""
+    if match_context and isinstance(match_context, dict):
+        score = match_context.get("score")
+        strengths = [str(s) for s in (match_context.get("strengths") or [])[:3] if s]
+        missing = [str(m) for m in (match_context.get("missing") or [])[:3] if m]
+        top_reason = (match_context.get("top_reason") or "").strip()
+        main_risk = (match_context.get("main_risk") or "").strip()
+        lines = ["Matchanalyse for denne stillingen (bruk aktivt i CV-en):"]
+        if score is not None:
+            lines.append(f"- Matchscore: {int(score)}%")
+        if top_reason:
+            lines.append(f"- Sterkeste match: {top_reason}")
+        if main_risk:
+            lines.append(f"- Viktigste gap: {main_risk}")
+        if strengths:
+            lines.append("- Fremhev disse styrkene: " + "; ".join(strengths))
+        if missing:
+            lines.append("- Tone ned eller kompenser for: " + "; ".join(missing))
+        match_block = "\n".join(lines)
+
     prompt = f"""
 Svar KUN med gyldig JSON med feltene:
 cover_letter, tailored_cv, email_text
@@ -341,11 +362,13 @@ Text: {job_comp}
 Candidate:
 {cand_comp}
 
-Regler:
+{match_block + chr(10) if match_block else ""}Regler:
 - Skriv på norsk.
 - Ikke finn på erfaring/utdanning.
 - Ikke bruk placeholders som [telefon] eller [adresse].
 - {style_text}
+- Bruk nøkkelord fra stillingsannonsen i CV-en der kandidaten faktisk har relevant erfaring.
+- Fremhev styrker fra matchanalysen øverst i Profesjonell oppsummering.
 
 {SHARED_ANTI_HALLUCINATION_RULES}
 
@@ -487,6 +510,7 @@ def analyze_job_url(
             company=company,
             job_text=job_text,
             application_style=style_norm,
+            match_context=match,
         )
         result.update(docs)
 
