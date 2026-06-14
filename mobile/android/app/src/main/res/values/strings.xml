@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Ærlig JobbCoach</string>
-    <string name="title_activity_main">Ærlig JobbCoach</string>
-    <string name="package_name">com.frankbjelland.aerligjobbcoach</string>
-    <string name="custom_url_scheme">com.frankbjelland.aerligjobbcoach</string>
+    <string name="app_name">Ærlig</string>
+    <string name="title_activity_main">Ærlig</string>
+    <string name="package_name">com.aerlig.app</string>
+    <string name="custom_url_scheme">com.aerlig.app</string>
 </resources>

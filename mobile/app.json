@@ -1,13 +1,15 @@
 {
   "expo": {
-    "name": "Ærlig JobbCoach",
+    "name": "Ærlig",
     "slug": "aerlig-jobbcoach",
     "version": "1.0.0",
     "plugins": [
       "expo-font"
     ],
     "android": {
-      "package": "com.frankbjelland.aerligjobbcoach"
+      "package": "com.aerlig.app",
+      "versionCode": 1,
+      "permissions": ["android.permission.RECORD_AUDIO"]
     },
     "extra": {
       "eas": {
