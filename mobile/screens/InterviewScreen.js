@@ -35,6 +35,7 @@ export default function InterviewScreen({
   setInterviewError,
   interviewStarted,
   setInterviewStarted,
+  profileTooEmpty,
   styles,
 }) {
   const scrollRef = React.useRef(null);
@@ -142,6 +143,14 @@ export default function InterviewScreen({
 
   async function startInterview() {
     if (interviewLoading) return;
+    if (profileTooEmpty) {
+      setInterviewError(
+        uiLanguage === 'en'
+          ? 'Add work experience or education to your profile to get a personalised interview.'
+          : 'Fyll ut profilen din (erfaring eller utdanning) for å få et personlig intervju.'
+      );
+      return;
+    }
     setInterviewLoading(true);
     setInterviewError('');
     setIsFinal(false);
@@ -366,9 +375,18 @@ export default function InterviewScreen({
             ) : null}
 
             {interviewError ? (
-              <Text style={[styles.helpText, styles.aerligHelpText, { marginTop: 10, marginBottom: 0, color: '#ef4444' }]}>
-                {interviewError}
-              </Text>
+              <View style={{ marginTop: 10 }}>
+                <Text style={[styles.helpText, styles.aerligHelpText, { marginBottom: 0, color: '#ef4444' }]}>
+                  {interviewError}
+                </Text>
+                {profileTooEmpty ? (
+                  <TouchableOpacity onPress={() => setActiveTab('profile')} style={{ marginTop: 8 }}>
+                    <Text style={{ color: '#E8501A', fontSize: 14, fontWeight: '600' }}>
+                      {uiLanguage === 'en' ? '→ Go to Profile' : '→ Gå til Profil'}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
             ) : null}
           </View>
 

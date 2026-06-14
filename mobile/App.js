@@ -526,6 +526,13 @@ export default function App() {
     setDocuments([]);
   }
 
+  function isProfileTooEmpty() {
+    const hasExperience = Array.isArray(experienceEntries) && experienceEntries.length > 0;
+    const hasEducation = Array.isArray(educationEntries) && educationEntries.length > 0;
+    const hasSkills = (skills || '').trim().length > 10;
+    return !hasExperience && !hasEducation && !hasSkills;
+  }
+
   async function logout() {
     try {
       await AsyncStorage.removeItem('authToken');
@@ -1196,6 +1203,20 @@ export default function App() {
       return;
     }
 
+    if (isProfileTooEmpty()) {
+      Alert.alert(
+        uiLanguage === 'en' ? 'Complete your profile' : 'Fyll ut profilen din',
+        uiLanguage === 'en'
+          ? 'Add work experience or education to get a relevant analysis.'
+          : 'Legg til arbeidserfaring eller utdanning for å få en god analyse.',
+        [
+          { text: uiLanguage === 'en' ? 'Cancel' : 'Avbryt', style: 'cancel' },
+          { text: uiLanguage === 'en' ? 'Go to Profile' : 'Gå til Profil', onPress: () => setActiveTab('profile') },
+        ]
+      );
+      return;
+    }
+
     // New analysis => clear any previously generated package view.
     setApplicationPackage(null);
     setGenerationBanner('');
@@ -1230,6 +1251,19 @@ export default function App() {
   async function sendApplication() {
     if (!profileId) {
       Alert.alert('Feil', 'Lagre profilen før sending');
+      return;
+    }
+    if (isProfileTooEmpty()) {
+      Alert.alert(
+        uiLanguage === 'en' ? 'Complete your profile' : 'Fyll ut profilen din',
+        uiLanguage === 'en'
+          ? 'Add work experience or education to generate a relevant application.'
+          : 'Legg til arbeidserfaring eller utdanning for å generere en god søknad.',
+        [
+          { text: uiLanguage === 'en' ? 'Cancel' : 'Avbryt', style: 'cancel' },
+          { text: uiLanguage === 'en' ? 'Go to Profile' : 'Gå til Profil', onPress: () => setActiveTab('profile') },
+        ]
+      );
       return;
     }
     if (!applicationEmail || !applicationEmail.trim()) {
@@ -1312,6 +1346,19 @@ export default function App() {
   async function generatePdf() {
     if (!profileId) {
       Alert.alert('Feil', 'Lagre profilen først');
+      return;
+    }
+    if (isProfileTooEmpty()) {
+      Alert.alert(
+        uiLanguage === 'en' ? 'Complete your profile' : 'Fyll ut profilen din',
+        uiLanguage === 'en'
+          ? 'Add work experience or education to generate a relevant CV.'
+          : 'Legg til arbeidserfaring eller utdanning for å generere en god CV.',
+        [
+          { text: uiLanguage === 'en' ? 'Cancel' : 'Avbryt', style: 'cancel' },
+          { text: uiLanguage === 'en' ? 'Go to Profile' : 'Gå til Profil', onPress: () => setActiveTab('profile') },
+        ]
+      );
       return;
     }
 
@@ -1419,6 +1466,7 @@ export default function App() {
 
     generationLockRef.current = true;
     setIsGenerating(true);
+    const prevTemplate = cvTemplate;
     setCvTemplate(newTemplate);
 
     const includePhoto = !!profilePhotoData && !!includePhotoInPdf;
@@ -1437,6 +1485,8 @@ export default function App() {
       }
     } catch (e) {
       console.error('[Assistant] regeneratePdfWithTemplate failed', e);
+      setCvTemplate(prevTemplate);
+      setGenerationBanner(uiLanguage === 'en' ? 'Could not switch template, try again.' : 'Kunne ikke bytte mal, prøv igjen.');
     } finally {
       setIsGenerating(false);
       generationLockRef.current = false;
@@ -2765,6 +2815,7 @@ export default function App() {
       setInterviewError={setInterviewError}
       interviewStarted={interviewStarted}
       setInterviewStarted={setInterviewStarted}
+      profileTooEmpty={isProfileTooEmpty()}
       styles={styles}
     />
   );
