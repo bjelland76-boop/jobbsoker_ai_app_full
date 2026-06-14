@@ -159,7 +159,7 @@ async function apiFetch(path, options) {
   return data;
 }
 
-const PRIVACY_URL = 'https://www.fandv.no';
+const PRIVACY_URL = 'https://bjelland76-boop.github.io/jobbsoker_ai_app_full/';
 
 // Career tips shown on the Home screen.
 // We keep them locally and rotate them every few hours.
