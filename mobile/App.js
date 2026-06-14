@@ -1232,8 +1232,12 @@ export default function App() {
       Alert.alert('Feil', 'Lagre profilen før sending');
       return;
     }
-    if (!jobUrl || !applicationEmail) {
-      Alert.alert('Feil', 'Mangler jobbannonse eller e-post');
+    if (!applicationEmail || !applicationEmail.trim()) {
+      setGenerationBanner('Skriv inn e-postadressen din for å sende søknaden.');
+      return;
+    }
+    if (!jobUrl) {
+      setGenerationBanner('Lim inn en jobbannonse-URL først.');
       return;
     }
 
