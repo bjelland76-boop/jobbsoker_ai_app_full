@@ -317,15 +317,22 @@ def analyze_job_match(
     # Very compact schema instruction to minimize tokens.
     prompt = (
         f"JOB:{job_comp}\nCV:{cv_comp}\n"
+        "INFERENCE RULES (apply before listing missing):\n"
+        "- Skills that are LOGICALLY IMPLIED by long experience must NOT appear in missing. "
+        "Examples: 10+ years warehouse/parts work implies invoicing, stock counting, goods receipt, forklift, ERP basics. "
+        "20+ years in a trade implies all common sub-tasks of that trade. "
+        "Only list something as missing if the CV gives no reasonable basis to infer it.\n"
+        "- Certifications/licences (fagbrev, forklift licence, etc.) listed under experience or education count as documented.\n"
+        "- Do NOT flag soft skills (teamwork, communication) as missing — assume them unless the job explicitly tests them.\n"
         "Return JSON: {"
         '"score":0-100,'
         '"interview_probability":0-100,'
         '"seniority_match":0-100,'
         '"fit":"1 short sentence",'
         '"top_reason":"1 short sentence",'
-        '"main_risk":"1 short sentence",'
+        '"main_risk":"1 short sentence — only a real gap, not an implied skill",'
         '"strengths":["max 3"],'
-        '"missing":["max 3"],'
+        '"missing":["max 3; only genuine gaps not inferable from stated experience"],'
         '"recommended_cv_changes":["max 3; actionable CV edits addressing missing requirements; <=120 chars; no generic"],'
         '"advice":"1 short sentence",'
         '"cv_mal":"profesjonell (DEFAULT for de fleste stillinger: salg/IT/helse/bygg/kontor/service/logistikk/HR) | kreativ (KUN for: designer/UX/grafisk/animasjon/reklame/media/innhold) | klassisk (KUN for: advokat/jurist/revisor/forsker/akademiker/offentlig forvaltning) — velg basert på stillingstittelen i JOB-seksjonen"'
