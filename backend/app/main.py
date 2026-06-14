@@ -420,7 +420,7 @@ def health(db: Session = Depends(get_db)):
         checks["database_error"] = str(e)
 
     checks["jwt_secret_present"] = bool(os.getenv("JWT_SECRET"))
-    checks["openai_key_present"] = bool(os.getenv("OPENAI_API_KEY"))
+    checks["anthropic_key_present"] = bool(os.getenv("ANTHROPIC_API_KEY"))
 
     smtp_host = os.getenv("SMTP_HOST")
     smtp_user = os.getenv("SMTP_USER")

@@ -10,6 +10,7 @@ reportlab==4.2.2
 requests==2.32.3
 beautifulsoup4==4.12.3
 anthropic
+openai==1.35.14
 httpx<0.28
 python-multipart==0.0.9
 
