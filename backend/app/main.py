@@ -97,6 +97,7 @@ def ensure_profile_columns() -> None:
         ensure_col("profiles", "languages", "languages TEXT DEFAULT ''")
         ensure_col("profiles", "references_json", "references_json TEXT DEFAULT ''")
         ensure_col("profiles", "cv_gaps", "cv_gaps TEXT DEFAULT ''")
+        ensure_col("profiles", "has_seen_onboarding", "has_seen_onboarding INTEGER DEFAULT 0")
 
         # jobs
         ensure_col("jobs", "user_id", "user_id INTEGER")
@@ -265,6 +266,7 @@ def profile_to_dict(profile: Profile) -> dict:
         "target_role": (getattr(profile, "target_role", "") or ""),
         "cv_text": (getattr(profile, "cv_text", "") or ""),
         "tone": (getattr(profile, "tone", "") or "normal"),
+        "has_seen_onboarding": bool(getattr(profile, "has_seen_onboarding", False)),
     }
 
 
@@ -970,6 +972,17 @@ def update_profile(profile_id: int, data: ProfileIn, current_user: User = Depend
     db.commit()
     db.refresh(profile)
 
+    return profile_to_dict(profile)
+
+
+@app.patch("/profiles/{profile_id}/onboarding", response_model=ProfileOut)
+def mark_onboarding_seen(profile_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    profile = db.get(Profile, profile_id)
+    if not profile or profile.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profil ikke funnet")
+    profile.has_seen_onboarding = True
+    db.commit()
+    db.refresh(profile)
     return profile_to_dict(profile)
 
 

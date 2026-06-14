@@ -46,6 +46,7 @@ class Profile(Base):
 
     cv_gaps: Mapped[str] = mapped_column(Text, default="")
     tone: Mapped[str] = mapped_column(String(50), default="normal")
+    has_seen_onboarding: Mapped[bool] = mapped_column(Boolean, default=False)
 
 class Job(Base):
     __tablename__ = "jobs"

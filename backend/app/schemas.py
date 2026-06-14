@@ -29,6 +29,7 @@ class ProfileOut(BaseModel):
     target_role: str
     cv_text: str
     tone: str
+    has_seen_onboarding: bool = False
 
 
 class JobOut(BaseModel):

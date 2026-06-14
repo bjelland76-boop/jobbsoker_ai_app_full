@@ -172,6 +172,7 @@ export default function App() {
 
   const [authReady, setAuthReady] = useState(false);
   const [authTokenState, setAuthTokenState] = useState(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [uiLanguage, setUiLanguage] = useState('no'); // no | en
   const [authEmail, setAuthEmail] = useState('');
   const [authCode, setAuthCode] = useState('');
@@ -728,6 +729,7 @@ export default function App() {
           setIncludePhotoInPdf(defInc);
           setSkills(profile.skills || '');
           setConsentAnalytics(!!profile.consent_analytics);
+          if (!profile.has_seen_onboarding) setShowOnboarding(true);
           setLanguagesList(Array.isArray(profile.languages) ? profile.languages : (profile.languages ? [profile.languages] : []));
           setCvGaps(profile.cv_gaps || '');
 
@@ -801,6 +803,13 @@ export default function App() {
     if (!authTokenState) return;
     loadProfile();
   }, [authTokenState]);
+
+  async function dismissOnboarding() {
+    setShowOnboarding(false);
+    if (profileId) {
+      try { await apiFetch(`/profiles/${profileId}/onboarding`, { method: 'PATCH' }); } catch (_) {}
+    }
+  }
 
   useEffect(() => {
     if (showSchoolListIndex < 0) return;
@@ -1595,6 +1604,54 @@ export default function App() {
     { title: 'Søknadsstatus', value: '—', percent: 35, status: 'Oppdater status på søknader', tab: 'applications' },
   ];
 
+  const renderOnboarding = () => (
+    <View style={{
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.55)', zIndex: 999,
+      justifyContent: 'center', alignItems: 'center', padding: 20,
+    }}>
+      <View style={{
+        backgroundColor: '#F7F5F0', borderRadius: 16, padding: 28,
+        width: '100%', maxWidth: 420,
+        shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 16, elevation: 12,
+      }}>
+        <Text style={{ fontSize: 24, fontWeight: '800', color: '#0f172a', textAlign: 'center', marginBottom: 6 }}>
+          Velkommen til Ærlig!
+        </Text>
+        <Text style={{ fontSize: 14, color: '#64748b', textAlign: 'center', marginBottom: 24, lineHeight: 20 }}>
+          Din ærlige jobbcoach — her er hvordan du kommer i gang
+        </Text>
+
+        {[
+          { icon: '🔗', text: 'Lim inn en jobbannonse-URL og få en ærlig match-score' },
+          { icon: '📄', text: 'Generer CV og søknad tilpasset nettopp denne stillingen' },
+          { icon: '🎙️', text: 'Øv på intervju før den virkelige samtalen' },
+        ].map((step, i) => (
+          <View key={i} style={{
+            flexDirection: 'row', alignItems: 'flex-start', gap: 14,
+            backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10,
+            shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
+          }}>
+            <Text style={{ fontSize: 26 }}>{step.icon}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, color: '#334155', lineHeight: 19 }}>{step.text}</Text>
+            </View>
+          </View>
+        ))}
+
+        <TouchableOpacity
+          onPress={dismissOnboarding}
+          style={{
+            backgroundColor: '#E8501A', borderRadius: 10, paddingVertical: 14,
+            alignItems: 'center', marginTop: 14,
+          }}
+        >
+          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Kom i gang</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   const renderHome = () => {
     const ripple = Platform.OS === 'android'
       ? { android_ripple: { color: 'rgba(26, 26, 46, 0.10)' } }
@@ -1666,11 +1723,23 @@ export default function App() {
         <View style={styles.aerligHeroCard}>
           <View style={styles.aerligHeroHeader}>
             <Text style={styles.aerligLogo}>Ærlig.</Text>
-            {analysedJobsCount > 0 ? (
-              <View style={styles.aerligBadge}>
-                <Text style={styles.aerligBadgeText}>{analysedJobsCount}</Text>
-              </View>
-            ) : null}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              {analysedJobsCount > 0 ? (
+                <View style={styles.aerligBadge}>
+                  <Text style={styles.aerligBadgeText}>{analysedJobsCount}</Text>
+                </View>
+              ) : null}
+              <TouchableOpacity
+                onPress={() => setShowOnboarding(true)}
+                style={{
+                  width: 28, height: 28, borderRadius: 14,
+                  backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#E8501A',
+                  alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <Text style={{ color: '#E8501A', fontSize: 13, fontWeight: '700' }}>?</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <Text style={styles.aerligHeroGreeting}>
@@ -3430,6 +3499,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {showOnboarding && renderOnboarding()}
       {activeTab === 'interview' ? (
         renderInterview()
       ) : (
