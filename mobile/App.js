@@ -2246,39 +2246,37 @@ export default function App() {
                     </View>
                   ) : null}
 
-                  {/* Template picker — only shown when a tailored CV has been generated */}
-                  {tailoredCvJobTitle ? (
-                    <View style={{ marginBottom: 12 }}>
-                      <Text style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>
-                        Mal: <Text style={{ fontWeight: '700', color: '#0f172a' }}>{cvTemplate.charAt(0).toUpperCase() + cvTemplate.slice(1)}</Text>
-                      </Text>
-                      <View style={{ flexDirection: 'row', gap: 6 }}>
-                        {['kreativ', 'profesjonell', 'klassisk'].map((tpl) => {
-                          const active = cvTemplate === tpl;
-                          return (
-                            <TouchableOpacity
-                              key={tpl}
-                              onPress={() => !active && regeneratePdfWithTemplate(tpl)}
-                              disabled={isGenerating || active}
-                              style={{
-                                paddingHorizontal: 10,
-                                paddingVertical: 5,
-                                borderRadius: 6,
-                                borderWidth: 1.5,
-                                borderColor: active ? '#1e3a8a' : '#cbd5e1',
-                                backgroundColor: active ? '#1e3a8a' : '#fff',
-                                opacity: isGenerating && !active ? 0.5 : 1,
-                              }}
-                            >
-                              <Text style={{ fontSize: 12, fontWeight: active ? '700' : '400', color: active ? '#fff' : '#334155' }}>
-                                {tpl.charAt(0).toUpperCase() + tpl.slice(1)}
-                              </Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
+                  {/* Template picker — shown whenever a PDF has been generated */}
+                  <View style={{ marginBottom: 12 }}>
+                    <Text style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>
+                      Mal: <Text style={{ fontWeight: '700', color: '#0f172a' }}>{cvTemplate.charAt(0).toUpperCase() + cvTemplate.slice(1)}</Text>
+                    </Text>
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      {['kreativ', 'profesjonell', 'klassisk'].map((tpl) => {
+                        const active = cvTemplate === tpl;
+                        return (
+                          <TouchableOpacity
+                            key={tpl}
+                            onPress={() => !active && regeneratePdfWithTemplate(tpl)}
+                            disabled={isGenerating || active}
+                            style={{
+                              paddingHorizontal: 10,
+                              paddingVertical: 5,
+                              borderRadius: 6,
+                              borderWidth: 1.5,
+                              borderColor: active ? '#1e3a8a' : '#cbd5e1',
+                              backgroundColor: active ? '#1e3a8a' : '#fff',
+                              opacity: isGenerating && !active ? 0.5 : 1,
+                            }}
+                          >
+                            <Text style={{ fontSize: 12, fontWeight: active ? '700' : '400', color: active ? '#fff' : '#334155' }}>
+                              {tpl.charAt(0).toUpperCase() + tpl.slice(1)}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
                     </View>
-                  ) : null}
+                  </View>
                   {(typeof applicationPackage?.pdfUrl === 'string' && applicationPackage.pdfUrl.trim()) ? (
                     <TouchableOpacity
                       style={[styles.aerligSecondaryButton, { marginTop: 0 }]}
