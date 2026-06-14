@@ -115,6 +115,7 @@ class ApplicationPackageOut(BaseModel):
     cv: str
     coverLetter: str
     pdfUrl: str
+    cvMal: str = "profesjonell"  # which visual template was used
 
 
 class EducationOptionOut(BaseModel):

@@ -144,8 +144,20 @@ class _Theme:
     box_border: colors.Color
     section_accent: colors.Color
 
+    # Extra fields for template variation
+    cv_subheader_color: colors.Color = None       # color of CV section sub-headers
+    section_underline: colors.Color = None        # thin rule under CV sub-headers
+    section_spacing: float = 0.0                  # extra cm between sections (kreativ)
 
-THEME = _Theme(
+    def __post_init__(self):
+        if self.cv_subheader_color is None:
+            self.cv_subheader_color = self.section_accent
+        if self.section_underline is None:
+            self.section_underline = colors.HexColor("#cbd5e1")
+
+
+# --- Profesjonell: clean navy (default) ---
+THEME_PROFESJONELL = _Theme(
     sidebar_bg=colors.HexColor("#1e3a8a"),
     sidebar_text=colors.white,
     sidebar_muted=colors.HexColor("#dbeafe"),
@@ -155,7 +167,28 @@ THEME = _Theme(
     box_bg=colors.HexColor("#f8fafc"),
     box_border=colors.HexColor("#cbd5e1"),
     section_accent=colors.HexColor("#1e3a8a"),
+    cv_subheader_color=colors.HexColor("#1e3a8a"),
+    section_underline=colors.HexColor("#cbd5e1"),
+    section_spacing=0.0,
 )
+
+# --- Kreativ: dark sidebar, orange accents ---
+THEME_KREATIV = _Theme(
+    sidebar_bg=colors.HexColor("#1a1a2e"),
+    sidebar_text=colors.white,
+    sidebar_muted=colors.HexColor("#f5cba7"),
+    divider=colors.HexColor("#E8501A"),
+    text=colors.HexColor("#0f172a"),
+    muted=colors.HexColor("#2d2d2d"),
+    box_bg=colors.HexColor("#fff8f5"),
+    box_border=colors.HexColor("#f5cba7"),
+    section_accent=colors.HexColor("#E8501A"),
+    cv_subheader_color=colors.HexColor("#E8501A"),
+    section_underline=colors.HexColor("#E8501A"),
+    section_spacing=0.18,
+)
+
+THEME = THEME_PROFESJONELL  # backward-compat alias
 
 
 # CV section titles produced by the LLM (tailored_cv is plain text).
@@ -250,10 +283,12 @@ class _SidebarPdfDoc:
         cv_text: str,
         *,
         include_photo: bool = True,
+        theme: _Theme | None = None,
     ):
         self.path = OUT / filename
         self.c = canvas.Canvas(str(self.path), pagesize=A4)
         self.width, self.height = A4
+        self.theme = theme or THEME_PROFESJONELL
 
         self.profile = profile
         self.job = job
@@ -294,11 +329,11 @@ class _SidebarPdfDoc:
         c = self.c
 
         # Background
-        c.setFillColor(THEME.sidebar_bg)
+        c.setFillColor(self.theme.sidebar_bg)
         c.rect(0, 0, self.sidebar_w, self.height, fill=1, stroke=0)
 
         # Divider line
-        c.setStrokeColor(THEME.divider)
+        c.setStrokeColor(self.theme.divider)
         c.setLineWidth(1)
         c.line(self.sidebar_w, 0, self.sidebar_w, self.height)
 
@@ -340,7 +375,7 @@ class _SidebarPdfDoc:
             y_img = y - photo_box
             c.setFillColor(colors.HexColor("#1d4ed8"))
             c.roundRect(x, y_img, photo_box, photo_box, 10, fill=1, stroke=0)
-            c.setFillColor(THEME.sidebar_muted)
+            c.setFillColor(self.theme.sidebar_muted)
             c.setFont("Helvetica-Bold", 18)
             initials = "".join([p[:1] for p in (getattr(self.profile, "name", "") or "").split()[:2]]).upper()
             c.drawCentredString(x + photo_box / 2, y_img + photo_box / 2 - 6, initials or "CV")
@@ -348,7 +383,7 @@ class _SidebarPdfDoc:
 
         # Name
         name = (getattr(self.profile, "name", "") or "").strip() or ""
-        c.setFillColor(THEME.sidebar_text)
+        c.setFillColor(self.theme.sidebar_text)
         c.setFont("Helvetica-Bold", 14)
         for line in _wrap_lines(name, self.sidebar_w - 2 * pad_x, "Helvetica-Bold", 14):
             c.drawString(pad_x, y, line)
@@ -375,7 +410,7 @@ class _SidebarPdfDoc:
             contact_lines.append(email)
 
         if contact_lines:
-            c.setFillColor(THEME.sidebar_muted)
+            c.setFillColor(self.theme.sidebar_muted)
             c.setFont("Helvetica", 9.5)
             max_w = self.sidebar_w - 2 * pad_x
             for ln in contact_lines:
@@ -389,12 +424,12 @@ class _SidebarPdfDoc:
         langs = _parse_json_list(getattr(self.profile, "languages", ""))
         lang_lines = _as_text_lines(langs)
 
-        c.setFillColor(THEME.sidebar_text)
+        c.setFillColor(self.theme.sidebar_text)
         c.setFont("Helvetica-Bold", 10)
         c.drawString(pad_x, y, "SPRÅK")
         y -= 0.45 * cm
 
-        c.setFillColor(THEME.sidebar_muted)
+        c.setFillColor(self.theme.sidebar_muted)
         c.setFont("Helvetica", 9.5)
         if not lang_lines:
             c.drawString(pad_x, y, "—")
@@ -412,7 +447,7 @@ class _SidebarPdfDoc:
 
     def _draw_main_title(self, title: str, subtitle: str | None = None) -> None:
         c = self.c
-        c.setFillColor(THEME.text)
+        c.setFillColor(self.theme.text)
         c.setFont("Helvetica-Bold", 16)
         c.drawString(self.main_left, self.y, title)
         self.y -= 0.65 * cm
@@ -428,12 +463,12 @@ class _SidebarPdfDoc:
     def _section_header(self, title: str) -> None:
         self._ensure_space(1.1 * cm)
         c = self.c
-        c.setFillColor(THEME.text)
+        c.setFillColor(self.theme.text)
         c.setFont("Helvetica-Bold", 11)
         c.drawString(self.main_left, self.y, title.upper())
 
         # Accent underline
-        c.setStrokeColor(THEME.section_accent)
+        c.setStrokeColor(self.theme.section_accent)
         c.setLineWidth(1.5)
         c.line(self.main_left, self.y - 0.18 * cm, self.main_left + 4.2 * cm, self.y - 0.18 * cm)
 
@@ -443,18 +478,18 @@ class _SidebarPdfDoc:
     def _cv_subheader(self, title: str) -> None:
         """Render a CV subsection header inside the main CV section."""
 
-        # Add a bit of air before subsections (but avoid extra gap at the very top).
-        self._ensure_space(1.0 * cm)
+        extra = self.theme.section_spacing * cm
+        self._ensure_space((1.0 + self.theme.section_spacing) * cm)
         if self.y < (self.height - self.top_margin - 0.2 * cm):
-            self.y -= 0.35 * cm
+            self.y -= (0.35 + extra) * 1  # extra air for kreativ
 
         c = self.c
-        c.setFillColor(THEME.section_accent)  # navy
+        c.setFillColor(self.theme.cv_subheader_color)
         c.setFont("Helvetica-Bold", 12.2)
         c.drawString(self.main_left, self.y, title)
 
         # Thin underline/accent
-        c.setStrokeColor(colors.HexColor("#cbd5e1"))
+        c.setStrokeColor(self.theme.section_underline)
         c.setLineWidth(0.8)
         c.line(self.main_left, self.y - 0.18 * cm, self.main_left + self.main_w, self.y - 0.18 * cm)
 
@@ -491,7 +526,7 @@ class _SidebarPdfDoc:
             for i, wline in enumerate(wrapped):
                 self._ensure_space(0.62 * cm)
 
-                c.setFillColor(THEME.muted)
+                c.setFillColor(self.theme.muted)
                 c.setFont(font, size)
 
                 if i == 0:
@@ -519,7 +554,7 @@ class _SidebarPdfDoc:
             wrapped = _wrap_lines(line.strip(), max_w, font, size)
             for wline in wrapped:
                 self._ensure_space(0.62 * cm)
-                c.setFillColor(THEME.muted)
+                c.setFillColor(self.theme.muted)
                 c.setFont(font, size)
                 c.drawString(self.main_left, self.y, wline)
                 self.y -= leading
@@ -560,7 +595,7 @@ class _SidebarPdfDoc:
 
         self._ensure_space(0.95 * cm)
 
-        c.setFillColor(THEME.text)
+        c.setFillColor(self.theme.text)
         c.setFont("Helvetica-Bold", 10.8)
         c.drawString(self.main_left, self.y, left or title_line)
 
@@ -748,11 +783,11 @@ class _SidebarPdfDoc:
             # heading in paragraph (e.g. "Ansvar:")
             if stripped.endswith(":") and len(stripped) <= 40:
                 self._ensure_space(0.65 * cm)
-                c.setFillColor(THEME.text)
+                c.setFillColor(self.theme.text)
                 c.setFont("Helvetica-Bold", 10.4)
                 c.drawString(self.main_left, self.y, stripped[:-1])
                 self.y -= 0.45 * cm
-                c.setFillColor(THEME.muted)
+                c.setFillColor(self.theme.muted)
                 c.setFont(font, size)
                 continue
 
@@ -764,11 +799,11 @@ class _SidebarPdfDoc:
             for i, wline in enumerate(wrapped):
                 self._ensure_space(0.62 * cm)
                 if bullet and i == 0:
-                    c.setFillColor(THEME.muted)
+                    c.setFillColor(self.theme.muted)
                     c.setFont(font, size)
                     c.drawString(self.main_left, self.y, "•")
 
-                c.setFillColor(THEME.muted)
+                c.setFillColor(self.theme.muted)
                 c.setFont(font, size)
                 c.drawString(indent_x, self.y, wline)
                 self.y -= leading
@@ -828,18 +863,18 @@ class _SidebarPdfDoc:
         y_top = self.y
 
         # Box background
-        c.setFillColor(THEME.box_bg)
-        c.setStrokeColor(THEME.box_border)
+        c.setFillColor(self.theme.box_bg)
+        c.setStrokeColor(self.theme.box_border)
         c.setLineWidth(1)
         c.roundRect(x, y_top - box_h, self.main_w, box_h, 10, fill=1, stroke=1)
 
         # Title
-        c.setFillColor(THEME.text)
+        c.setFillColor(self.theme.text)
         c.setFont("Helvetica-Bold", 11)
         c.drawString(x + pad, y_top - 0.75 * cm, title)
 
         # Text
-        c.setFillColor(THEME.muted)
+        c.setFillColor(self.theme.muted)
         c.setFont(font, size)
 
         y_txt = y_top - 1.45 * cm
@@ -895,7 +930,7 @@ class _SidebarPdfDoc:
 
             self._ensure_space(1.2 * cm)
 
-            c.setFillColor(THEME.text)
+            c.setFillColor(self.theme.text)
             c.setFont("Helvetica-Bold", 10.6)
             c.drawString(self.main_left, self.y, head or "Erfaring")
 
@@ -934,7 +969,7 @@ class _SidebarPdfDoc:
 
             self._ensure_space(1.2 * cm)
 
-            c.setFillColor(THEME.text)
+            c.setFillColor(self.theme.text)
             c.setFont("Helvetica-Bold", 10.6)
             c.drawString(self.main_left, self.y, head or "Utdanning")
 
@@ -1022,6 +1057,346 @@ class _SidebarPdfDoc:
         return str(self.path)
 
 
+class _ClassicPdfDoc:
+    """Full-width, no-sidebar layout for the 'Klassisk' template.
+
+    - No colours: all black / dark grey
+    - Times-Bold for all headings (serif)
+    - Name + contact centred at top, then a horizontal rule
+    - Sections separated by rule lines
+    """
+
+    _MARGIN_X = 2.2 * cm
+    _MARGIN_TOP = 2.2 * cm
+    _MARGIN_BOTTOM = 1.8 * cm
+    _FONT_BODY = "Helvetica"
+    _FONT_HEAD = "Times-Bold"
+    _COLOR_BLACK = colors.black
+    _COLOR_DARK = colors.HexColor("#1a1a1a")
+    _COLOR_MID = colors.HexColor("#333333")
+    _COLOR_MUTED = colors.HexColor("#555555")
+    _COLOR_RULE = colors.HexColor("#999999")
+
+    def __init__(
+        self,
+        filename: str,
+        profile,
+        job,
+        cover_letter: str,
+        cv_text: str,
+        *,
+        include_photo: bool = True,
+        cv_only: bool = False,
+    ):
+        self.path = OUT / filename
+        self.c = canvas.Canvas(str(self.path), pagesize=A4)
+        self.width, self.height = A4
+        self.profile = profile
+        self.job = job
+        self.cover_letter = cover_letter
+        self.cv_text = cv_text
+        self.include_photo = include_photo
+        self.cv_only = cv_only
+
+        self.left = self._MARGIN_X
+        self.right = self.width - self._MARGIN_X
+        self.content_w = self.right - self.left
+
+        self.page_no = 0
+        self.y = self.height
+
+    # ---- Page management ----
+
+    def _new_page(self) -> None:
+        if self.page_no > 0:
+            self.c.showPage()
+        self.page_no += 1
+        self.y = self.height - self._MARGIN_TOP
+        self.c.setFillColor(self._COLOR_MUTED)
+        self.c.setFont(self._FONT_BODY, 8)
+        self.c.drawRightString(self.right, 0.9 * cm, f"Side {self.page_no}")
+
+    def _ensure_space(self, needed_h: float) -> None:
+        if self.y - needed_h <= self._MARGIN_BOTTOM:
+            self._new_page()
+
+    # ---- Header (name + contact) ----
+
+    def _draw_header(self) -> None:
+        c = self.c
+        name = (getattr(self.profile, "name", "") or "").strip()
+        c.setFillColor(self._COLOR_BLACK)
+        c.setFont(self._FONT_HEAD, 24)
+        c.drawCentredString(self.width / 2, self.y, name or "CV")
+        self.y -= 0.9 * cm
+
+        parts: list[str] = []
+        phone = (getattr(self.profile, "phone", "") or "").strip()
+        email = (getattr(self.profile, "email", "") or "").strip()
+        addr = (getattr(self.profile, "address", "") or "").strip()
+        postal_code = (getattr(self.profile, "postal_code", "") or "").strip()
+        postal_place = (getattr(self.profile, "postal_place", "") or "").strip()
+        location = " ".join([x for x in [postal_code, postal_place] if x]) or addr
+        if phone:
+            parts.append(phone)
+        if email:
+            parts.append(email)
+        if location:
+            parts.append(location)
+
+        if parts:
+            c.setFillColor(self._COLOR_MUTED)
+            c.setFont(self._FONT_BODY, 9.5)
+            c.drawCentredString(self.width / 2, self.y, "  |  ".join(parts))
+            self.y -= 0.55 * cm
+
+        # Divider rule
+        c.setStrokeColor(self._COLOR_BLACK)
+        c.setLineWidth(1.5)
+        c.line(self.left, self.y, self.right, self.y)
+        self.y -= 0.65 * cm
+
+    # ---- Section headers ----
+
+    def _section_header(self, title: str) -> None:
+        self._ensure_space(1.3 * cm)
+        self.y -= 0.25 * cm
+        c = self.c
+        c.setFillColor(self._COLOR_BLACK)
+        c.setFont(self._FONT_HEAD, 12)
+        c.drawString(self.left, self.y, title.upper())
+        c.setStrokeColor(self._COLOR_BLACK)
+        c.setLineWidth(0.8)
+        c.line(self.left, self.y - 0.2 * cm, self.right, self.y - 0.2 * cm)
+        self.y -= 0.75 * cm
+
+    def _cv_subheader(self, title: str) -> None:
+        self._ensure_space(1.0 * cm)
+        if self.y < (self.height - self._MARGIN_TOP - 0.2 * cm):
+            self.y -= 0.3 * cm
+        c = self.c
+        c.setFillColor(self._COLOR_BLACK)
+        c.setFont(self._FONT_HEAD, 11)
+        c.drawString(self.left, self.y, title)
+        c.setStrokeColor(self._COLOR_RULE)
+        c.setLineWidth(0.5)
+        c.line(self.left, self.y - 0.18 * cm, self.right, self.y - 0.18 * cm)
+        self.y -= 0.65 * cm
+
+    # ---- Text rendering ----
+
+    def _wrap(self, text: str, max_w: float, font: str, size: float) -> list[str]:
+        return _wrap_lines(text, max_w, font, size)
+
+    def _paragraph(self, text: str, *, font: str = "", size: float = 10.2, leading: float = 0.50 * cm) -> None:
+        font = font or self._FONT_BODY
+        c = self.c
+        for raw in (text or "").split("\n"):
+            line = raw.rstrip()
+            if not line.strip():
+                self.y -= 0.22 * cm
+                continue
+            stripped = line.strip()
+            if stripped.startswith("•") or stripped.startswith("-"):
+                bullet = True
+                stripped = stripped[1:].strip()
+            else:
+                bullet = False
+            indent_x = self.left + (0.55 * cm if bullet else 0)
+            max_w = self.content_w - (indent_x - self.left)
+            wrapped = self._wrap(stripped, max_w, font, size)
+            for i, wline in enumerate(wrapped):
+                self._ensure_space(0.62 * cm)
+                c.setFillColor(self._COLOR_MID)
+                c.setFont(font, size)
+                if bullet and i == 0:
+                    c.drawString(self.left, self.y, "•")
+                c.drawString(indent_x, self.y, wline)
+                self.y -= leading
+        self.y -= 0.18 * cm
+
+    def _cv_paragraph(self, text: str, **kwargs) -> None:
+        self._paragraph(text, **kwargs)
+
+    def _cv_bullet_lines(self, lines: list[str], *, font: str = "", size: float = 10.1, leading: float = 0.48 * cm) -> None:
+        font = font or self._FONT_BODY
+        c = self.c
+        bullet_x = self.left
+        text_x = self.left + 0.65 * cm
+        max_w = self.content_w - 0.65 * cm
+        for raw in lines:
+            stripped = (raw or "").strip()
+            if not stripped:
+                self.y -= 0.18 * cm
+                continue
+            if stripped.startswith("•"):
+                stripped = stripped[1:].strip()
+            elif stripped.startswith("-"):
+                stripped = stripped[1:].strip()
+            wrapped = self._wrap(stripped, max_w, font, size)
+            for i, wline in enumerate(wrapped):
+                self._ensure_space(0.62 * cm)
+                c.setFillColor(self._COLOR_MID)
+                c.setFont(font, size)
+                if i == 0:
+                    c.drawString(bullet_x, self.y, "•")
+                    c.drawString(text_x, self.y, wline)
+                else:
+                    c.drawString(text_x, self.y, wline)
+                self.y -= leading
+        self.y -= 0.12 * cm
+
+    def _extract_period_tail(self, line: str) -> tuple[str, str]:
+        s = " ".join((line or "").split()).strip()
+        if not s:
+            return ("", "")
+        m = re.search(r"\(([^)]*(?:19|20)\d{2}[^)]*)\)\s*$", s)
+        if m:
+            return (s[: m.start()].strip(" -–—|"), (m.group(1) or "").strip())
+        m = re.search(
+            r"((?:19|20)\d{2}[^\n]{0,18}(?:–|-)\s*(?:(?:19|20)\d{2}|nå|Nå|present|Present))\s*$",
+            s,
+        )
+        if m:
+            return (s[: m.start()].strip(" -–—|"), (m.group(1) or "").strip())
+        return (s, "")
+
+    def _cv_entry_header(self, title_line: str) -> None:
+        c = self.c
+        left, period = self._extract_period_tail(title_line)
+        self._ensure_space(0.95 * cm)
+        c.setFillColor(self._COLOR_BLACK)
+        c.setFont(self._FONT_HEAD, 10.8)
+        c.drawString(self.left, self.y, left or title_line)
+        if period:
+            c.setFillColor(self._COLOR_MUTED)
+            c.setFont(self._FONT_BODY, 9)
+            c.drawRightString(self.right, self.y, period)
+        self.y -= 0.55 * cm
+
+    def _draw_cv_text(self, text: str) -> None:
+        """Render AI-produced tailored_cv — same section logic as sidebar variant."""
+        src = (text or "").replace("\r\n", "\n").replace("\r", "\n")
+        lines = src.split("\n")
+
+        has_any_heading = any((ln or "").strip().casefold() in CV_SECTION_TITLES_CF for ln in lines)
+        if not has_any_heading:
+            self._paragraph(text)
+            return
+
+        def _strip_bullet_prefix(s: str) -> str:
+            s2 = (s or "").strip()
+            if s2.startswith("•"):
+                return s2[1:].strip()
+            if s2.startswith("-"):
+                return s2[1:].strip()
+            return s2
+
+        def _is_placeholder(line: str) -> bool:
+            s = " ".join(_strip_bullet_prefix(line).split()).casefold().strip(". ")
+            if not s:
+                return True
+            bads = {
+                "—", "-", "ikke oppgitt", "ikke dokumentert",
+                "not provided", "not documented", "n/a",
+            }
+            if s in bads:
+                return True
+            starters = (
+                "ingen referanser", "ingen sertifisering",
+                "referanser oppgis", "ikke tilgjengelig",
+                "ikke dokumentert", "ikke oppgitt",
+            )
+            return any(s.startswith(x) for x in starters)
+
+        def _has_real(content: list[str]) -> bool:
+            return any(
+                (ln or "").strip() and not _is_placeholder(ln)
+                for ln in content
+            )
+
+        sections: list[tuple[str, list[str]]] = []
+        cur: str | None = None
+        buf: list[str] = []
+        for ln in lines:
+            key_cf = (ln or "").strip().casefold()
+            if key_cf in CV_SECTION_TITLES_CF:
+                if cur is not None:
+                    sections.append((cur, buf))
+                cur = CV_SECTION_TITLES_CF[key_cf]
+                buf = []
+            elif cur is not None:
+                buf.append(ln)
+        if cur is not None:
+            sections.append((cur, buf))
+
+        for sec_title, raw in sections:
+            content = [x.rstrip() for x in raw]
+            while content and not content[0].strip():
+                content.pop(0)
+            while content and not content[-1].strip():
+                content.pop()
+            if not content or not _has_real(content):
+                continue
+
+            self._cv_subheader(sec_title)
+            sec_cf = sec_title.casefold()
+
+            if sec_cf in {"arbeidserfaring", "utdanning"}:
+                entry_bullets: list[str] = []
+                first = True
+                for ln in content:
+                    s = (ln or "").strip()
+                    if not s:
+                        if entry_bullets:
+                            self._cv_bullet_lines(entry_bullets)
+                            entry_bullets = []
+                        continue
+                    if _is_placeholder(s):
+                        continue
+                    if s.startswith("•") or s.startswith("-"):
+                        entry_bullets.append(s)
+                    else:
+                        if entry_bullets:
+                            self._cv_bullet_lines(entry_bullets)
+                            entry_bullets = []
+                        if not first:
+                            self.y -= 0.20 * cm
+                        first = False
+                        self._cv_entry_header(s)
+                if entry_bullets:
+                    self._cv_bullet_lines(entry_bullets)
+            elif sec_cf in {"kjerneferdigheter", "språk", "sertifiseringer", "referanser"}:
+                real = [ln for ln in content if not _is_placeholder(ln)]
+                bulletish = [ln for ln in real if (ln or "").strip().startswith(("•", "-"))]
+                if bulletish:
+                    self._cv_bullet_lines(real)
+                else:
+                    self._cv_paragraph("\n".join(real))
+            else:
+                real = [ln for ln in content if not _is_placeholder(ln)]
+                self._cv_paragraph("\n".join(real))
+
+    def _cover_section(self, text: str) -> None:
+        """Render cover letter as a plain section (no box)."""
+        self._section_header("Søknadstekst")
+        self._paragraph(text)
+
+    def build(self) -> str:
+        self._new_page()
+        self._draw_header()
+
+        if not self.cv_only and (self.cover_letter or "").strip():
+            self._cover_section(self.cover_letter)
+
+        if (self.cv_text or "").strip():
+            self._section_header("CV")
+            self._draw_cv_text(self.cv_text)
+
+        self.c.save()
+        return str(self.path)
+
+
 class _SidebarCvOnlyDoc(_SidebarPdfDoc):
     """CV-only variant of the sidebar template.
 
@@ -1064,40 +1439,68 @@ class _SidebarCvOnlyDoc(_SidebarPdfDoc):
         return str(self.path)
 
 
-def make_application_pdfs(profile, job, cover_letter: str, tailored_cv: str, *, include_photo: bool = True):
-    """Generate TWO PDFs with the same visual style.
+_VALID_TEMPLATES = {"kreativ", "profesjonell", "klassisk"}
 
+
+def _resolve_theme(template: str) -> _Theme | None:
+    """Return a _Theme for sidebar templates, or None for full-width (klassisk)."""
+    t = (template or "profesjonell").strip().lower()
+    if t not in _VALID_TEMPLATES:
+        t = "profesjonell"
+    if t == "kreativ":
+        return THEME_KREATIV
+    if t == "klassisk":
+        return None  # signals _ClassicPdfDoc
+    return THEME_PROFESJONELL
+
+
+def make_application_pdfs(
+    profile,
+    job,
+    cover_letter: str,
+    tailored_cv: str,
+    *,
+    include_photo: bool = True,
+    template: str = "profesjonell",
+):
+    """Generate TWO PDFs — combined (søknad+CV) and CV-only.
+
+    `template` is one of: "kreativ", "profesjonell", "klassisk".
     Returns (combined_pdf_path, cv_only_pdf_path).
-
-    - combined PDF: Søknad + CV (used by app "Generer PDF")
-    - CV-only PDF: used as email attachment
-
-    Note: We keep the (cover_path, cv_path) return signature for backward compatibility.
     """
 
     base = safe_name(f"{job.title}_{job.company}")
-
     combined_filename = f"soknad_og_cv_{base}.pdf"
     cv_filename = f"cv_{base}.pdf"
 
-    combined_doc = _SidebarPdfDoc(
-        combined_filename,
-        profile,
-        job,
-        cover_letter=cover_letter,
-        cv_text=tailored_cv,
-        include_photo=include_photo,
-    )
-    combined_path = combined_doc.build()
+    theme = _resolve_theme(template)
 
-    cv_doc = _SidebarCvOnlyDoc(
-        cv_filename,
-        profile,
-        job,
-        cover_letter="",
-        cv_text=tailored_cv,
-        include_photo=include_photo,
-    )
+    if theme is None:
+        # Klassisk: full-width, no sidebar
+        combined_doc = _ClassicPdfDoc(
+            combined_filename, profile, job,
+            cover_letter, tailored_cv,
+            include_photo=include_photo,
+        )
+        cv_doc = _ClassicPdfDoc(
+            cv_filename, profile, job,
+            "", tailored_cv,
+            include_photo=include_photo,
+            cv_only=True,
+        )
+    else:
+        combined_doc = _SidebarPdfDoc(
+            combined_filename, profile, job,
+            cover_letter=cover_letter, cv_text=tailored_cv,
+            include_photo=include_photo, theme=theme,
+        )
+        cv_doc = _SidebarCvOnlyDoc(
+            cv_filename, profile, job,
+            cover_letter="", cv_text=tailored_cv,
+            include_photo=include_photo, theme=theme,
+        )
+
+    combined_path = combined_doc.build()
     cv_path = cv_doc.build()
 
     return combined_path, cv_path

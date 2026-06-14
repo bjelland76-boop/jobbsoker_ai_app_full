@@ -184,6 +184,7 @@ export default function App() {
   const [jobUrl, setJobUrl] = useState('');
   const [analysis, setAnalysis] = useState(null);
   const [tailoredCvJobTitle, setTailoredCvJobTitle] = useState('');
+  const [cvTemplate, setCvTemplate] = useState('profesjonell');
   const [loading, setLoading] = useState(false);
   const [jobAnalyses, setJobAnalyses] = useState([]);
   const [jobAnalysesLoading, setJobAnalysesLoading] = useState(false);
@@ -1101,6 +1102,7 @@ export default function App() {
     try {
       const data = await apiFetch(`/job-analyses/${jobId}?profile_id=${profileId}`);
       setAnalysis(data);
+      if (data?.cv_mal) setCvTemplate(data.cv_mal);
       if (url) setJobUrl(url);
       setActiveTab('analysis');
     } catch (e) {
@@ -1202,6 +1204,7 @@ export default function App() {
       });
 
       setAnalysis(data);
+      if (data?.cv_mal) setCvTemplate(data.cv_mal);
       // If triggered from "Ny søknad" we still want to show the analysis screen.
       setActiveTab('analysis');
       // Refresh the history list (best-effort).
@@ -1364,6 +1367,7 @@ export default function App() {
           setApplicationPackage(safePkg);
           if (analysis?.job_id) {
             setTailoredCvJobTitle(analysis?.job_title || 'denne stillingen');
+            if (pkg.cvMal) setCvTemplate(pkg.cvMal);
           }
 
           // Only navigate/open documents when a PDF was actually created.
@@ -1385,6 +1389,36 @@ export default function App() {
       setGenerationBanner(failMsg);
     } finally {
       setGeneratingPdf(false);
+      setIsGenerating(false);
+      generationLockRef.current = false;
+    }
+  }
+
+  async function regeneratePdfWithTemplate(newTemplate) {
+    if (!analysis?.job_id || !applicationPackage) return;
+    if (generationLockRef.current || isGenerating) return;
+
+    generationLockRef.current = true;
+    setIsGenerating(true);
+    setCvTemplate(newTemplate);
+
+    const includePhoto = !!profilePhotoData && !!includePhotoInPdf;
+    try {
+      const pkg = await apiFetch(
+        `/job-analyses/${analysis.job_id}/generate-tailored-cv?profile_id=${profileId}&template=${encodeURIComponent(newTemplate)}&application_style=${encodeURIComponent(applicationStyle)}&include_photo=${includePhoto}`,
+        { method: 'POST' },
+      );
+      if (pkg && typeof pkg.cv === 'string') {
+        setApplicationPackage({
+          cv: pkg.cv || applicationPackage.cv,
+          coverLetter: pkg.coverLetter || applicationPackage.coverLetter,
+          pdfUrl: typeof pkg.pdfUrl === 'string' ? pkg.pdfUrl : '',
+        });
+        if (pkg.cvMal) setCvTemplate(pkg.cvMal);
+      }
+    } catch (e) {
+      console.error('[Assistant] regeneratePdfWithTemplate failed', e);
+    } finally {
       setIsGenerating(false);
       generationLockRef.current = false;
     }
@@ -2207,8 +2241,42 @@ export default function App() {
               {applicationPackage ? (
                 <View style={{ marginTop: 12 }}>
                   {tailoredCvJobTitle ? (
-                    <View style={{ backgroundColor: '#e8f4e8', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5, marginBottom: 10, alignSelf: 'flex-start' }}>
+                    <View style={{ backgroundColor: '#e8f4e8', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5, marginBottom: 8, alignSelf: 'flex-start' }}>
                       <Text style={{ color: '#2a7a2a', fontSize: 12, fontWeight: '600' }}>Tilpasset: {tailoredCvJobTitle}</Text>
+                    </View>
+                  ) : null}
+
+                  {/* Template picker — only shown when a tailored CV has been generated */}
+                  {tailoredCvJobTitle ? (
+                    <View style={{ marginBottom: 12 }}>
+                      <Text style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>
+                        Mal: <Text style={{ fontWeight: '700', color: '#0f172a' }}>{cvTemplate.charAt(0).toUpperCase() + cvTemplate.slice(1)}</Text>
+                      </Text>
+                      <View style={{ flexDirection: 'row', gap: 6 }}>
+                        {['kreativ', 'profesjonell', 'klassisk'].map((tpl) => {
+                          const active = cvTemplate === tpl;
+                          return (
+                            <TouchableOpacity
+                              key={tpl}
+                              onPress={() => !active && regeneratePdfWithTemplate(tpl)}
+                              disabled={isGenerating || active}
+                              style={{
+                                paddingHorizontal: 10,
+                                paddingVertical: 5,
+                                borderRadius: 6,
+                                borderWidth: 1.5,
+                                borderColor: active ? '#1e3a8a' : '#cbd5e1',
+                                backgroundColor: active ? '#1e3a8a' : '#fff',
+                                opacity: isGenerating && !active ? 0.5 : 1,
+                              }}
+                            >
+                              <Text style={{ fontSize: 12, fontWeight: active ? '700' : '400', color: active ? '#fff' : '#334155' }}>
+                                {tpl.charAt(0).toUpperCase() + tpl.slice(1)}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
                     </View>
                   ) : null}
                   {(typeof applicationPackage?.pdfUrl === 'string' && applicationPackage.pdfUrl.trim()) ? (

@@ -28,6 +28,7 @@ class MatchResult(TypedDict):
     seniority_match: int
     top_reason: str
     main_risk: str
+    cv_mal: str  # "kreativ" | "profesjonell" | "klassisk"
 
 
 def _compress_text(text: str, max_len: int = 2500) -> str:
@@ -179,6 +180,8 @@ def _normalize_list(v: Any, *, max_items: int = 3, max_item_chars: int = 60) -> 
 
 def _normalize_result(data: Any) -> MatchResult:
     # Output contract: always return these fields, no extras.
+    _CV_MAL_VALID = {"kreativ", "profesjonell", "klassisk"}
+
     out: MatchResult = {
         "score": 0,
         "fit": "",
@@ -190,6 +193,7 @@ def _normalize_result(data: Any) -> MatchResult:
         "seniority_match": 0,
         "top_reason": "",
         "main_risk": "",
+        "cv_mal": "profesjonell",
     }
 
     if not isinstance(data, dict):
@@ -217,6 +221,9 @@ def _normalize_result(data: Any) -> MatchResult:
         max_items=3,
         max_item_chars=120,
     )
+
+    cv_mal_raw = str(data.get("cv_mal") or "").strip().lower()
+    out["cv_mal"] = cv_mal_raw if cv_mal_raw in _CV_MAL_VALID else "profesjonell"
 
     return out
 
@@ -320,9 +327,9 @@ def analyze_job_match(
         '"strengths":["max 3"],'
         '"missing":["max 3"],'
         '"recommended_cv_changes":["max 3; actionable CV edits addressing missing requirements; <=120 chars; no generic"],'
-        '"advice":"1 short sentence"'
+        '"advice":"1 short sentence",'
+        '"cv_mal":"profesjonell|kreativ|klassisk — kreativ for design/media/marketing, klassisk for jus/okonomi/akademia/offentlig, profesjonell for alt annet"'
         "}"
-
     )
 
     try:

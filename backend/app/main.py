@@ -1509,11 +1509,18 @@ def generate_tailored_cv(
     profile_id: int = Query(..., ge=1),
     application_style: str = Query(default="vanlig"),
     include_photo: bool = Query(default=True),
+    template: str = Query(default=""),  # "kreativ"|"profesjonell"|"klassisk"; empty = use stored cv_mal
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Generate a job-tailored CV using the stored match analysis for this job."""
+    """Generate a job-tailored CV using the stored match analysis for this job.
+
+    If `template` is provided AND the CV texts are already stored, skip the Claude
+    call and only regenerate the PDF with the new visual template.
+    """
     from .job_analyzer import generate_application_texts, fetch_job_text
+
+    _VALID_TEMPLATES = {"kreativ", "profesjonell", "klassisk"}
 
     profile = db.get(Profile, profile_id)
     if not profile or profile.user_id != current_user.id:
@@ -1539,48 +1546,70 @@ def generate_tailored_cv(
     except Exception:
         stored = {}
 
-    match_context = {
-        "score": stored.get("match_score"),
-        "strengths": stored.get("strengths") or [],
-        "missing": stored.get("missing_requirements") or [],
-        "top_reason": stored.get("top_reason") or "",
-        "main_risk": stored.get("main_risk") or "",
-    }
+    # Resolve which template to use
+    template_norm = (template or "").strip().lower()
+    if template_norm not in _VALID_TEMPLATES:
+        template_norm = ""
+    effective_template = template_norm or str(stored.get("cv_mal") or "profesjonell")
+    if effective_template not in _VALID_TEMPLATES:
+        effective_template = "profesjonell"
 
-    job_text = (job.description or "").strip()
-    if not job_text:
+    # If a template change is requested AND we have existing generated texts → skip Claude
+    stored_cv = _to_text(stored.get("tailored_cv"))
+    stored_letter = _to_text(stored.get("cover_letter"))
+    stored_email = _to_text(stored.get("email_text"))
+    skip_claude = bool(template_norm) and bool(stored_cv) and bool(stored_letter)
+
+    if skip_claude:
+        cover_letter = stored_letter
+        tailored_cv = stored_cv
+        email_text_val = stored_email
+    else:
+        match_context = {
+            "score": stored.get("match_score"),
+            "strengths": stored.get("strengths") or [],
+            "missing": stored.get("missing_requirements") or [],
+            "top_reason": stored.get("top_reason") or "",
+            "main_risk": stored.get("main_risk") or "",
+        }
+
+        job_text = (job.description or "").strip()
+        if not job_text:
+            try:
+                job_text = fetch_job_text(job.url)
+                job.description = " ".join(job_text.split())[:3000]
+                db.commit()
+            except Exception:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Kunne ikke hente jobbannonse")
+
+        style_norm = (application_style or "vanlig").strip().lower()
+        if style_norm not in {"kort", "vanlig", "profesjonell"}:
+            style_norm = "vanlig"
+
         try:
-            job_text = fetch_job_text(job.url)
-            job.description = " ".join(job_text.split())[:3000]
-            db.commit()
-        except Exception:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Kunne ikke hente jobbannonse")
+            gen = generate_application_texts(
+                profile,
+                job_title=job.title or "",
+                company=job.company or "",
+                job_text=job_text,
+                application_style=style_norm,
+                match_context=match_context,
+            )
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    style_norm = (application_style or "vanlig").strip().lower()
-    if style_norm not in {"kort", "vanlig", "profesjonell"}:
-        style_norm = "vanlig"
+        cover_letter = _to_text(gen.get("cover_letter"))
+        tailored_cv = _to_text(gen.get("tailored_cv"))
+        email_text_val = _to_text(gen.get("email_text"))
 
-    try:
-        gen = generate_application_texts(
-            profile,
-            job_title=job.title or "",
-            company=job.company or "",
-            job_text=job_text,
-            application_style=style_norm,
-            match_context=match_context,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        # Persist generated texts back into the stored analysis
+        stored["cover_letter"] = cover_letter
+        stored["tailored_cv"] = tailored_cv
+        stored["email_text"] = email_text_val
+        stored["tailored_for_job"] = True
 
-    cover_letter = _to_text(gen.get("cover_letter"))
-    tailored_cv = _to_text(gen.get("tailored_cv"))
-    email_text_val = _to_text(gen.get("email_text"))
-
-    # Persist generated texts back into the stored analysis
-    stored["cover_letter"] = cover_letter
-    stored["tailored_cv"] = tailored_cv
-    stored["email_text"] = email_text_val
-    stored["tailored_for_job"] = True
+    # Always persist effective template
+    stored["cv_mal"] = effective_template
     row.analysis_json = json.dumps(stored, ensure_ascii=False)
     row.updated_at = datetime.utcnow()
 
@@ -1589,7 +1618,7 @@ def generate_tailored_cv(
 
     pdf_url = ""
     try:
-        template_id = "sidebar_v1"
+        template_id = f"{effective_template}_v1"
         content_hash = compute_pdf_content_hash(
             template_id=template_id,
             include_photo=include_photo_bool,
@@ -1601,6 +1630,7 @@ def generate_tailored_cv(
         cover_pdf, cv_pdf = make_application_pdfs(
             profile, job, cover_letter, pdf_tailored_cv,
             include_photo=include_photo_bool,
+            template=effective_template,
         )
         approw = GeneratedApplication(
             job_id=job.id,
@@ -1622,7 +1652,7 @@ def generate_tailored_cv(
     except Exception:
         db.commit()
 
-    return {"cv": tailored_cv, "coverLetter": cover_letter, "pdfUrl": pdf_url}
+    return {"cv": tailored_cv, "coverLetter": cover_letter, "pdfUrl": pdf_url, "cvMal": effective_template}
 
 
 def generateApplicationPackage(
@@ -1722,16 +1752,18 @@ def generateApplicationPackage(
         employer_cover_letter = sanitize_employer_text(cover_letter_raw)
         employer_tailored_cv = sanitize_employer_text(pdf_tailored_cv_raw)
 
+        cv_mal = str(result.get("cv_mal") or "profesjonell")
         cover_pdf, cv_pdf = make_application_pdfs(
             profile,
             job,
             employer_cover_letter,
             employer_tailored_cv,
             include_photo=bool(include_photo),
+            template=cv_mal,
         )
 
         # Persist generated content.
-        template_id = "sidebar_v1"
+        template_id = f"{cv_mal}_v1"
         include_photo_flag = bool(include_photo)
 
         # IMPORTANT: hash must match the actual employer-facing PDF content.
