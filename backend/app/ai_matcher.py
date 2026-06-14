@@ -332,7 +332,7 @@ def analyze_job_match(
             system=system_prompt,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.2,
-            max_tokens=380,
+            max_tokens=800,
         )
 
         raw = res.content[0].text.strip()

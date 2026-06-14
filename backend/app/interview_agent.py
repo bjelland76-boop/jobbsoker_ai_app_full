@@ -204,7 +204,7 @@ def _build_final_analysis(
         system=system,
         messages=[{"role": "user", "content": "\n".join(user_prompt_parts)}],
         temperature=0.3,
-        max_tokens=420,
+        max_tokens=800,
     )
 
     data = _parse_json(res.content[0].text)
@@ -393,7 +393,7 @@ def interview_chat(
                 {"role": "user", "content": user_prompt},
             ],
             temperature=0.25,
-            max_tokens=300,
+            max_tokens=600,
         )
 
         data = _parse_json(res.content[0].text)
