@@ -1,28 +1,35 @@
 import json
 import os
+import re
 
+import anthropic
 from dotenv import load_dotenv
-from openai import OpenAI
 
 from .prompt_rules import SHARED_ANTI_HALLUCINATION_RULES
 
 load_dotenv(".env")
 
+_CLAUDE_MODEL = "claude-haiku-4-5-20251001"
 
-def _get_client() -> OpenAI:
-    api_key = os.getenv("OPENAI_API_KEY")
+
+def _get_client() -> anthropic.Anthropic:
+    api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
-        raise RuntimeError("OPENAI_API_KEY mangler i backend/.env")
-    return OpenAI(api_key=api_key)
+        raise RuntimeError("ANTHROPIC_API_KEY mangler i backend/.env")
+    return anthropic.Anthropic(api_key=api_key)
+
+
+def _parse_json(raw: str) -> dict:
+    raw = (raw or "").strip()
+    if raw.startswith("```"):
+        raw = re.sub(r"^```(?:json)?\s*", "", raw)
+        raw = re.sub(r"\s*```\s*$", "", raw)
+    return json.loads(raw)
 
 
 def analyze_profile_cv(profile) -> dict:
-    """Analyze a profile/CV and suggest suitable job types + concrete advice.
+    """Analyze a profile/CV and suggest suitable job types + concrete advice."""
 
-    This is meant to be *job-market guidance*, not a job-ad analysis.
-    """
-
-    # Build a relatively compact but information-dense candidate summary.
     exp = getattr(profile, "experience", "")
     edu = getattr(profile, "education", "")
     skills = getattr(profile, "skills", "")
@@ -59,25 +66,19 @@ Regler:
 
     client = _get_client()
 
-    res = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "Du er en ærlig norsk karrierecoach og svarer kun med gyldig JSON.\n\n"
-                    + SHARED_ANTI_HALLUCINATION_RULES
-                ),
-            },
-            {"role": "user", "content": prompt},
-        ],
+    res = client.messages.create(
+        model=os.getenv("CLAUDE_MODEL") or _CLAUDE_MODEL,
+        system=(
+            "Du er en ærlig norsk karrierecoach og svarer kun med gyldig JSON.\n\n"
+            + SHARED_ANTI_HALLUCINATION_RULES
+        ),
+        messages=[{"role": "user", "content": prompt}],
         temperature=0.25,
-        response_format={"type": "json_object"},
+        max_tokens=1024,
     )
 
-    data = json.loads(res.choices[0].message.content)
+    data = _parse_json(res.content[0].text)
 
-    # Normalize output to expected fields.
     return {
         "summary": data.get("summary", ""),
         "suggested_roles": data.get("suggested_roles") or [],

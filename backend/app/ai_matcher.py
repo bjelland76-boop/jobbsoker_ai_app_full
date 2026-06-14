@@ -6,8 +6,8 @@ from collections import OrderedDict
 from threading import Lock
 from typing import Any, List, Optional, TypedDict
 
+import anthropic
 from dotenv import load_dotenv
-from openai import OpenAI
 
 from .prompt_rules import SHARED_ANTI_HALLUCINATION_RULES
 
@@ -136,11 +136,14 @@ def _extract_relevant(text: str) -> str:
     return (head + " " + " ".join(kept)).strip()
 
 
-def _get_client() -> OpenAI:
-    api_key = os.getenv("OPENAI_API_KEY")
+_CLAUDE_MODEL = "claude-haiku-4-5-20251001"
+
+
+def _get_client() -> anthropic.Anthropic:
+    api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
-        raise RuntimeError("OPENAI_API_KEY mangler i backend/.env")
-    return OpenAI(api_key=api_key)
+        raise RuntimeError("ANTHROPIC_API_KEY mangler i backend/.env")
+    return anthropic.Anthropic(api_key=api_key)
 
 
 def _clamp_0_100(v: Any) -> int:
@@ -288,7 +291,7 @@ def analyze_job_match(
     job_comp = _compress_text(job_src, max_len_i)
     cv_comp = _compress_text(cv_src, max_len_i)
 
-    model_id = (model or os.getenv("OPENAI_MATCH_MODEL") or "gpt-4o-mini").strip() or "gpt-4o-mini"
+    model_id = (model or os.getenv("CLAUDE_MODEL") or _CLAUDE_MODEL).strip() or _CLAUDE_MODEL
 
     # Phase 3: improve cache hit rate by hashing a more normalized variant.
     job_key = _normalize_for_cache(job_comp)
@@ -324,18 +327,18 @@ def analyze_job_match(
 
     try:
         client = _get_client()
-        res = client.chat.completions.create(
+        res = client.messages.create(
             model=model_id,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt},
-            ],
+            system=system_prompt,
+            messages=[{"role": "user", "content": prompt}],
             temperature=0.2,
             max_tokens=380,
-            response_format={"type": "json_object"},
         )
 
-        raw = res.choices[0].message.content
+        raw = res.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = re.sub(r"^```(?:json)?\s*", "", raw)
+            raw = re.sub(r"\s*```\s*$", "", raw)
         data = json.loads(raw)
         normalized = _normalize_result(data)
 

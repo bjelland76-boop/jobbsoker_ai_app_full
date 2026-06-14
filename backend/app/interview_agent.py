@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from typing import Any
 
 from dotenv import load_dotenv
@@ -21,9 +22,9 @@ from dotenv import load_dotenv
 from .prompt_rules import SHARED_ANTI_HALLUCINATION_RULES
 
 try:
-    from openai import OpenAI
+    import anthropic as _anthropic_mod
 except Exception:  # pragma: no cover
-    OpenAI = None  # type: ignore[assignment]
+    _anthropic_mod = None  # type: ignore[assignment]
 
 load_dotenv(".env")
 
@@ -97,13 +98,24 @@ def _compact(text: Any, limit: int) -> str:
     return s
 
 
-def _get_client() -> "OpenAI":
-    api_key = os.getenv("OPENAI_API_KEY")
+_CLAUDE_MODEL = "claude-haiku-4-5-20251001"
+
+
+def _get_client():
+    api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
-        raise RuntimeError("OPENAI_API_KEY mangler")
-    if OpenAI is None:
-        raise RuntimeError("openai-pakken er ikke tilgjengelig")
-    return OpenAI(api_key=api_key)
+        raise RuntimeError("ANTHROPIC_API_KEY mangler")
+    if _anthropic_mod is None:
+        raise RuntimeError("anthropic-pakken er ikke tilgjengelig")
+    return _anthropic_mod.Anthropic(api_key=api_key)
+
+
+def _parse_json(raw: str) -> dict:
+    raw = (raw or "").strip()
+    if raw.startswith("```"):
+        raw = re.sub(r"^```(?:json)?\s*", "", raw)
+        raw = re.sub(r"\s*```\s*$", "", raw)
+    return json.loads(raw) if raw else {}
 
 
 def _count_roles(hist: list[dict]) -> tuple[int, int]:
@@ -187,19 +199,15 @@ def _build_final_analysis(
         "\nGi nå en ærlig, konkret sluttanalyse som nevnt i instruksjonene."
     )
 
-    res = client.chat.completions.create(
-        model=(os.getenv("OPENAI_GEN_MODEL") or "gpt-4o-mini"),
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": "\n".join(user_prompt_parts)},
-        ],
+    res = client.messages.create(
+        model=(os.getenv("CLAUDE_MODEL") or _CLAUDE_MODEL),
+        system=system,
+        messages=[{"role": "user", "content": "\n".join(user_prompt_parts)}],
         temperature=0.3,
         max_tokens=420,
-        response_format={"type": "json_object"},
     )
 
-    raw = (res.choices[0].message.content or "").strip()
-    data = json.loads(raw) if raw else {}
+    data = _parse_json(res.content[0].text)
 
     return {
         "feedback": _compact(data.get("feedback"), 900),
@@ -240,7 +248,7 @@ def interview_chat(
 
     # --- Final analysis ---
     if user_turns >= TOTAL_QUESTIONS:
-        if not os.getenv("OPENAI_API_KEY"):
+        if not os.getenv("ANTHROPIC_API_KEY"):
             return {
                 "feedback": (
                     "Sterke sider: Du svarer tydelig når du bruker konkrete eksempler. "
@@ -308,12 +316,12 @@ def interview_chat(
             continue
         role = str(m.get("role") or "").strip().lower()
         content = _compact(m.get("content"), 300)
-        if role not in {"user", "assistant", "system"} or not content:
+        if role not in {"user", "assistant"} or not content:
             continue
         hist_short.append({"role": role, "content": content})
 
     # --- No OpenAI key — deterministic fallback ---
-    if not os.getenv("OPENAI_API_KEY"):
+    if not os.getenv("ANTHROPIC_API_KEY"):
         feedback = _fallback_feedback(user_answer_c) if user_answer_c else ""
         question = _fallback_question(phase, job_title_c, company_c)
         return {
@@ -377,20 +385,18 @@ def interview_chat(
 
         user_prompt = "\n".join(prompt_parts)
 
-        res = client.chat.completions.create(
-            model=(os.getenv("OPENAI_GEN_MODEL") or "gpt-4o-mini"),
+        res = client.messages.create(
+            model=(os.getenv("CLAUDE_MODEL") or _CLAUDE_MODEL),
+            system=system,
             messages=[
-                {"role": "system", "content": system},
                 *hist_short,
                 {"role": "user", "content": user_prompt},
             ],
             temperature=0.25,
             max_tokens=300,
-            response_format={"type": "json_object"},
         )
 
-        raw = (res.choices[0].message.content or "").strip()
-        data = json.loads(raw) if raw else {}
+        data = _parse_json(res.content[0].text)
 
         feedback = _compact(data.get("feedback"), 500)
         tip = _compact(data.get("tip"), 260)

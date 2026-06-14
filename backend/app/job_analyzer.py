@@ -6,8 +6,8 @@ from typing import Any
 
 import requests
 from bs4 import BeautifulSoup
+import anthropic
 from dotenv import load_dotenv
-from openai import OpenAI
 
 from .ai_matcher import analyze_job_match, _compress_text
 from .prompt_rules import SHARED_ANTI_HALLUCINATION_RULES
@@ -15,11 +15,14 @@ from .prompt_rules import SHARED_ANTI_HALLUCINATION_RULES
 load_dotenv(".env")
 
 
-def _get_client() -> OpenAI:
-    api_key = os.getenv("OPENAI_API_KEY")
+_CLAUDE_MODEL = "claude-haiku-4-5-20251001"
+
+
+def _get_client() -> anthropic.Anthropic:
+    api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
-        raise RuntimeError("OPENAI_API_KEY mangler i backend/.env")
-    return OpenAI(api_key=api_key)
+        raise RuntimeError("ANTHROPIC_API_KEY mangler i backend/.env")
+    return anthropic.Anthropic(api_key=api_key)
 
 
 def fetch_job_text(url: str) -> str:
@@ -376,18 +379,19 @@ Arbeidserfaring:
 """.strip()
 
     client = _get_client()
-    res = client.chat.completions.create(
-        model=os.getenv("OPENAI_GEN_MODEL") or "gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "Return ONLY JSON. Be concise."},
-            {"role": "user", "content": prompt},
-        ],
+    res = client.messages.create(
+        model=os.getenv("CLAUDE_MODEL") or _CLAUDE_MODEL,
+        system="Return ONLY JSON. Be concise.",
+        messages=[{"role": "user", "content": prompt}],
         temperature=0.25,
         max_tokens=2200,
-        response_format={"type": "json_object"},
     )
 
-    data = json.loads(res.choices[0].message.content)
+    raw = res.content[0].text.strip()
+    if raw.startswith("```"):
+        raw = re.sub(r"^```(?:json)?\s*", "", raw)
+        raw = re.sub(r"\s*```\s*$", "", raw)
+    data = json.loads(raw)
     return {
         "cover_letter": data.get("cover_letter", ""),
         "tailored_cv": data.get("tailored_cv", ""),
@@ -444,7 +448,7 @@ def analyze_job_url(
         if len(score_risks) >= 3:
             break
 
-    match_model = (os.getenv("OPENAI_MATCH_MODEL") or "gpt-4o-mini").strip() or "gpt-4o-mini"
+    match_model = (os.getenv("CLAUDE_MODEL") or _CLAUDE_MODEL).strip() or _CLAUDE_MODEL
 
     result: dict[str, Any] = {
         # Phase 5: lightweight analytics fields (stored in analysis_json).
