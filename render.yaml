@@ -16,6 +16,12 @@ services:
       # Required (set in Render dashboard / during Blueprint deploy)
       - key: JWT_SECRET
         sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: APP_SECRET_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
       - key: OPENAI_API_KEY
         sync: false
 
