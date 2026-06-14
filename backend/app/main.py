@@ -1523,13 +1523,15 @@ def generate_tailored_cv(
     application_style: str = Query(default="vanlig"),
     include_photo: bool = Query(default=True),
     template: str = Query(default=""),  # "kreativ"|"profesjonell"|"klassisk"; empty = use stored cv_mal
+    language: str = Query(default="no"),  # "no" | "en"
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Generate a job-tailored CV using the stored match analysis for this job.
 
-    If `template` is provided AND the CV texts are already stored, skip the Claude
-    call and only regenerate the PDF with the new visual template.
+    If `template` is provided AND the CV texts are already stored for the requested
+    language, skip the Claude call and only regenerate the PDF with the new visual template.
+    Norwegian and English variants are cached separately.
     """
     from .job_analyzer import generate_application_texts, fetch_job_text
 
@@ -1567,10 +1569,16 @@ def generate_tailored_cv(
     if effective_template not in _VALID_TEMPLATES:
         effective_template = "profesjonell"
 
-    # If a template change is requested AND we have existing generated texts → skip Claude
-    stored_cv = _to_text(stored.get("tailored_cv"))
-    stored_letter = _to_text(stored.get("cover_letter"))
-    stored_email = _to_text(stored.get("email_text"))
+    # Language-specific storage keys: Norwegian uses legacy keys, English uses _en suffix
+    lang = "en" if (language or "no").strip().lower() == "en" else "no"
+    cv_key = "tailored_cv" if lang == "no" else "tailored_cv_en"
+    letter_key = "cover_letter" if lang == "no" else "cover_letter_en"
+    email_key = "email_text" if lang == "no" else "email_text_en"
+
+    # If a template change is requested AND we have existing texts for this language → skip Claude
+    stored_cv = _to_text(stored.get(cv_key))
+    stored_letter = _to_text(stored.get(letter_key))
+    stored_email = _to_text(stored.get(email_key))
     skip_claude = bool(template_norm) and bool(stored_cv) and bool(stored_letter)
 
     if skip_claude:
@@ -1607,6 +1615,7 @@ def generate_tailored_cv(
                 job_text=job_text,
                 application_style=style_norm,
                 match_context=match_context,
+                language=lang,
             )
         except Exception as e:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -1615,10 +1624,10 @@ def generate_tailored_cv(
         tailored_cv = _to_text(gen.get("tailored_cv"))
         email_text_val = _to_text(gen.get("email_text"))
 
-        # Persist generated texts back into the stored analysis
-        stored["cover_letter"] = cover_letter
-        stored["tailored_cv"] = tailored_cv
-        stored["email_text"] = email_text_val
+        # Persist generated texts back into the stored analysis (language-specific keys)
+        stored[cv_key] = tailored_cv
+        stored[letter_key] = cover_letter
+        stored[email_key] = email_text_val
         stored["tailored_for_job"] = True
 
     # Always persist effective template
@@ -1665,7 +1674,7 @@ def generate_tailored_cv(
     except Exception:
         db.commit()
 
-    return {"cv": tailored_cv, "coverLetter": cover_letter, "pdfUrl": pdf_url, "cvMal": effective_template}
+    return {"cv": tailored_cv, "coverLetter": cover_letter, "pdfUrl": pdf_url, "cvMal": effective_template, "language": lang}
 
 
 def generateApplicationPackage(

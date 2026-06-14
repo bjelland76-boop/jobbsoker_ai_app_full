@@ -186,6 +186,7 @@ export default function App() {
   const [analysis, setAnalysis] = useState(null);
   const [tailoredCvJobTitle, setTailoredCvJobTitle] = useState('');
   const [cvTemplate, setCvTemplate] = useState('profesjonell');
+  const [cvLanguage, setCvLanguage] = useState('no'); // 'no' | 'en'
   const [loading, setLoading] = useState(false);
   const [jobAnalyses, setJobAnalyses] = useState([]);
   const [jobAnalysesLoading, setJobAnalysesLoading] = useState(false);
@@ -1337,7 +1338,7 @@ export default function App() {
       if (analysis?.job_id) {
         // Use stored analysis to build a CV tailored to this specific job.
         pkg = await apiFetch(
-          `/job-analyses/${analysis.job_id}/generate-tailored-cv?profile_id=${profileId}&application_style=${encodeURIComponent(applicationStyle)}&include_photo=${includePhoto}`,
+          `/job-analyses/${analysis.job_id}/generate-tailored-cv?profile_id=${profileId}&application_style=${encodeURIComponent(applicationStyle)}&include_photo=${includePhoto}&language=${cvLanguage}`,
           { method: 'POST' },
         );
       } else {
@@ -1419,7 +1420,7 @@ export default function App() {
     const includePhoto = !!profilePhotoData && !!includePhotoInPdf;
     try {
       const pkg = await apiFetch(
-        `/job-analyses/${analysis.job_id}/generate-tailored-cv?profile_id=${profileId}&template=${encodeURIComponent(newTemplate)}&application_style=${encodeURIComponent(applicationStyle)}&include_photo=${includePhoto}`,
+        `/job-analyses/${analysis.job_id}/generate-tailored-cv?profile_id=${profileId}&template=${encodeURIComponent(newTemplate)}&application_style=${encodeURIComponent(applicationStyle)}&include_photo=${includePhoto}&language=${cvLanguage}`,
         { method: 'POST' },
       );
       if (pkg && typeof pkg.cv === 'string') {
@@ -2276,6 +2277,22 @@ export default function App() {
                   </View>
                 </View>
               ) : null}
+
+              <Text style={[styles.inputLabel, styles.aerligLabel, { marginTop: 6 }]}>Språk / Language</Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
+                {[{ key: 'no', label: '🇳🇴 Norsk' }, { key: 'en', label: '🇬🇧 English' }].map(({ key, label }) => {
+                  const active = cvLanguage === key;
+                  return (
+                    <TouchableOpacity
+                      key={key}
+                      onPress={() => setCvLanguage(key)}
+                      style={[styles.filterChip, styles.aerligFilterChip, active && styles.aerligFilterChipActive]}
+                    >
+                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, active && styles.aerligFilterChipTextActive]}>{label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
 
               {generationBanner ? (
                 <View style={{

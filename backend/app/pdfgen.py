@@ -201,8 +201,21 @@ CV_SECTION_TITLES: list[str] = [
     "Sertifiseringer",
     "Språk",
     "Referanser",
+    # English equivalents
+    "Professional Summary",
+    "Core Skills",
+    "Work Experience",
+    "Education",
+    "Certifications",
+    "Languages",
+    "References",
 ]
 CV_SECTION_TITLES_CF = {t.casefold(): t for t in CV_SECTION_TITLES}
+
+# Section rendering category sets (Norwegian + English)
+_SEC_EXPERIENCE = {"arbeidserfaring", "utdanning", "work experience", "education"}
+_SEC_BULLETS = {"kjerneferdigheter", "språk", "sertifiseringer", "referanser",
+                "core skills", "languages", "certifications", "references"}
 
 
 def _clean_company_for_pdf(company: str) -> str:
@@ -713,7 +726,7 @@ class _SidebarPdfDoc:
             sec_cf = section_title.casefold()
 
             # Experience / education: treat non-bullet lines as entry headers.
-            if sec_cf in {"arbeidserfaring", "utdanning"}:
+            if sec_cf in _SEC_EXPERIENCE:
                 entry_bullets: list[str] = []
                 first_entry = True
 
@@ -749,7 +762,7 @@ class _SidebarPdfDoc:
                     self._cv_bullet_lines(entry_bullets)
 
             # Bullet-friendly sections.
-            elif sec_cf in {"kjerneferdigheter", "språk", "sertifiseringer", "referanser"}:
+            elif sec_cf in _SEC_BULLETS:
                 bulletish = [ln for ln in content if (ln or "").strip().startswith(("•", "-"))]
                 if bulletish:
                     self._cv_bullet_lines([ln for ln in content if not _is_placeholder_line(ln)])
@@ -1342,7 +1355,7 @@ class _ClassicPdfDoc:
             self._cv_subheader(sec_title)
             sec_cf = sec_title.casefold()
 
-            if sec_cf in {"arbeidserfaring", "utdanning"}:
+            if sec_cf in _SEC_EXPERIENCE:
                 entry_bullets: list[str] = []
                 first = True
                 for ln in content:
@@ -1366,7 +1379,7 @@ class _ClassicPdfDoc:
                         self._cv_entry_header(s)
                 if entry_bullets:
                     self._cv_bullet_lines(entry_bullets)
-            elif sec_cf in {"kjerneferdigheter", "språk", "sertifiseringer", "referanser"}:
+            elif sec_cf in _SEC_BULLETS:
                 real = [ln for ln in content if not _is_placeholder(ln)]
                 bulletish = [ln for ln in real if (ln or "").strip().startswith(("•", "-"))]
                 if bulletish:

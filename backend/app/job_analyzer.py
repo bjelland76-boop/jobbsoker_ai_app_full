@@ -292,6 +292,7 @@ def generate_application_texts(
     job_text: str,
     application_style: str = "vanlig",
     match_context: dict | None = None,
+    language: str = "no",
 ) -> dict:
     """Generate cover letter + tailored CV + email text.
 
@@ -353,7 +354,61 @@ def generate_application_texts(
             lines.append("- Disse kravene mangler — tone ned eller kompenser med overførbar erfaring: " + "; ".join(missing))
         match_block = "\n".join(lines)
 
-    prompt = f"""
+    use_english = (language or "no").strip().lower() == "en"
+
+    if use_english:
+        prompt = f"""
+Reply ONLY with valid JSON with fields:
+cover_letter, tailored_cv, email_text
+
+Job:
+Title: {job_title}
+Company: {company}
+Text: {job_comp}
+
+Candidate:
+{cand_comp}
+
+{match_block + chr(10) if match_block else ""}Rules:
+- Write in English (British or neutral international English).
+- Do NOT invent experience or education.
+- Do NOT use placeholders like [phone] or [address].
+- {style_text}
+- Use keywords from the job ad in the CV where the candidate genuinely has relevant experience.
+- Highlight the candidate's strongest points for this role at the top of Professional Summary.
+- IMPORTANT: NEVER output match score, match metadata or background analysis in the CV or cover letter. Only normal CV content is allowed in output.
+
+{SHARED_ANTI_HALLUCINATION_RULES}
+
+tailored_cv:
+- Plain text (ATS-friendly): no markdown, no tables, no emojis.
+- Do NOT include contact info in tailored_cv.
+- Use ONLY information from the Candidate block. If something is missing: write neutrally, do not guess.
+- Structure (section titles on their own lines, in this order):
+  Professional Summary\nCore Skills\nWork Experience\nEducation\nCertifications (if available)\nLanguages\nReferences
+
+Professional Summary (important):
+- 3–5 sentences (not bullet points).
+- Must read as written for a real candidate: concrete, fact-based and relevant to the role.
+- Prioritise in this order when supported by Candidate data:
+  1) years of experience (use "Estimated total years experience" if provided, otherwise omit years)
+  2) industry/sector
+  3) responsibilities (operations, customer contact, logistics, procurement, etc.)
+  4) documented results / improvements (use Evidence points first)
+  5) systems, process improvements, efficiency, logistics
+  6) leadership / special responsibilities (if stated)
+- Avoid generic phrases like "motivated", "team player", "positive attitude" unless followed by a concrete example from Candidate data.
+
+Core Skills:
+- 8–12 bullet points (•), primarily technical/concrete skills and systems.
+- Soft skills only if supported by concrete examples.
+
+Work Experience:
+- Only roles found in Candidate Experience.
+- For each role: 2–5 short bullet points with responsibilities/results (do not invent).
+""".strip()
+    else:
+        prompt = f"""
 Svar KUN med gyldig JSON med feltene:
 cover_letter, tailored_cv, email_text
 

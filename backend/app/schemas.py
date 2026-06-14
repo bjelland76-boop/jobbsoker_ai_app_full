@@ -120,6 +120,7 @@ class ApplicationPackageOut(BaseModel):
     coverLetter: str
     pdfUrl: str
     cvMal: str = "profesjonell"  # which visual template was used
+    language: str = "no"  # "no" | "en"
 
 
 class EducationOptionOut(BaseModel):
