@@ -337,17 +337,20 @@ def generate_application_texts(
         missing = [str(m) for m in (match_context.get("missing") or [])[:3] if m]
         top_reason = (match_context.get("top_reason") or "").strip()
         main_risk = (match_context.get("main_risk") or "").strip()
-        lines = ["Matchanalyse for denne stillingen (bruk aktivt i CV-en):"]
+        lines = [
+            "BAKGRUNNSINFORMASJON FOR TILPASNING (skal IKKE skrives ut i CV eller søknadsbrev):",
+            "Bruk dette KUN til å vite hva som skal vektlegges. Disse dataene skal aldri vises i output.",
+        ]
         if score is not None:
-            lines.append(f"- Matchscore: {int(score)}%")
+            lines.append(f"- Matchprosent: {int(score)}% (kun intern referanse, aldri vis i output)")
         if top_reason:
-            lines.append(f"- Sterkeste match: {top_reason}")
+            lines.append(f"- Kandidatens sterkeste side for denne jobben: {top_reason}")
         if main_risk:
-            lines.append(f"- Viktigste gap: {main_risk}")
+            lines.append(f"- Viktigste gap å kompensere for: {main_risk}")
         if strengths:
-            lines.append("- Fremhev disse styrkene: " + "; ".join(strengths))
+            lines.append("- Disse ferdighetene bør vektlegges i CV-en: " + "; ".join(strengths))
         if missing:
-            lines.append("- Tone ned eller kompenser for: " + "; ".join(missing))
+            lines.append("- Disse kravene mangler — tone ned eller kompenser med overførbar erfaring: " + "; ".join(missing))
         match_block = "\n".join(lines)
 
     prompt = f"""
@@ -368,7 +371,8 @@ Candidate:
 - Ikke bruk placeholders som [telefon] eller [adresse].
 - {style_text}
 - Bruk nøkkelord fra stillingsannonsen i CV-en der kandidaten faktisk har relevant erfaring.
-- Fremhev styrker fra matchanalysen øverst i Profesjonell oppsummering.
+- Fremhev kandidatens sterkeste sider for denne jobben øverst i Profesjonell oppsummering.
+- VIKTIG: Skriv ALDRI ut matchprosent, matchscore, analysemetadata eller bakgrunnsinformasjonen i selve CV-en eller søknadsbrevet. Kun vanlig CV-innhold er tillatt i output.
 
 {SHARED_ANTI_HALLUCINATION_RULES}
 
