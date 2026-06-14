@@ -1373,8 +1373,13 @@ export default function App() {
           // Only navigate/open documents when a PDF was actually created.
           if (safePkg.pdfUrl && safePkg.pdfUrl.trim()) {
             await loadDocuments();
-            setActiveTab('documents');
-            Alert.alert('OK', 'PDF er generert. Se under Dokumenter.');
+            if (analysis?.job_id) {
+              // Tailored CV flow: stay on analysis tab so template selector buttons are visible.
+              Alert.alert('OK', 'PDF er generert. Bytt mal under, eller åpne under Dokumenter.');
+            } else {
+              setActiveTab('documents');
+              Alert.alert('OK', 'PDF er generert. Se under Dokumenter.');
+            }
           }
 
           return;

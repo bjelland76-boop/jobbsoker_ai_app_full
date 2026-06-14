@@ -98,6 +98,9 @@ class JobAnalysisOut(BaseModel):
     tailored_cv: Optional[str] = None
     email_text: Optional[str] = None
 
+    # Visual CV template auto-selected based on job type.
+    cv_mal: str = "profesjonell"
+
 
 class AnalyzeAndSendOut(BaseModel):
     """Legacy response model (kept for backwards compatibility).
