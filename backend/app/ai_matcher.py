@@ -328,7 +328,7 @@ def analyze_job_match(
         '"missing":["max 3"],'
         '"recommended_cv_changes":["max 3; actionable CV edits addressing missing requirements; <=120 chars; no generic"],'
         '"advice":"1 short sentence",'
-        '"cv_mal":"profesjonell|kreativ|klassisk — kreativ for design/media/marketing, klassisk for jus/okonomi/akademia/offentlig, profesjonell for alt annet"'
+        '"cv_mal":"profesjonell (DEFAULT for de fleste stillinger: salg/IT/helse/bygg/kontor/service/logistikk/HR) | kreativ (KUN for: designer/UX/grafisk/animasjon/reklame/media/innhold) | klassisk (KUN for: advokat/jurist/revisor/forsker/akademiker/offentlig forvaltning) — velg basert på stillingstittelen i JOB-seksjonen"'
         "}"
     )
 
