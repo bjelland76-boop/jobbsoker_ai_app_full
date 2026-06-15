@@ -74,7 +74,7 @@ Regler:
         ),
         messages=[{"role": "user", "content": prompt}],
         temperature=0.25,
-        max_tokens=1024,
+        max_tokens=2048,
     )
 
     data = _parse_json(res.content[0].text)
