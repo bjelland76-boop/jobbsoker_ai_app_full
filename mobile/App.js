@@ -153,7 +153,9 @@ async function apiFetch(path, options) {
 
   if (!r.ok) {
     const msg = (data && (data.detail || data.error)) || r.statusText || 'Ukjent feil';
-    throw new Error(msg);
+    const err = new Error(msg);
+    err.status = r.status;
+    throw err;
   }
 
   return data;
@@ -461,7 +463,11 @@ export default function App() {
         setActiveTab('home');
       }
     } catch (e) {
-      Alert.alert('Feil', errText(e));
+      if (e.status === 429) {
+        Alert.alert('For mange forsøk', 'Vent noen minutter og prøv igjen.');
+      } else {
+        Alert.alert('Feil', errText(e));
+      }
     }
     setAuthLoading(false);
   }
@@ -700,7 +706,11 @@ export default function App() {
                 setResendCooldown(30);
                 Alert.alert('Kode sendt', 'Vi har sendt en ny engangskode på e-post.');
               } catch (e) {
-                Alert.alert('Feil', errText(e));
+                if (e.status === 429) {
+                  Alert.alert('For mange forsøk', 'Vent noen minutter og prøv igjen.');
+                } else {
+                  Alert.alert('Feil', errText(e));
+                }
               }
               setAuthLoading(false);
             }}

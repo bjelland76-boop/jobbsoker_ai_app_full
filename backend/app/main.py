@@ -672,7 +672,7 @@ def request_login_code(
     if int(email_count) >= email_max_per_hour or int(ip_count) >= ip_max_per_hour:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="For mange forsøk. Vent litt og prøv igjen.",
+            detail="For mange forsøk – vent noen minutter og prøv igjen.",
         )
 
     # Invalidate any previous unused codes for this email (avoid many valid codes).
