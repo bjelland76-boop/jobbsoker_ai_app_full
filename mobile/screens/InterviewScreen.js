@@ -106,7 +106,9 @@ export default function InterviewScreen({
         if (!uri) return;
 
         const formData = new FormData();
-        formData.append('audio', { uri, type: 'audio/m4a', name: 'recording.m4a' });
+        const audioResponse = await fetch(uri);
+        const blob = await audioResponse.blob();
+        formData.append('audio', blob, 'recording.webm');
 
         const result = await apiFetch('/interview/transcribe', {
           method: 'POST',
@@ -266,7 +268,7 @@ export default function InterviewScreen({
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={{ flex: 1, backgroundColor: '#F5F4F1' }}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
     >
@@ -274,7 +276,6 @@ export default function InterviewScreen({
         ref={scrollRef}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 260 }]}
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
       >
         <View style={styles.aerligHomeWrap}>
           <Pressable

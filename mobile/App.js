@@ -1974,7 +1974,7 @@ export default function App() {
       setCvAnalysis(data);
       setActiveTab('cv');
     } catch (e) {
-      Alert.alert('Feil', String(e));
+      Alert.alert('Feil', errText(e));
     }
     setCvLoading(false);
   }
@@ -2000,6 +2000,11 @@ export default function App() {
 
       {cvAnalysis ? (
         <View style={[styles.aerligCard, styles.aerligAccentNavy]}>
+          {!cvAnalysis.summary && !cvAnalysis.suggested_roles?.length && !cvAnalysis.strengths?.length ? (
+            <Text style={styles.aerligCardBody}>
+              Profilen din mangler nok informasjon for en god analyse. Fyll ut CV/erfaring i profilen din først.
+            </Text>
+          ) : null}
           {cvAnalysis.summary ? (
             <>
               <Text style={styles.aerligCardSectionTitle}>Oppsummering</Text>
