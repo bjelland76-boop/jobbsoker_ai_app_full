@@ -10,7 +10,7 @@ import anthropic
 from dotenv import load_dotenv
 
 from .ai_matcher import analyze_job_match, _compress_text
-from .prompt_rules import SHARED_ANTI_HALLUCINATION_RULES
+from .prompt_rules import SHARED_ANTI_HALLUCINATION_RULES, SHARED_ANTI_HALLUCINATION_RULES_EN
 
 load_dotenv(".env")
 
@@ -331,6 +331,8 @@ def generate_application_texts(
         6000,
     )
 
+    use_english = (language or "no").strip().lower() == "en"
+
     match_block = ""
     if match_context and isinstance(match_context, dict):
         score = match_context.get("score")
@@ -338,23 +340,37 @@ def generate_application_texts(
         missing = [str(m) for m in (match_context.get("missing") or [])[:3] if m]
         top_reason = (match_context.get("top_reason") or "").strip()
         main_risk = (match_context.get("main_risk") or "").strip()
-        lines = [
-            "BAKGRUNNSINFORMASJON FOR TILPASNING (skal IKKE skrives ut i CV eller søknadsbrev):",
-            "Bruk dette KUN til å vite hva som skal vektlegges. Disse dataene skal aldri vises i output.",
-        ]
-        if score is not None:
-            lines.append(f"- Matchprosent: {int(score)}% (kun intern referanse, aldri vis i output)")
-        if top_reason:
-            lines.append(f"- Kandidatens sterkeste side for denne jobben: {top_reason}")
-        if main_risk:
-            lines.append(f"- Viktigste gap å kompensere for: {main_risk}")
-        if strengths:
-            lines.append("- Disse ferdighetene bør vektlegges i CV-en: " + "; ".join(strengths))
-        if missing:
-            lines.append("- Disse kravene mangler — tone ned eller kompenser med overførbar erfaring: " + "; ".join(missing))
+        if use_english:
+            lines = [
+                "BACKGROUND FOR TAILORING (MUST NOT appear in CV or cover letter):",
+                "Use this ONLY to know what to emphasise. Never output these data in the result.",
+            ]
+            if score is not None:
+                lines.append(f"- Match score: {int(score)}% (internal reference only, never show in output)")
+            if top_reason:
+                lines.append(f"- Candidate's strongest point for this role: {top_reason}")
+            if main_risk:
+                lines.append(f"- Most important gap to compensate for: {main_risk}")
+            if strengths:
+                lines.append("- These skills should be emphasised in the CV: " + "; ".join(strengths))
+            if missing:
+                lines.append("- These requirements are missing — downplay or compensate with transferable experience: " + "; ".join(missing))
+        else:
+            lines = [
+                "BAKGRUNNSINFORMASJON FOR TILPASNING (skal IKKE skrives ut i CV eller søknadsbrev):",
+                "Bruk dette KUN til å vite hva som skal vektlegges. Disse dataene skal aldri vises i output.",
+            ]
+            if score is not None:
+                lines.append(f"- Matchprosent: {int(score)}% (kun intern referanse, aldri vis i output)")
+            if top_reason:
+                lines.append(f"- Kandidatens sterkeste side for denne jobben: {top_reason}")
+            if main_risk:
+                lines.append(f"- Viktigste gap å kompensere for: {main_risk}")
+            if strengths:
+                lines.append("- Disse ferdighetene bør vektlegges i CV-en: " + "; ".join(strengths))
+            if missing:
+                lines.append("- Disse kravene mangler — tone ned eller kompenser med overførbar erfaring: " + "; ".join(missing))
         match_block = "\n".join(lines)
-
-    use_english = (language or "no").strip().lower() == "en"
 
     if use_english:
         prompt = f"""
@@ -378,7 +394,15 @@ Candidate:
 - Highlight the candidate's strongest points for this role at the top of Professional Summary.
 - IMPORTANT: NEVER output match score, match metadata or background analysis in the CV or cover letter. Only normal CV content is allowed in output.
 
-{SHARED_ANTI_HALLUCINATION_RULES}
+{SHARED_ANTI_HALLUCINATION_RULES_EN}
+
+cover_letter:
+- Write in English (British or neutral international English).
+- 3–4 paragraphs. No bullet points.
+- Opening: mention the role and company by name, state why the candidate is a strong fit.
+- Body: highlight 2–3 concrete strengths from the candidate's experience relevant to the role.
+- Closing: express interest in an interview, polite and professional tone.
+- Do NOT include contact details or date in the cover letter text.
 
 tailored_cv:
 - Plain text (ATS-friendly): no markdown, no tables, no emojis.

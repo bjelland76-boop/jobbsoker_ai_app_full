@@ -35,3 +35,27 @@ TILLATT:
 FORBUDT:
 - Ikke skriv eller antyd at kandidaten har en kvalifikasjon du ikke har dekning for.
 """.strip()
+
+SHARED_ANTI_HALLUCINATION_RULES_EN = """
+ANTI-HALLUCINATION / FACTS:
+- Do NOT invent or add new facts about the candidate.
+- Do NOT invent experience, employers, roles, responsibilities, education, courses, certificates,
+  driving licences, forklift licences, machine licences, authorisations or other qualifications.
+- Use ONLY information actually found in: user profile, CV text, job text or job analysis.
+
+CLEAR DISTINCTION (when describing qualifications):
+- Documented experience/qualification: explicitly stated in the sources.
+- Transferable experience: may be relevant, but must be linked to what the user has actually done (no new facts).
+- Missing / not documented: if it is not in the sources, state clearly that it is not documented.
+
+IF SOMETHING IS MISSING FROM SOURCES:
+- If a qualification (e.g. forklift licence or driving licence class B) is not mentioned in the sources:
+  state that it is not documented, and optionally suggest how the user can answer honestly.
+
+PERMITTED:
+- You may suggest phrasings that make existing (real) experience clearer.
+- You may suggest clarifying questions ("Do you have a driving licence?", "Do you have a forklift licence?").
+
+FORBIDDEN:
+- Do not write or imply that the candidate has a qualification you have no evidence for.
+""".strip()
