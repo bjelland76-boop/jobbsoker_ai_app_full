@@ -531,10 +531,10 @@ class _SidebarPdfDoc:
         """Render bullet lines with consistent indent + wrap."""
 
         if leading is None:
-            leading = max(0.48 * cm, self.theme.body_leading * cm - 0.02 * cm)
+            leading = 0.53 * cm  # 1.5× line-height at 10pt
 
         c = self.c
-        bullet_x = self.main_left
+        bullet_x = self.main_left + 0.28 * cm   # 8px indent for bullet
         text_x = self.main_left + 0.65 * cm
         max_w = self.main_w - (text_x - self.main_left)
 
@@ -554,7 +554,7 @@ class _SidebarPdfDoc:
             for i, wline in enumerate(wrapped):
                 self._ensure_space(0.62 * cm)
 
-                c.setFillColor(self.theme.muted)
+                c.setFillColor(colors.HexColor("#333333"))
                 c.setFont(font, size)
 
                 if i == 0:
@@ -565,13 +565,13 @@ class _SidebarPdfDoc:
 
                 self.y -= leading
 
-        self.y -= 0.12 * cm
+        self.y -= 0.10 * cm
 
-    def _cv_paragraph(self, text: str, *, font: str = "Helvetica", size: float = 10.2, leading: float = None) -> None:
-        """Paragraph renderer for CV text (slightly tighter than cover letter)."""
+    def _cv_paragraph(self, text: str, *, font: str = "Helvetica", size: float = 10.0, leading: float = None) -> None:
+        """Paragraph renderer for CV text."""
 
         if leading is None:
-            leading = self.theme.body_leading * cm
+            leading = 0.53 * cm  # 1.5× line-height at 10pt
 
         c = self.c
         max_w = self.main_w
@@ -585,7 +585,7 @@ class _SidebarPdfDoc:
             wrapped = _wrap_lines(line.strip(), max_w, font, size)
             for wline in wrapped:
                 self._ensure_space(0.62 * cm)
-                c.setFillColor(self.theme.muted)
+                c.setFillColor(colors.HexColor("#333333"))
                 c.setFont(font, size)
                 c.drawString(self.main_left, self.y, wline)
                 self.y -= leading
@@ -619,32 +619,32 @@ class _SidebarPdfDoc:
         return (s, "")
 
     def _cv_entry_header_fields(self, title: str, employer: str, period: str) -> None:
-        """Render a pre-parsed experience entry: title (bold) + period (right), employer below."""
+        """Render a pre-parsed experience entry.
+
+        Layout:
+          Title (12pt bold, #1a1a1a)
+          Employer · Period (10pt normal, #666666) — one line
+          [description bullets below]
+        """
         c = self.c
-        space_needed = (0.57 + (0.48 if employer else 0)) * cm + 0.3 * cm
+        meta = " · ".join(x for x in [employer, period] if x)
+        space_needed = (0.50 + (0.45 if meta else 0)) * cm + 0.25 * cm
         self._ensure_space(space_needed)
 
-        # Title: 11.5pt bold, near-black
-        c.setFillColor(self.theme.text)
-        c.setFont("Helvetica-Bold", 11.5)
+        # Title: 12pt bold, near-black
+        c.setFillColor(colors.HexColor("#1a1a1a"))
+        c.setFont("Helvetica-Bold", 12)
         c.drawString(self.main_left, self.y, title)
+        self.y -= 0.46 * cm
 
-        # Period: 9pt italic, light grey, right-aligned
-        if period:
-            c.setFillColor(colors.HexColor("#94a3b8"))
-            c.setFont("Helvetica-Oblique", 9)
-            c.drawRightString(self.main_left + self.main_w, self.y, period)
+        # Employer · Period on same line: 10pt normal, grey
+        if meta:
+            c.setFillColor(colors.HexColor("#666666"))
+            c.setFont("Helvetica", 10)
+            c.drawString(self.main_left, self.y, meta)
+            self.y -= 0.46 * cm
 
-        self.y -= 0.54 * cm
-
-        # Employer: 10.5pt normal, muted grey
-        if employer:
-            c.setFillColor(self.theme.muted)
-            c.setFont("Helvetica", 10.5)
-            c.drawString(self.main_left, self.y, employer)
-            self.y -= 0.48 * cm
-
-        self.y -= 0.10 * cm  # gap before description
+        self.y -= 0.08 * cm  # small gap before description
 
     def _cv_entry_header(self, title_line: str) -> None:
         """Parse a combined 'Title – Employer (period)' line and delegate to _cv_entry_header_fields."""
@@ -1329,10 +1329,24 @@ class _ClassicPdfDoc:
                 self.y -= leading
         self.y -= 0.18 * cm
 
-    def _cv_paragraph(self, text: str, **kwargs) -> None:
-        self._paragraph(text, **kwargs)
+    def _cv_paragraph(self, text: str, *, font: str = "", size: float = 10.0, leading: float = 0.53 * cm) -> None:
+        font = font or self._FONT_BODY
+        c = self.c
+        for raw in (text or "").split("\n"):
+            line = raw.rstrip()
+            if not line.strip():
+                self.y -= 0.22 * cm
+                continue
+            wrapped = self._wrap(line.strip(), self.content_w, font, size)
+            for wline in wrapped:
+                self._ensure_space(0.62 * cm)
+                c.setFillColor(colors.HexColor("#333333"))
+                c.setFont(font, size)
+                c.drawString(self.left, self.y, wline)
+                self.y -= leading
+        self.y -= 0.18 * cm
 
-    def _cv_bullet_lines(self, lines: list[str], *, font: str = "", size: float = 10.0, leading: float = 0.50 * cm) -> None:
+    def _cv_bullet_lines(self, lines: list[str], *, font: str = "", size: float = 10.0, leading: float = 0.53 * cm) -> None:
         font = font or self._FONT_BODY
         c = self.c
         bullet_x = self.left
@@ -1350,7 +1364,7 @@ class _ClassicPdfDoc:
             wrapped = self._wrap(stripped, max_w, font, size)
             for i, wline in enumerate(wrapped):
                 self._ensure_space(0.62 * cm)
-                c.setFillColor(self._COLOR_MID)
+                c.setFillColor(colors.HexColor("#333333"))
                 c.setFont(font, size)
                 if i == 0:
                     c.drawString(bullet_x, self.y, "•")
@@ -1358,7 +1372,7 @@ class _ClassicPdfDoc:
                 else:
                     c.drawString(text_x, self.y, wline)
                 self.y -= leading
-        self.y -= 0.12 * cm
+        self.y -= 0.10 * cm
 
     def _extract_period_tail(self, line: str) -> tuple[str, str]:
         s = " ".join((line or "").split()).strip()
@@ -1376,30 +1390,31 @@ class _ClassicPdfDoc:
         return (s, "")
 
     def _cv_entry_header_fields(self, title: str, employer: str, period: str) -> None:
-        """Render a pre-parsed experience entry."""
+        """Render a pre-parsed experience entry.
+
+        Layout:
+          Title (12pt bold serif, #1a1a1a)
+          Employer · Period (10pt normal, #666666) — one line
+        """
         c = self.c
-        space_needed = (0.57 + (0.48 if employer else 0)) * cm + 0.3 * cm
+        meta = " · ".join(x for x in [employer, period] if x)
+        space_needed = (0.50 + (0.45 if meta else 0)) * cm + 0.25 * cm
         self._ensure_space(space_needed)
 
-        # Title: 11.5pt bold serif, near-black
-        c.setFillColor(self._COLOR_BLACK)
-        c.setFont(self._FONT_HEAD, 11.5)
+        # Title: 12pt bold serif, near-black
+        c.setFillColor(colors.HexColor("#1a1a1a"))
+        c.setFont(self._FONT_HEAD, 12)
         c.drawString(self.left, self.y, title)
-        # Period: 9pt italic, light grey
-        if period:
-            c.setFillColor(colors.HexColor("#94a3b8"))
-            c.setFont("Helvetica-Oblique", 9)
-            c.drawRightString(self.right, self.y, period)
-        self.y -= 0.54 * cm
+        self.y -= 0.46 * cm
 
-        # Employer: 10.5pt normal, dark grey
-        if employer:
-            c.setFillColor(self._COLOR_MID)
-            c.setFont(self._FONT_BODY, 10.5)
-            c.drawString(self.left, self.y, employer)
-            self.y -= 0.48 * cm
+        # Employer · Period on same line: 10pt normal, grey
+        if meta:
+            c.setFillColor(colors.HexColor("#666666"))
+            c.setFont(self._FONT_BODY, 10)
+            c.drawString(self.left, self.y, meta)
+            self.y -= 0.46 * cm
 
-        self.y -= 0.10 * cm  # gap before description
+        self.y -= 0.08 * cm  # small gap before description
 
     def _cv_entry_header(self, title_line: str) -> None:
         """Parse a combined 'Title – Employer (period)' line and delegate."""
