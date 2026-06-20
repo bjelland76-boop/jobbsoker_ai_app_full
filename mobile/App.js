@@ -227,6 +227,9 @@ export default function App() {
   const [customLanguageInput, setCustomLanguageInput] = useState('');
   const [cvGaps, setCvGaps] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState('idle'); // 'idle'|'pending'|'saving'|'saved'|'error'
+  const autoSaveTimerRef = useRef(null);
+  const profileLoadedRef = useRef(false);
   const [showLanguageList, setShowLanguageList] = useState(false);
   const [showSchoolListIndex, setShowSchoolListIndex] = useState(-1);
   const [schoolFilter, setSchoolFilter] = useState('');
@@ -829,6 +832,8 @@ export default function App() {
           });
 
           setReferenceEntries(references);
+          // Allow autosave to kick in only after initial load settles
+          setTimeout(() => { profileLoadedRef.current = true; }, 0);
         }
       } catch (e) {
         if (__DEV__) console.log('Kunne ikke laste profil:', e);
@@ -836,6 +841,7 @@ export default function App() {
     }
 
     if (!authTokenState) return;
+    profileLoadedRef.current = false;
     loadProfile();
   }, [authTokenState]);
 
@@ -1030,7 +1036,6 @@ export default function App() {
     }
 
     setCvImportPreview(null);
-    Alert.alert('Profil oppdatert!', 'Husk å trykke "Lagre profil" for å lagre endringene.');
   }
 
   async function saveProfile({ silent = false, override = {} } = {}) {
@@ -1077,6 +1082,64 @@ export default function App() {
 
     setSavingProfile(false);
   }
+
+  async function saveProfileAuto() {
+    if (!profileId || !name?.trim()) return;
+    setAutoSaveStatus('saving');
+    try {
+      const data = await apiFetch(`/profiles/${profileId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name, email: profileEmail, phone, address,
+          postal_code: postalCode, postal_place: postalPlace,
+          photo_data: profilePhotoData, include_photo_default: includePhotoDefault,
+          consent_analytics: consentAnalytics,
+          experience: experienceEntries, education: educationEntries,
+          skills, languages: languagesList,
+          references: referenceEntries, cv_gaps: cvGaps,
+        }),
+      });
+      setProfileId(data.id);
+      if (analysis && jobUrl) setProfileUpdatedSinceAnalysis(true);
+      setAutoSaveStatus('saved');
+      setTimeout(() => setAutoSaveStatus((s) => s === 'saved' ? 'idle' : s), 2000);
+    } catch {
+      setAutoSaveStatus('error');
+    }
+  }
+
+  async function flushAutoSave() {
+    if (!autoSaveTimerRef.current) return;
+    clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = null;
+    await saveProfileAuto();
+  }
+
+  // Autosave: debounce 2s after any profile field changes
+  useEffect(() => {
+    if (!profileLoadedRef.current || !profileId) return;
+    setAutoSaveStatus('pending');
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      autoSaveTimerRef.current = null;
+      saveProfileAuto();
+    }, 2000);
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [
+    name, profileEmail, phone, address, postalCode, postalPlace,
+    skills, cvGaps,
+    experienceEntries, educationEntries, referenceEntries, languagesList,
+  ]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Flush pending autosave when navigating away from profile
+  useEffect(() => {
+    if (activeTab !== 'profile') {
+      flushAutoSave();
+    }
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let mounted = true;
@@ -1375,6 +1438,9 @@ export default function App() {
       return;
     }
 
+    // Save any pending profile changes before analyzing
+    await flushAutoSave();
+
     // New analysis => clear any previously generated package view.
     setApplicationPackage(null);
     setGenerationBanner('');
@@ -1435,6 +1501,9 @@ export default function App() {
     }
 
     if (generationLockRef.current || isGenerating) return;
+
+    await flushAutoSave();
+
     generationLockRef.current = true;
     setIsGenerating(true);
 
@@ -1527,6 +1596,8 @@ export default function App() {
     }
 
     if (generationLockRef.current || isGenerating) return;
+
+    await flushAutoSave();
     generationLockRef.current = true;
     setIsGenerating(true);
 
@@ -2109,6 +2180,7 @@ export default function App() {
       return;
     }
 
+    await flushAutoSave();
     setCvLoading(true);
     try {
       const data = await apiFetch('/analyze-cv', {
@@ -3832,14 +3904,39 @@ export default function App() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.aerligSecondaryButton} onPress={() => setActiveTab('documents')}> 
+        <TouchableOpacity style={styles.aerligSecondaryButton} onPress={() => setActiveTab('documents')}>
           <Text style={styles.aerligSecondaryButtonText}>Dokumenter</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.aerligSecondaryButton} onPress={() => setActiveTab('settings')}> 
+        <TouchableOpacity style={styles.aerligSecondaryButton} onPress={() => setActiveTab('settings')}>
           <Text style={styles.aerligSecondaryButtonText}>E-postinnstillinger</Text>
         </TouchableOpacity>
+
+        {/* Autosave status */}
+        <View style={styles.autoSaveBar}>
+          {autoSaveStatus === 'pending' && (
+            <Text style={styles.autoSaveText}>Venter på lagring...</Text>
+          )}
+          {autoSaveStatus === 'saving' && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <ActivityIndicator size="small" color={THEME.colors.primary} />
+              <Text style={styles.autoSaveText}>Lagrer...</Text>
+            </View>
+          )}
+          {autoSaveStatus === 'saved' && (
+            <Text style={[styles.autoSaveText, { color: '#16a34a' }]}>Lagret ✓</Text>
+          )}
+          {autoSaveStatus === 'error' && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Text style={[styles.autoSaveText, { color: '#dc2626' }]}>Kunne ikke lagre</Text>
+              <TouchableOpacity onPress={saveProfileAuto}>
+                <Text style={[styles.autoSaveText, { color: THEME.colors.primary, fontWeight: '600' }]}>Prøv igjen</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
         <TouchableOpacity style={styles.aerligPrimaryButton} onPress={saveProfile}>
-          <Text style={styles.aerligPrimaryButtonText}>{savingProfile ? 'Lagrer...' : 'Lagre profil'}</Text>
+          <Text style={styles.aerligPrimaryButtonText}>{savingProfile ? 'Lagrer...' : 'Lagre nå'}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -5394,6 +5491,18 @@ const styles = StyleSheet.create({
     color: '#E8622A',
     fontWeight: '900',
   },
+  autoSaveBar: {
+    minHeight: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  autoSaveText: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+
   cvModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
