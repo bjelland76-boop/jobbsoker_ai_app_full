@@ -560,24 +560,32 @@ export default function App() {
   }
 
   async function deleteAccount() {
+    const msg = 'Dette sletter kontoen din og all lagret data (profil, analyser, dokumenter og statistikk). Dette kan ikke angres.';
+
+    const doDelete = async () => {
+      try {
+        await apiFetch('/me', { method: 'DELETE' });
+        Alert.alert('Slettet', 'Kontoen og alle data er slettet.');
+        await logout();
+      } catch (e) {
+        Alert.alert('Feil', errText(e));
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      // eslint-disable-next-line no-alert
+      if (window.confirm('Slett konto og data\n\n' + msg)) {
+        await doDelete();
+      }
+      return;
+    }
+
     Alert.alert(
       'Slett konto og data',
-      'Dette sletter kontoen din og all lagret data (profil, analyser, dokumenter og statistikk). Dette kan ikke angres.',
+      msg,
       [
         { text: 'Avbryt', style: 'cancel' },
-        {
-          text: 'Slett',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await apiFetch('/me', { method: 'DELETE' });
-              Alert.alert('Slettet', 'Kontoen og alle data er slettet.');
-              await logout();
-            } catch (e) {
-              Alert.alert('Feil', errText(e));
-            }
-          },
-        },
+        { text: 'Slett', style: 'destructive', onPress: doDelete },
       ]
     );
   }
