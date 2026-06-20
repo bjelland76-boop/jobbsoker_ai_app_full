@@ -4429,23 +4429,38 @@ export default function App() {
           )}
         </View>
 
-        <TouchableOpacity style={styles.aerligPrimaryButton} onPress={saveProfile}>
-          <Text style={styles.aerligPrimaryButtonText}>{savingProfile ? 'Lagrer...' : 'Lagre nå'}</Text>
-        </TouchableOpacity>
+        <View style={{ marginTop: 32, gap: 12 }}>
+          <TouchableOpacity
+            style={[styles.aerligPrimaryButton, { width: '100%' }]}
+            onPress={saveProfile}
+          >
+            <Text style={styles.aerligPrimaryButtonText}>{savingProfile ? 'Lagrer...' : 'Lagre nå'}</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.aerligDangerButton}
-          onPress={deleteAccount}
-        >
-          <Text style={styles.aerligDangerButtonText}>Slett konto og data</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={{
+              width: '100%',
+              minHeight: 50,
+              paddingVertical: 14,
+              borderRadius: 12,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: '#FFFFFF',
+              borderWidth: 1.5,
+              borderColor: '#E8501A',
+            }}
+            onPress={logout}
+          >
+            <Text style={{ color: '#E8501A', fontSize: 15, fontWeight: '600', letterSpacing: 0.2 }}>Logg ut</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.aerligDangerButton}
-          onPress={logout}
-        >
-          <Text style={styles.aerligDangerButtonText}>Logg ut</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={{ alignItems: 'center', paddingVertical: 12 }}
+            onPress={deleteAccount}
+          >
+            <Text style={{ color: '#999999', fontSize: 13 }}>Slett konto og data</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
