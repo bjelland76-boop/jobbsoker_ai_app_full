@@ -1181,6 +1181,13 @@ export default function App() {
     }
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Pre-fill application email from profile when not manually set
+  useEffect(() => {
+    if (!applicationEmail && profileEmail) {
+      setApplicationEmail(profileEmail);
+    }
+  }, [profileEmail]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     let mounted = true;
 
