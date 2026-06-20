@@ -3064,8 +3064,8 @@ export default function App() {
         </TouchableOpacity>
 
         {/* Import source picker modal */}
-        <Modal
-          visible={cvImportModalVisible}
+        {cvImportModalVisible && <Modal
+          visible
           transparent
           animationType="fade"
           onRequestClose={() => setCvImportModalVisible(false)}
@@ -3091,7 +3091,7 @@ export default function App() {
               </TouchableOpacity>
             </View>
           </View>
-        </Modal>
+        </Modal>}
 
         {/* CV import preview/confirm modal */}
         {cvImportPreview && (
