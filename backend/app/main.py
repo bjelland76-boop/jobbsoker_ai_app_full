@@ -23,7 +23,7 @@ from fastapi import (
     status,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import delete, func, inspect, select, text
 from sqlalchemy.orm import Session
@@ -1792,6 +1792,191 @@ def generate_tailored_cv(
         db.commit()
 
     return {"cv": tailored_cv, "coverLetter": cover_letter, "pdfUrl": pdf_url, "cvMal": effective_template, "language": lang}
+
+
+@app.post(
+    "/job-analyses/{job_id}/stream-documents",
+    tags=["analysis"],
+)
+def stream_documents(
+    job_id: int,
+    profile_id: int = Query(..., ge=1),
+    application_style: str = Query(default="vanlig"),
+    include_photo: bool = Query(default=True),
+    language: str = Query(default="no"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Stream cover letter + CV + email as SSE chunks, then generate PDF and persist."""
+    from .job_analyzer import stream_application_texts, fetch_job_text
+    from .db import SessionLocal as _SessionLocal
+
+    profile = db.get(Profile, profile_id)
+    if not profile or profile.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Fant ikke profil")
+
+    job = db.get(Job, job_id)
+    if not job or job.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Fant ikke jobb")
+
+    row = db.scalars(
+        select(JobAnalysisHistory).where(
+            JobAnalysisHistory.profile_id == profile_id,
+            JobAnalysisHistory.job_id == job_id,
+            JobAnalysisHistory.hidden == False,  # noqa: E712
+        )
+    ).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Kjør jobbanalyse først")
+
+    try:
+        stored = json.loads(row.analysis_json) if row.analysis_json else {}
+    except Exception:
+        stored = {}
+
+    match_context = {
+        "score": stored.get("match_score"),
+        "strengths": stored.get("strengths") or [],
+        "missing": stored.get("missing_requirements") or [],
+        "top_reason": stored.get("top_reason") or "",
+        "main_risk": stored.get("main_risk") or "",
+    }
+
+    job_text = (job.description or "").strip()
+    if not job_text:
+        try:
+            job_text = fetch_job_text(job.url)
+            job.description = " ".join(job_text.split())[:3000]
+            db.commit()
+        except Exception:
+            raise HTTPException(status_code=400, detail="Kunne ikke hente jobbannonse")
+
+    style_norm = (application_style or "vanlig").strip().lower()
+    if style_norm not in {"kort", "vanlig", "profesjonell"}:
+        style_norm = "vanlig"
+    lang = (language or "no").strip().lower()
+
+    user_docs = db.scalars(
+        select(ProfileDocument).where(ProfileDocument.user_id == current_user.id)
+    ).all()
+    doc_context = "\n\n".join(
+        f"[{d.document_type}: {d.filename}]\n{d.extracted_text}"
+        for d in user_docs
+        if d.extracted_text.strip()
+    )
+
+    effective_template = stored.get("cv_mal") or "profesjonell"
+    row_id = row.id
+    job_id_val = job.id
+    profile_id_val = profile.id
+    job_title_val = job.title or ""
+    company_val = job.company or ""
+    include_photo_bool = bool(include_photo) and bool(getattr(profile, "photo_data", ""))
+
+    def event_generator():
+        cover_letter = ""
+        tailored_cv = ""
+        email_text_val = ""
+
+        try:
+            for event_type, data in stream_application_texts(
+                profile,
+                job_title=job_title_val,
+                company=company_val,
+                job_text=job_text,
+                application_style=style_norm,
+                match_context=match_context,
+                language=lang,
+                document_context=doc_context,
+            ):
+                if event_type == "chunk":
+                    yield f"data: {json.dumps({'t': 'c', 'v': data})}\n\n"
+                elif event_type == "done":
+                    cover_letter = data.get("cover_letter", "")
+                    tailored_cv = data.get("tailored_cv", "")
+                    email_text_val = data.get("email_text", "")
+        except Exception as exc:
+            yield f"data: {json.dumps({'t': 'e', 'msg': str(exc)})}\n\n"
+            return
+
+        # Persist text + generate PDFs with a fresh session (original db may be closed)
+        pdf_url = ""
+        with _SessionLocal() as fresh_db:
+            try:
+                cv_key = "cover_letter_en" if lang == "en" else "cover_letter"
+                letter_key = "tailored_cv_en" if lang == "en" else "tailored_cv"
+                email_key = "email_text_en" if lang == "en" else "email_text"
+                stored[cv_key] = cover_letter
+                stored[letter_key] = tailored_cv
+                stored[email_key] = email_text_val
+                stored["tailored_for_job"] = True
+                stored["cv_mal"] = effective_template
+
+                hist = fresh_db.get(JobAnalysisHistory, row_id)
+                if hist:
+                    hist.analysis_json = json.dumps(stored, ensure_ascii=False)
+                    hist.updated_at = datetime.utcnow()
+
+                pdf_tailored_cv = _inject_references_into_cv(profile, tailored_cv)
+                content_hash = compute_pdf_content_hash(
+                    template_id=f"{effective_template}_v1",
+                    include_photo=include_photo_bool,
+                    cover_letter=cover_letter,
+                    rendered_cv_text=pdf_tailored_cv,
+                    profile=profile,
+                    job=type("J", (), {"id": job_id_val, "title": job_title_val, "company": company_val})(),
+                )
+                existing = fresh_db.scalars(
+                    select(GeneratedApplication).where(
+                        GeneratedApplication.content_hash == content_hash,
+                        GeneratedApplication.content_hash != "",
+                    )
+                ).first()
+                if not existing:
+                    cover_pdf, cv_pdf = make_application_pdfs(
+                        profile,
+                        type("J", (), {"id": job_id_val, "title": job_title_val, "company": company_val})(),
+                        cover_letter,
+                        pdf_tailored_cv,
+                        include_photo=include_photo_bool,
+                        template=effective_template,
+                    )
+                    approw = GeneratedApplication(
+                        job_id=job_id_val,
+                        profile_id=profile_id_val,
+                        cover_letter=cover_letter,
+                        tailored_cv=tailored_cv,
+                        email_text=email_text_val,
+                        pdf_path=cover_pdf,
+                        cv_pdf_path=cv_pdf,
+                        template=f"{effective_template}_v1",
+                        include_photo=include_photo_bool,
+                        content_hash=content_hash,
+                    )
+                    fresh_db.add(approw)
+                    fresh_db.commit()
+                    fresh_db.refresh(approw)
+                    pdf_url = f"/generated-applications/{approw.id}/pdf/cover"
+                else:
+                    fresh_db.commit()
+                    pdf_url = f"/generated-applications/{existing.id}/pdf/cover"
+            except Exception:
+                try:
+                    fresh_db.rollback()
+                except Exception:
+                    pass
+
+        yield f"data: {json.dumps({'t': 'd', 'coverLetter': cover_letter, 'cv': tailored_cv, 'emailText': email_text_val, 'pdfUrl': pdf_url, 'cvMal': effective_template})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
 
 
 def generateApplicationPackage(

@@ -511,6 +511,195 @@ Arbeidserfaring:
     }
 
 
+_MARKERS_NO = ("###SØKNADSBREV", "###CV", "###EPOST")
+_MARKERS_EN = ("###COVER_LETTER", "###TAILORED_CV", "###EMAIL")
+
+
+def _parse_marker_output(text: str, use_english: bool) -> dict[str, str]:
+    markers = _MARKERS_EN if use_english else _MARKERS_NO
+    fields = ("cover_letter", "tailored_cv", "email_text")
+    result: dict[str, str] = {f: "" for f in fields}
+    positions = [text.find(m) for m in markers]
+    for i, (marker, field) in enumerate(zip(markers, fields)):
+        if positions[i] < 0:
+            continue
+        start = positions[i] + len(marker)
+        end = len(text)
+        for j in range(i + 1, len(markers)):
+            if positions[j] > positions[i]:
+                end = positions[j]
+                break
+        result[field] = text[start:end].strip()
+    return result
+
+
+def stream_application_texts(
+    profile: Any,
+    *,
+    job_title: str,
+    company: str,
+    job_text: str,
+    application_style: str = "vanlig",
+    match_context: dict | None = None,
+    language: str = "no",
+    document_context: str = "",
+):
+    """Generator: yields ("chunk", str) for each streaming chunk from Claude,
+    then ("done", dict) with cover_letter / tailored_cv / email_text."""
+
+    use_english = (language or "no").strip().lower() == "en"
+    style_text = _style_instructions(application_style)
+    job_comp = _compress_text(job_text, 8000)
+    years = _estimate_years_experience(profile)
+    evidence = _extract_evidence_snippets(profile)
+    evidence_block = "\n".join([f"- {x}" for x in evidence]) if evidence else ""
+
+    cand_comp = _compress_text(
+        "\n".join([
+            f"Name: {(getattr(profile, 'name', '') or '').strip()}",
+            f"Email: {(getattr(profile, 'email', '') or '').strip()}",
+            f"Phone: {(getattr(profile, 'phone', '') or '').strip()}",
+            f"Address: {(getattr(profile, 'address', '') or '').strip()}",
+            (f"Estimated total years experience: {years}" if isinstance(years, int) else ""),
+            _build_cv_text_for_generation(profile),
+            f"References: {(getattr(profile, 'references_json', '') or '').strip()}",
+            (
+                "Evidence (candidate-provided):\n" + evidence_block
+                if evidence_block
+                else "Evidence: (none provided)"
+            ),
+            (
+                "Additional documents:\n" + document_context
+                if document_context.strip()
+                else ""
+            ),
+        ]),
+        6000,
+    )
+
+    match_block = ""
+    if match_context and isinstance(match_context, dict):
+        score = match_context.get("score")
+        strengths = [str(s) for s in (match_context.get("strengths") or [])[:3] if s]
+        missing = [str(m) for m in (match_context.get("missing") or [])[:3] if m]
+        top_reason = (match_context.get("top_reason") or "").strip()
+        main_risk = (match_context.get("main_risk") or "").strip()
+        if use_english:
+            mb = ["BACKGROUND FOR TAILORING (never output this in CV or cover letter):"]
+            if score is not None:
+                mb.append(f"- Match score: {int(score)}% (internal only)")
+            if top_reason:
+                mb.append(f"- Strongest point for this role: {top_reason}")
+            if main_risk:
+                mb.append(f"- Gap to compensate for: {main_risk}")
+            if strengths:
+                mb.append("- Emphasise: " + "; ".join(strengths))
+            if missing:
+                mb.append("- Downplay/compensate: " + "; ".join(missing))
+        else:
+            mb = ["BAKGRUNNSINFORMASJON (skal IKKE skrives ut i CV eller søknadsbrev):"]
+            if score is not None:
+                mb.append(f"- Matchprosent: {int(score)}% (kun intern referanse)")
+            if top_reason:
+                mb.append(f"- Sterkeste side for denne jobben: {top_reason}")
+            if main_risk:
+                mb.append(f"- Gap å kompensere for: {main_risk}")
+            if strengths:
+                mb.append("- Vektlegg: " + "; ".join(strengths))
+            if missing:
+                mb.append("- Tone ned/kompenser: " + "; ".join(missing))
+        match_block = "\n".join(mb)
+
+    m1, m2, m3 = (_MARKERS_EN if use_english else _MARKERS_NO)
+
+    if use_english:
+        prompt = f"""Output EXACTLY these three sections with their headers and NO other text:
+
+{m1}
+[cover letter here]
+
+{m2}
+[tailored CV here]
+
+{m3}
+[short email here]
+
+Job:
+Title: {job_title}
+Company: {company}
+Text: {job_comp}
+
+Candidate:
+{cand_comp}
+
+{match_block + chr(10) if match_block else ""}Rules:
+- Write in English (British or neutral international English).
+- Do NOT invent experience or education.
+- Do NOT use placeholders like [phone] or [address].
+- {style_text}
+- Use keywords from the job ad in the CV where the candidate genuinely has relevant experience.
+- NEVER output match score, match metadata or background analysis in the CV or cover letter.
+
+{SHARED_ANTI_HALLUCINATION_RULES_EN}
+
+{m1}: 3–4 paragraphs, no bullet points. Mention role and company by name. No contact details or date.
+{m2}: Plain text (ATS-friendly), no markdown, no tables. Sections in order: Professional Summary / Core Skills / Work Experience / Education / Languages / References. Professional Summary: 3–5 concrete sentences. Core Skills: 8–12 bullets (•). Work Experience: only actual roles from Candidate data, 2–5 bullets each.
+{m3}: 3–4 sentences, polite, reference the role and company.""".strip()
+    else:
+        prompt = f"""Svar med NØYAKTIG disse tre seksjonene med overskrifter, ingenting annet:
+
+{m1}
+[søknadsbrev her]
+
+{m2}
+[tilpasset CV her]
+
+{m3}
+[kort e-post her]
+
+Job:
+Title: {job_title}
+Company: {company}
+Text: {job_comp}
+
+Candidate:
+{cand_comp}
+
+{match_block + chr(10) if match_block else ""}Regler:
+- Skriv på norsk.
+- Ikke finn på erfaring/utdanning.
+- Ikke bruk placeholders som [telefon] eller [adresse].
+- {style_text}
+- Bruk nøkkelord fra stillingsannonsen i CV-en der kandidaten faktisk har relevant erfaring.
+- ALDRI skriv ut matchprosent, analysemetadata eller bakgrunnsinformasjon i CV eller søknadsbrev.
+
+{SHARED_ANTI_HALLUCINATION_RULES}
+
+{m1}: {style_text} Ingen punktlister. Nevn stilling og bedrift med navn. Ingen kontaktinfo eller dato.
+{m2}: Ren tekst (ATS-vennlig), ingen markdown, ingen tabeller. Seksjoner i rekkefølge: Profesjonell oppsummering / Kjerneferdigheter / Arbeidserfaring / Utdanning / Språk / Referanser. Profesjonell oppsummering: 3–5 konkrete setninger. Kjerneferdigheter: 8–12 punkter (•). Arbeidserfaring: kun roller fra Candidate-data, 2–5 punkter hver.
+{m3}: 3–4 setninger, høflig, referer til stilling og bedrift.""".strip()
+
+    client = _get_client()
+    full_text = ""
+
+    with client.messages.stream(
+        model=os.getenv("CLAUDE_MODEL") or _CLAUDE_MODEL,
+        system=(
+            "You are a professional job application assistant. Output only the requested sections."
+            if use_english
+            else "Du er en profesjonell jobbsøknad-assistent. Skriv kun de forespurte seksjonene."
+        ),
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=2500,
+        temperature=0.25,
+    ) as stream:
+        for text_chunk in stream.text_stream:
+            full_text += text_chunk
+            yield ("chunk", text_chunk)
+
+    yield ("done", _parse_marker_output(full_text, use_english))
+
+
 def analyze_job_url(
     profile: Any,
     url: str,

@@ -130,7 +130,7 @@ def _ask_claude_text(text: str) -> dict:
         model=os.getenv("CLAUDE_MODEL") or _CLAUDE_MODEL,
         system=_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": f"CV-tekst:\n\n{text}"}],
-        max_tokens=4096,
+        max_tokens=2048,
         temperature=0,
     )
     return _normalize(_strip_md(res.content[0].text))
@@ -154,7 +154,7 @@ def _ask_claude_image(image_bytes: bytes, media_type: str) -> dict:
                 ],
             }
         ],
-        max_tokens=4096,
+        max_tokens=2048,
         temperature=0,
     )
     return _normalize(_strip_md(res.content[0].text))
@@ -200,7 +200,7 @@ def _ask_claude_image_text(image_bytes: bytes, media_type: str) -> str:
                 ],
             }
         ],
-        max_tokens=4096,
+        max_tokens=1024,
         temperature=0,
     )
     return res.content[0].text.strip()

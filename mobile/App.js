@@ -206,6 +206,7 @@ export default function App() {
   const [applicationPackage, setApplicationPackage] = useState(null);
   const [sending, setSending] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [streamingProgress, setStreamingProgress] = useState('');
   // Request locking: only allow one active generation request at a time.
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationBanner, setGenerationBanner] = useState('');
@@ -542,6 +543,7 @@ export default function App() {
     setApplicationEmail('');
     setApplicationPackage(null);
     setGenerationBanner('');
+    setStreamingProgress('');
     setIsGenerating(false);
     generationLockRef.current = false;
 
@@ -1640,6 +1642,7 @@ export default function App() {
 
     setGeneratingPdf(true);
     setGenerationBanner('');
+    setStreamingProgress('');
     // Only clear UI AFTER request is confirmed started.
     setApplicationPackage(null);
     setTailoredCvJobTitle('');
@@ -1647,11 +1650,44 @@ export default function App() {
     try {
       let pkg;
       if (analysis?.job_id) {
-        // Use stored analysis to build a CV tailored to this specific job.
-        pkg = await apiFetch(
-          `/job-analyses/${analysis.job_id}/generate-tailored-cv?profile_id=${profileId}&application_style=${encodeURIComponent(applicationStyle)}&include_photo=${includePhoto}&language=${cvLanguage}`,
-          { method: 'POST' },
-        );
+        // Use streaming endpoint for stored-analysis path.
+        const streamUrl = `${API}/job-analyses/${analysis.job_id}/stream-documents?profile_id=${profileId}&application_style=${encodeURIComponent(applicationStyle)}&include_photo=${includePhoto}&language=${cvLanguage}`;
+        const resp = await fetch(streamUrl, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
+        });
+        if (!resp.ok) {
+          throw new Error(`HTTP ${resp.status}`);
+        }
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        let accumulated = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const lines = buf.split('\n');
+          buf = lines.pop();
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const raw = line.slice(6).trim();
+            if (!raw) continue;
+            try {
+              const ev = JSON.parse(raw);
+              if (ev.t === 'c') {
+                accumulated += ev.v;
+                // Show last ~120 chars of streamed text as progress
+                setStreamingProgress(accumulated.slice(-120).replace(/\n/g, ' '));
+              } else if (ev.t === 'd') {
+                pkg = { cv: ev.cv, coverLetter: ev.coverLetter, pdfUrl: ev.pdfUrl, cvMal: ev.cvMal };
+              } else if (ev.t === 'e') {
+                throw new Error(ev.msg || 'Generering feilet');
+              }
+            } catch (parseErr) { /* ignore malformed SSE lines */ }
+          }
+        }
+        setStreamingProgress('');
       } else {
         // No saved analysis — fall back to full re-analysis + generation.
         pkg = await apiFetch('/analyze-url-and-send', {
@@ -2666,6 +2702,12 @@ export default function App() {
               >
                 <Text style={styles.aerligSecondaryButtonText}>{generatingPdf ? 'Genererer...' : 'Generer PDF (uten e-post)'}</Text>
               </TouchableOpacity>
+
+              {streamingProgress ? (
+                <Text style={{ fontSize: 12, color: '#6B7280', fontStyle: 'italic', marginTop: 6, marginBottom: 2 }} numberOfLines={2}>
+                  ✍️ {streamingProgress}
+                </Text>
+              ) : null}
 
               {applicationPackage ? (
                 <View style={{ marginTop: 12 }}>
