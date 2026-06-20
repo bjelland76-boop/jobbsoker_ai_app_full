@@ -172,6 +172,8 @@ THEME_PROFESJONELL = _Theme(
     cv_subheader_color=colors.HexColor("#1e3a8a"),
     section_underline=colors.HexColor("#cbd5e1"),
     section_spacing=0.0,
+    entry_gap=0.42,
+    body_leading=0.50,
 )
 
 # --- Kreativ: dark sidebar, orange accents ---
@@ -517,7 +519,7 @@ class _SidebarPdfDoc:
         lines: list[str],
         *,
         font: str = "Helvetica",
-        size: float = 10.1,
+        size: float = 10.0,
         leading: float = None,
     ) -> None:
         """Render bullet lines with consistent indent + wrap."""
@@ -625,27 +627,31 @@ class _SidebarPdfDoc:
             title_part = left or title_line
             employer_part = ""
 
-        space_needed = (0.55 + (0.48 if employer_part else 0)) * cm + 0.3 * cm
+        space_needed = (0.57 + (0.48 if employer_part else 0)) * cm + 0.3 * cm
         self._ensure_space(space_needed)
 
-        # Title line (bold) with period right-aligned
+        # Title line: 11.5pt bold, near-black
         c.setFillColor(self.theme.text)
-        c.setFont("Helvetica-Bold", 10.8)
+        c.setFont("Helvetica-Bold", 11.5)
         c.drawString(self.main_left, self.y, title_part)
 
+        # Period: 9pt italic, light grey — right-aligned on same line as title
         if period:
-            c.setFillColor(colors.HexColor("#64748b"))
-            c.setFont("Helvetica", 9)
+            c.setFillColor(colors.HexColor("#94a3b8"))
+            c.setFont("Helvetica-Oblique", 9)
             c.drawRightString(self.main_left + self.main_w, self.y, period)
 
-        self.y -= 0.52 * cm
+        self.y -= 0.54 * cm
 
-        # Employer line (normal weight, slightly muted)
+        # Employer line: 10.5pt normal, muted grey
         if employer_part:
             c.setFillColor(self.theme.muted)
-            c.setFont("Helvetica", 10)
+            c.setFont("Helvetica", 10.5)
             c.drawString(self.main_left, self.y, employer_part)
-            self.y -= 0.46 * cm
+            self.y -= 0.48 * cm
+
+        # Small gap before description bullets (margin-top ~4px)
+        self.y -= 0.10 * cm
 
     def _draw_cv_text(self, text: str) -> None:
         """Render the AI-produced tailored_cv with improved layout.
@@ -1259,7 +1265,7 @@ class _ClassicPdfDoc:
     def _cv_paragraph(self, text: str, **kwargs) -> None:
         self._paragraph(text, **kwargs)
 
-    def _cv_bullet_lines(self, lines: list[str], *, font: str = "", size: float = 10.1, leading: float = 0.48 * cm) -> None:
+    def _cv_bullet_lines(self, lines: list[str], *, font: str = "", size: float = 10.0, leading: float = 0.50 * cm) -> None:
         font = font or self._FONT_BODY
         c = self.c
         bullet_x = self.left
@@ -1314,23 +1320,29 @@ class _ClassicPdfDoc:
             title_part = left or title_line
             employer_part = ""
 
-        space_needed = (0.55 + (0.48 if employer_part else 0)) * cm + 0.3 * cm
+        space_needed = (0.57 + (0.48 if employer_part else 0)) * cm + 0.3 * cm
         self._ensure_space(space_needed)
 
+        # Title: 11.5pt bold serif, near-black
         c.setFillColor(self._COLOR_BLACK)
-        c.setFont(self._FONT_HEAD, 10.8)
+        c.setFont(self._FONT_HEAD, 11.5)
         c.drawString(self.left, self.y, title_part)
+        # Period: 9pt italic, light grey
         if period:
-            c.setFillColor(self._COLOR_MUTED)
-            c.setFont(self._FONT_BODY, 9)
+            c.setFillColor(colors.HexColor("#94a3b8"))
+            c.setFont("Helvetica-Oblique", 9)
             c.drawRightString(self.right, self.y, period)
-        self.y -= 0.52 * cm
+        self.y -= 0.54 * cm
 
+        # Employer: 10.5pt normal, dark grey
         if employer_part:
             c.setFillColor(self._COLOR_MID)
-            c.setFont(self._FONT_BODY, 10)
+            c.setFont(self._FONT_BODY, 10.5)
             c.drawString(self.left, self.y, employer_part)
-            self.y -= 0.46 * cm
+            self.y -= 0.48 * cm
+
+        # Small gap before description bullets (margin-top ~4px)
+        self.y -= 0.10 * cm
 
     def _draw_cv_text(self, text: str) -> None:
         """Render AI-produced tailored_cv — same section logic as sidebar variant."""
@@ -1419,7 +1431,7 @@ class _ClassicPdfDoc:
                             self._cv_bullet_lines(entry_bullets)
                             entry_bullets = []
                         if not first:
-                            self.y -= 0.30 * cm
+                            self.y -= 0.42 * cm
                         first = False
                         self._cv_entry_header(s)
                 if entry_bullets:
