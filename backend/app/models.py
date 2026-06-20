@@ -149,3 +149,14 @@ class AppSetting(Base):
     user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     notification_email: Mapped[str] = mapped_column(String(250), default="")
     auto_email: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class ProfileDocument(Base):
+    __tablename__ = "profile_documents"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    filename: Mapped[str] = mapped_column(String(250))
+    document_type: Mapped[str] = mapped_column(String(100), default="Annet")
+    description: Mapped[str] = mapped_column(Text, default="")
+    extracted_text: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

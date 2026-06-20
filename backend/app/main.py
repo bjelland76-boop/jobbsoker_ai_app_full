@@ -14,6 +14,7 @@ from fastapi import (
     Depends,
     FastAPI,
     File,
+    Form,
     Header,
     HTTPException,
     Query,
@@ -45,6 +46,7 @@ from .models import (
     JobAnalysisHistory,
     LoginCode,
     Profile,
+    ProfileDocument,
     User,
 )
 from .pdf_dedupe import compute_pdf_content_hash
@@ -1009,6 +1011,87 @@ async def import_cv(
     return result
 
 
+@app.post("/profile/documents")
+async def upload_document(
+    file: UploadFile = File(...),
+    document_type: str = Form(default="Annet"),
+    description: str = Form(default=""),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Upload a document (PDF or image), extract text, and store it."""
+    from .cv_importer import extract_document_text
+
+    data = await file.read()
+    if len(data) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Filen er for stor (maks 10 MB)")
+
+    try:
+        extracted = extract_document_text(file.filename or "", file.content_type or "", data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Kunne ikke lese filen: {e}")
+
+    doc = ProfileDocument(
+        user_id=current_user.id,
+        filename=file.filename or "ukjent",
+        document_type=document_type,
+        description=description,
+        extracted_text=extracted,
+    )
+    db.add(doc)
+    db.commit()
+    db.refresh(doc)
+
+    return {
+        "id": doc.id,
+        "filename": doc.filename,
+        "document_type": doc.document_type,
+        "description": doc.description,
+        "created_at": doc.created_at.isoformat(),
+    }
+
+
+@app.get("/profile/documents")
+def get_documents(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    docs = db.scalars(
+        select(ProfileDocument)
+        .where(ProfileDocument.user_id == current_user.id)
+        .order_by(ProfileDocument.created_at.desc())
+    ).all()
+    return [
+        {
+            "id": d.id,
+            "filename": d.filename,
+            "document_type": d.document_type,
+            "description": d.description,
+            "created_at": d.created_at.isoformat(),
+        }
+        for d in docs
+    ]
+
+
+@app.delete("/profile/documents/{doc_id}")
+def delete_document(
+    doc_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    doc = db.scalars(
+        select(ProfileDocument).where(
+            ProfileDocument.id == doc_id,
+            ProfileDocument.user_id == current_user.id,
+        )
+    ).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Dokument ikke funnet")
+    db.delete(doc)
+    db.commit()
+    return {"ok": True}
+
+
 @app.get("/settings", response_model=SettingsOut)
 def get_settings(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     s = db.scalars(select(AppSetting).where(AppSetting.user_id == current_user.id)).first()
@@ -1631,6 +1714,15 @@ def generate_tailored_cv(
         if style_norm not in {"kort", "vanlig", "profesjonell"}:
             style_norm = "vanlig"
 
+        user_docs = db.scalars(
+            select(ProfileDocument).where(ProfileDocument.user_id == current_user.id)
+        ).all()
+        doc_context = "\n\n".join(
+            f"[{d.document_type}: {d.filename}]\n{d.extracted_text}"
+            for d in user_docs
+            if d.extracted_text.strip()
+        )
+
         try:
             gen = generate_application_texts(
                 profile,
@@ -1640,6 +1732,7 @@ def generate_tailored_cv(
                 application_style=style_norm,
                 match_context=match_context,
                 language=lang,
+                document_context=doc_context,
             )
         except Exception as e:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

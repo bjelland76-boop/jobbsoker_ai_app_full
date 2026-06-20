@@ -182,6 +182,49 @@ def _extract_docx(data: bytes) -> str:
     return "\n".join(p.text for p in doc.paragraphs if p.text.strip())
 
 
+def _ask_claude_image_text(image_bytes: bytes, media_type: str) -> str:
+    """Use Claude vision to extract raw text from an image document."""
+    client = _get_client()
+    b64 = base64.standard_b64encode(image_bytes).decode()
+    res = client.messages.create(
+        model=os.getenv("CLAUDE_MODEL") or _CLAUDE_MODEL,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {"type": "base64", "media_type": media_type, "data": b64},
+                    },
+                    {"type": "text", "text": "Transkriber all tekst fra dette dokumentet nøyaktig. Returner kun teksten, ingen kommentarer."},
+                ],
+            }
+        ],
+        max_tokens=4096,
+        temperature=0,
+    )
+    return res.content[0].text.strip()
+
+
+def extract_document_text(filename: str, content_type: str, data: bytes) -> str:
+    """Extract raw text from a document (PDF or image) without structured parsing."""
+    ext = Path(filename).suffix.lower() if filename else ""
+    ct = (content_type or "").lower()
+
+    if ext == ".pdf" or "pdf" in ct:
+        return _extract_pdf(data)
+    elif ct.startswith("image/") or ext in (".jpg", ".jpeg", ".png", ".webp", ".gif"):
+        media_type = ct if ct.startswith("image/") else f"image/{ext.lstrip('.')}"
+        if media_type not in ("image/jpeg", "image/png", "image/gif", "image/webp"):
+            media_type = "image/jpeg"
+        return _ask_claude_image_text(data, media_type)
+    else:
+        try:
+            return data.decode("utf-8", errors="replace")
+        except Exception:
+            return ""
+
+
 def extract_and_parse(filename: str, content_type: str, data: bytes) -> dict:
     """Main entry point: extract text and parse with Claude. Returns profile dict."""
     ext = Path(filename).suffix.lower() if filename else ""

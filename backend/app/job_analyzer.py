@@ -293,6 +293,7 @@ def generate_application_texts(
     application_style: str = "vanlig",
     match_context: dict | None = None,
     language: str = "no",
+    document_context: str = "",
 ) -> dict:
     """Generate cover letter + tailored CV + email text.
 
@@ -325,6 +326,11 @@ def generate_application_texts(
                     "Evidence (candidate-provided; use these BEFORE generic claims):\n" + evidence_block
                     if evidence_block
                     else "Evidence: (none provided)"
+                ),
+                (
+                    "Additional documents (certificates, transcripts, etc.):\n" + document_context
+                    if document_context.strip()
+                    else ""
                 ),
             ]
         ),

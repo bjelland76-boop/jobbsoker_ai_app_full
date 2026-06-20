@@ -257,10 +257,15 @@ export default function App() {
   const [expandLangCard, setExpandLangCard] = useState(false);
   const [expandGapsCard, setExpandGapsCard] = useState(false);
   const [expandRefCard, setExpandRefCard] = useState(false);
+  const [expandDocsCard, setExpandDocsCard] = useState(false);
   const [expandSkillsCard, setExpandSkillsCard] = useState(false);
   const [editingLanguageIndex, setEditingLanguageIndex] = useState(-1);
   const [editingGapIndex, setEditingGapIndex] = useState(-1);
   const [editingReferenceIndex, setEditingReferenceIndex] = useState(-1);
+  const [profileDocsList, setProfileDocsList] = useState([]);
+  const [docsUploading, setDocsUploading] = useState(false);
+  const [showDocTypeModal, setShowDocTypeModal] = useState(false);
+  const [pendingDocFile, setPendingDocFile] = useState(null);
 
   const [applications, setApplications] = useState([]);
   const [applicationsLoading, setApplicationsLoading] = useState(false);
@@ -519,6 +524,7 @@ export default function App() {
     setConsentAnalytics(false);
     setLanguagesList([]);
     setCvGapsList([]);
+    setProfileDocsList([]);
     setExperienceEntries([]);
     setEducationEntries([]);
     setReferenceEntries([]);
@@ -853,6 +859,20 @@ export default function App() {
     if (!authTokenState) return;
     profileLoadedRef.current = false;
     loadProfile();
+  }, [authTokenState]);
+
+  async function loadProfileDocuments() {
+    try {
+      const items = await apiFetch('/profile/documents');
+      setProfileDocsList(Array.isArray(items) ? items : []);
+    } catch (e) {
+      if (__DEV__) console.log('Kunne ikke laste dokumenter:', e);
+    }
+  }
+
+  useEffect(() => {
+    if (!authTokenState) return;
+    loadProfileDocuments();
   }, [authTokenState]);
 
   async function dismissOnboarding() {
@@ -3127,6 +3147,72 @@ export default function App() {
     }).filter(Boolean).join('\n');
   }
 
+  const DOC_TYPES = ['Fagbrev', 'Kursbevis', 'Karakterutskrift', 'Attest', 'Annet'];
+
+  async function pickAndUploadDocument(documentType) {
+    setShowDocTypeModal(false);
+    if (!pendingDocFile) return;
+    const file = pendingDocFile;
+    setPendingDocFile(null);
+    setDocsUploading(true);
+    try {
+      const formData = new FormData();
+      const uri = file.assets ? file.assets[0].uri : file.uri;
+      const name = file.assets ? (file.assets[0].name || 'dokument') : (file.name || 'dokument');
+      const mimeType = file.assets ? (file.assets[0].mimeType || 'application/octet-stream') : (file.mimeType || 'application/octet-stream');
+      formData.append('file', { uri, name, type: mimeType });
+      formData.append('document_type', documentType);
+
+      const token = AUTH_TOKEN || authTokenState;
+      const resp = await fetch(`${API}/profile/documents`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.detail || 'Opplasting feilet');
+      }
+      await loadProfileDocuments();
+    } catch (e) {
+      Alert.alert('Feil', e.message || 'Kunne ikke laste opp dokumentet');
+    }
+    setDocsUploading(false);
+  }
+
+  async function deleteProfileDocument(docId) {
+    const doDelete = async () => {
+      try {
+        await apiFetch(`/profile/documents/${docId}`, { method: 'DELETE' });
+        setProfileDocsList((prev) => prev.filter((d) => d.id !== docId));
+      } catch (e) {
+        Alert.alert('Feil', 'Kunne ikke slette dokumentet');
+      }
+    };
+    if (Platform.OS === 'web') {
+      if (window.confirm('Slette dette dokumentet?')) await doDelete();
+      return;
+    }
+    Alert.alert('Slette dokument', 'Er du sikker?', [
+      { text: 'Avbryt', style: 'cancel' },
+      { text: 'Slett', style: 'destructive', onPress: doDelete },
+    ]);
+  }
+
+  async function openDocumentPicker() {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled) return;
+      setPendingDocFile(result);
+      setShowDocTypeModal(true);
+    } catch (e) {
+      Alert.alert('Feil', 'Kunne ikke åpne filvelger');
+    }
+  }
+
   async function pickProfilePhoto() {
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -4154,6 +4240,87 @@ export default function App() {
             </View>
           )}
         </View>
+
+        {/* Dokumenter accordion card */}
+        <View style={[styles.profileSummaryCardFull, { marginBottom: 12 }]}>
+          <TouchableOpacity
+            onPress={() => setExpandDocsCard((v) => !v)}
+            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+            activeOpacity={0.7}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={[styles.profileCardIcon, { marginBottom: 0 }]}>📄</Text>
+              <View>
+                <Text style={styles.profileCardLabel}>Dokumenter</Text>
+                <Text style={styles.profileCardValue}>
+                  {profileDocsList.length > 0 ? `${profileDocsList.length} dokument${profileDocsList.length === 1 ? '' : 'er'}` : 'Ingen opplastet'}
+                </Text>
+              </View>
+            </View>
+            <Text style={{ color: '#6B7280', fontSize: 14 }}>{expandDocsCard ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+
+          {expandDocsCard && (
+            <View style={{ marginTop: 12 }}>
+              <View style={{ height: 1, backgroundColor: '#E8E6E0', marginBottom: 8 }} />
+              <Text style={[styles.helpText, styles.aerligHelpText, { marginBottom: 12 }]}>
+                Last opp fagbrev, kursbevis, karakterutskrifter og lignende. Teksten brukes automatisk når AI-en lager søknadsbrev og CV.
+              </Text>
+              {profileDocsList.map((doc) => (
+                <View key={doc.id} style={[styles.aerligCard, styles.aerligListRow]}>
+                  <View style={[styles.aerligEntryHeader, styles.aerligListRowHeader]}>
+                    <View style={{ flex: 1, paddingRight: 10 }}>
+                      <Text style={styles.aerligEntryTitle} numberOfLines={1}>{doc.filename}</Text>
+                      <Text style={styles.aerligEntrySub} numberOfLines={1}>{doc.document_type}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.aerligRowActions}>
+                    <TouchableOpacity
+                      style={[styles.filterChip, styles.aerligFilterChip, styles.aerligRowActionChip, styles.aerligRowActionChipDanger]}
+                      onPress={() => deleteProfileDocument(doc.id)}
+                    >
+                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, styles.aerligRowActionTextDanger]}>Fjern</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+              <TouchableOpacity
+                style={[styles.smallButton, styles.aerligSmallButton, docsUploading && { opacity: 0.5 }]}
+                onPress={openDocumentPicker}
+                disabled={docsUploading}
+              >
+                <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>
+                  {docsUploading ? 'Laster opp...' : '+ Last opp dokument'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {showDocTypeModal && (
+          <Modal visible transparent animationType="fade" onRequestClose={() => { setShowDocTypeModal(false); setPendingDocFile(null); }}>
+            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+              <View style={{ backgroundColor: '#FFFFFF', borderRadius: 12, padding: 24, width: '100%', maxWidth: 360 }}>
+                <Text style={{ fontSize: 17, fontWeight: '600', color: '#111827', marginBottom: 16 }}>Velg dokumenttype</Text>
+                {DOC_TYPES.map((type) => (
+                  <TouchableOpacity
+                    key={type}
+                    style={[styles.aerligPrimaryButton, { marginBottom: 10 }]}
+                    onPress={() => pickAndUploadDocument(type)}
+                  >
+                    <Text style={styles.aerligPrimaryButtonText}>{type}</Text>
+                  </TouchableOpacity>
+                ))}
+                <TouchableOpacity
+                  style={styles.aerligSecondaryButton}
+                  onPress={() => { setShowDocTypeModal(false); setPendingDocFile(null); }}
+                >
+                  <Text style={styles.aerligSecondaryButtonText}>Avbryt</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+        )}
 
         <View style={styles.profileField}>
           <Text style={[styles.inputLabel, styles.aerligLabel]}>Anonym statistikk</Text>
