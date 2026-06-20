@@ -989,13 +989,36 @@ export default function App() {
     if (preview.email && !profileEmail) setProfileEmail(preview.email);
     if (preview.phone && !phone) setPhone(preview.phone);
     if (preview.address && !address) setAddress(preview.address);
-    if (preview.skills && !skills) setSkills(preview.skills);
 
-    if (preview.experience && experienceEntries.length === 0) {
-      setExperienceEntries([{ company: '', title: preview.experience, from: '', to: '', current: false }]);
+    // skills: array from backend → comma-separated string
+    if (Array.isArray(preview.skills) && preview.skills.length > 0 && !skills) {
+      setSkills(preview.skills.join(', '));
     }
-    if (preview.education && educationEntries.length === 0) {
-      setEducationEntries([{ school: preview.education, degree: '', from: '', to: '' }]);
+
+    // languages: array → languagesList (only if empty)
+    if (Array.isArray(preview.languages) && preview.languages.length > 0 && languagesList.length === 0) {
+      setLanguagesList(preview.languages);
+    }
+
+    // experience: array of {title, company, from, to, current} (only if empty)
+    if (Array.isArray(preview.experience) && preview.experience.length > 0 && experienceEntries.length === 0) {
+      setExperienceEntries(preview.experience.map((e) => ({
+        title: e.title || '',
+        company: e.company || '',
+        from: e.from || '',
+        to: e.to || '',
+        current: !!e.current,
+      })));
+    }
+
+    // education: array of {school, degree, from, to} (only if empty)
+    if (Array.isArray(preview.education) && preview.education.length > 0 && educationEntries.length === 0) {
+      setEducationEntries(preview.education.map((e) => ({
+        school: e.school || '',
+        degree: e.degree || '',
+        from: e.from || '',
+        to: e.to || '',
+      })));
     }
 
     setCvImportPreview(null);
@@ -3082,20 +3105,57 @@ export default function App() {
               <View style={[styles.cvModalCard, { maxHeight: '80%' }]}>
                 <ScrollView>
                   <Text style={styles.cvModalTitle}>Hva vi fant i CV-en</Text>
+
                   {[
                     ['Navn', cvImportPreview.name],
                     ['E-post', cvImportPreview.email],
                     ['Telefon', cvImportPreview.phone],
                     ['Adresse', cvImportPreview.address],
-                    ['Ferdigheter', cvImportPreview.skills],
-                    ['Erfaring', cvImportPreview.experience],
-                    ['Utdanning', cvImportPreview.education],
                   ].filter(([, v]) => v).map(([label, value]) => (
                     <View key={label} style={{ marginBottom: 8 }}>
                       <Text style={[styles.inputLabel, styles.aerligLabel]}>{label}</Text>
                       <Text style={{ color: '#374151', fontSize: 14, lineHeight: 20 }}>{value}</Text>
                     </View>
                   ))}
+
+                  {Array.isArray(cvImportPreview.experience) && cvImportPreview.experience.length > 0 && (
+                    <View style={{ marginBottom: 8 }}>
+                      <Text style={[styles.inputLabel, styles.aerligLabel]}>Erfaring ({cvImportPreview.experience.length} oppføringer)</Text>
+                      {cvImportPreview.experience.map((e, i) => (
+                        <View key={i} style={{ backgroundColor: '#F9FAFB', borderRadius: 8, padding: 8, marginTop: 4 }}>
+                          <Text style={{ fontWeight: '600', fontSize: 13, color: '#111827' }}>{e.title || '—'}</Text>
+                          <Text style={{ fontSize: 13, color: '#6B7280' }}>{e.company || ''}{e.from ? ` · ${e.from}–${e.current ? 'nå' : (e.to || '?')}` : ''}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {Array.isArray(cvImportPreview.education) && cvImportPreview.education.length > 0 && (
+                    <View style={{ marginBottom: 8 }}>
+                      <Text style={[styles.inputLabel, styles.aerligLabel]}>Utdanning ({cvImportPreview.education.length} oppføringer)</Text>
+                      {cvImportPreview.education.map((e, i) => (
+                        <View key={i} style={{ backgroundColor: '#F9FAFB', borderRadius: 8, padding: 8, marginTop: 4 }}>
+                          <Text style={{ fontWeight: '600', fontSize: 13, color: '#111827' }}>{e.degree || '—'}</Text>
+                          <Text style={{ fontSize: 13, color: '#6B7280' }}>{e.school || ''}{e.from ? ` · ${e.from}–${e.to || '?'}` : ''}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {Array.isArray(cvImportPreview.skills) && cvImportPreview.skills.length > 0 && (
+                    <View style={{ marginBottom: 8 }}>
+                      <Text style={[styles.inputLabel, styles.aerligLabel]}>Ferdigheter</Text>
+                      <Text style={{ color: '#374151', fontSize: 14, lineHeight: 20 }}>{cvImportPreview.skills.join(', ')}</Text>
+                    </View>
+                  )}
+
+                  {Array.isArray(cvImportPreview.languages) && cvImportPreview.languages.length > 0 && (
+                    <View style={{ marginBottom: 8 }}>
+                      <Text style={[styles.inputLabel, styles.aerligLabel]}>Språk</Text>
+                      <Text style={{ color: '#374151', fontSize: 14, lineHeight: 20 }}>{cvImportPreview.languages.join(', ')}</Text>
+                    </View>
+                  )}
+
                   <Text style={[styles.helpText, styles.aerligHelpText, { marginTop: 8 }]}>
                     Felter som allerede er fylt ut i profilen din vil ikke bli overskrevet.
                   </Text>

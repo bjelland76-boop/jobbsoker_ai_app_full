@@ -6,7 +6,6 @@ import io
 import json
 import os
 import re
-import tempfile
 from pathlib import Path
 
 import anthropic
@@ -16,17 +15,40 @@ load_dotenv(".env")
 
 _CLAUDE_MODEL = "claude-haiku-4-5-20251001"
 
-_SYSTEM_PROMPT = (
-    "Du er en CV-parser. Analyser innholdet og returner KUN et JSON-objekt "
-    "(ingen markdown, ingen forklaring) med feltene:\n"
-    '{"name": "fullt navn", "email": "e-post eller tom streng", '
-    '"phone": "telefon eller tom streng", "address": "adresse eller tom streng", '
-    '"cv_text": "fullstendig CV-tekst som sammenhengende tekst", '
-    '"experience": "arbeidserfaring som tekst", '
-    '"education": "utdanning som tekst", '
-    '"skills": "ferdigheter som kommaseparert tekst"}\n'
-    "Bruk tom streng for felt som mangler. Svar kun med JSON."
-)
+_SYSTEM_PROMPT = """Du er en CV-parser. Analyser innholdet og returner KUN et gyldig JSON-objekt (ingen markdown, ingen forklaring) med disse feltene:
+
+{
+  "name": "fullt navn eller tom streng",
+  "email": "e-post eller tom streng",
+  "phone": "telefon eller tom streng",
+  "address": "gateadresse eller tom streng",
+  "experience": [
+    {
+      "title": "stillingstittel",
+      "company": "arbeidsgiver",
+      "from": "årstall som streng, f.eks. 2018",
+      "to": "årstall som streng eller tom streng hvis pågående",
+      "current": false
+    }
+  ],
+  "education": [
+    {
+      "degree": "grad eller studieprogram",
+      "school": "skole eller universitet",
+      "from": "årstall som streng",
+      "to": "årstall som streng"
+    }
+  ],
+  "skills": ["ferdighet1", "ferdighet2"],
+  "languages": ["språk1", "språk2"]
+}
+
+Regler:
+- experience og education skal alltid være lister (tom liste [] hvis ingenting finnes)
+- skills og languages skal alltid være lister (tom liste [] hvis ingenting finnes)
+- from/to skal være årstall som streng (f.eks. "2018"), ikke datoer
+- Sett current: true og to: "" hvis stillingen er pågående
+- Svar KUN med JSON, ingen tekst rundt"""
 
 
 def _get_client() -> anthropic.Anthropic:
@@ -44,16 +66,74 @@ def _strip_md(raw: str) -> dict:
     return json.loads(raw)
 
 
+def _normalize(parsed: dict) -> dict:
+    """Ensure all fields have the correct types regardless of what Claude returned."""
+    def to_list(v):
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str) and v.strip():
+            return [v]
+        return []
+
+    experience = []
+    for e in to_list(parsed.get("experience")):
+        if isinstance(e, str):
+            experience.append({"title": e, "company": "", "from": "", "to": "", "current": False})
+        elif isinstance(e, dict):
+            experience.append({
+                "title": e.get("title", ""),
+                "company": e.get("company", e.get("employer", "")),
+                "from": str(e.get("from", "")),
+                "to": str(e.get("to", "")),
+                "current": bool(e.get("current", False)),
+            })
+
+    education = []
+    for e in to_list(parsed.get("education")):
+        if isinstance(e, str):
+            education.append({"school": e, "degree": "", "from": "", "to": ""})
+        elif isinstance(e, dict):
+            education.append({
+                "school": e.get("school", e.get("institution", "")),
+                "degree": e.get("degree", ""),
+                "from": str(e.get("from", "")),
+                "to": str(e.get("to", "")),
+            })
+
+    skills_raw = parsed.get("skills", [])
+    if isinstance(skills_raw, str):
+        skills = [s.strip() for s in re.split(r"[,;]", skills_raw) if s.strip()]
+    else:
+        skills = [str(s) for s in to_list(skills_raw) if s]
+
+    languages_raw = parsed.get("languages", [])
+    if isinstance(languages_raw, str):
+        languages = [s.strip() for s in re.split(r"[,;]", languages_raw) if s.strip()]
+    else:
+        languages = [str(s) for s in to_list(languages_raw) if s]
+
+    return {
+        "name": parsed.get("name", ""),
+        "email": parsed.get("email", ""),
+        "phone": parsed.get("phone", ""),
+        "address": parsed.get("address", ""),
+        "experience": experience,
+        "education": education,
+        "skills": skills,
+        "languages": languages,
+    }
+
+
 def _ask_claude_text(text: str) -> dict:
     client = _get_client()
     res = client.messages.create(
         model=os.getenv("CLAUDE_MODEL") or _CLAUDE_MODEL,
         system=_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": f"CV-tekst:\n\n{text}"}],
-        max_tokens=2048,
+        max_tokens=4096,
         temperature=0,
     )
-    return _strip_md(res.content[0].text)
+    return _normalize(_strip_md(res.content[0].text))
 
 
 def _ask_claude_image(image_bytes: bytes, media_type: str) -> dict:
@@ -74,10 +154,10 @@ def _ask_claude_image(image_bytes: bytes, media_type: str) -> dict:
                 ],
             }
         ],
-        max_tokens=2048,
+        max_tokens=4096,
         temperature=0,
     )
-    return _strip_md(res.content[0].text)
+    return _normalize(_strip_md(res.content[0].text))
 
 
 def _extract_pdf(data: bytes) -> str:
@@ -109,32 +189,20 @@ def extract_and_parse(filename: str, content_type: str, data: bytes) -> dict:
 
     if ext == ".pdf" or "pdf" in ct:
         text = _extract_pdf(data)
-        parsed = _ask_claude_text(text)
+        return _ask_claude_text(text)
     elif ext in (".docx", ".doc") or "word" in ct or "officedocument" in ct:
         text = _extract_docx(data)
-        parsed = _ask_claude_text(text)
+        return _ask_claude_text(text)
     elif ct.startswith("image/") or ext in (".jpg", ".jpeg", ".png", ".webp", ".gif"):
         media_type = ct if ct.startswith("image/") else f"image/{ext.lstrip('.')}"
         if media_type not in ("image/jpeg", "image/png", "image/gif", "image/webp"):
             media_type = "image/jpeg"
-        parsed = _ask_claude_image(data, media_type)
+        return _ask_claude_image(data, media_type)
     else:
-        # Fallback: try to decode as text
         try:
             text = data.decode("utf-8", errors="replace")
         except Exception:
             text = ""
         if not text.strip():
             raise ValueError(f"Filtypen støttes ikke: {filename or content_type}")
-        parsed = _ask_claude_text(text)
-
-    return {
-        "name": parsed.get("name", ""),
-        "email": parsed.get("email", ""),
-        "phone": parsed.get("phone", ""),
-        "address": parsed.get("address", ""),
-        "cv_text": parsed.get("cv_text", ""),
-        "experience": parsed.get("experience", ""),
-        "education": parsed.get("education", ""),
-        "skills": parsed.get("skills", ""),
-    }
+        return _ask_claude_text(text)
