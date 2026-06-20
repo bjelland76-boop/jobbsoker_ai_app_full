@@ -251,6 +251,7 @@ export default function App() {
   const [editEducation, setEditEducation] = useState(false);
   const [editingExperienceIndex, setEditingExperienceIndex] = useState(-1);
   const [editingEducationIndex, setEditingEducationIndex] = useState(-1);
+  const [expandPersonCard, setExpandPersonCard] = useState(false);
   const [expandExpCard, setExpandExpCard] = useState(false);
   const [expandEduCard, setExpandEduCard] = useState(false);
   const [expandSkillsCard, setExpandSkillsCard] = useState(false);
@@ -3304,6 +3305,112 @@ export default function App() {
           </View>
         </View>
 
+        {/* Personopplysninger accordion card */}
+        <View style={[styles.profileSummaryCardFull, { marginBottom: 12 }]}>
+          <TouchableOpacity
+            onPress={() => setExpandPersonCard((v) => !v)}
+            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+            activeOpacity={0.7}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={[styles.profileCardIcon, { marginBottom: 0 }]}>👤</Text>
+              <View>
+                <Text style={styles.profileCardLabel}>Personopplysninger</Text>
+                <Text style={styles.profileCardValue} numberOfLines={1}>{name || 'Ikke utfylt'}</Text>
+              </View>
+            </View>
+            <Text style={{ color: '#6B7280', fontSize: 14 }}>{expandPersonCard ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+
+          {expandPersonCard && (
+            <View style={{ marginTop: 12 }}>
+              <View style={{ height: 1, backgroundColor: '#E8E6E0', marginBottom: 12 }} />
+
+              <Text style={[styles.inputLabel, styles.aerligLabel]}>Navn</Text>
+              <TextInput style={[styles.input, styles.aerligInput]} value={name} onChangeText={setName} placeholder="Navn" />
+
+              <Text style={[styles.inputLabel, styles.aerligLabel]}>E-post</Text>
+              <TextInput style={[styles.input, styles.aerligInput]} value={profileEmail} onChangeText={setProfileEmail} placeholder="E-post" autoCapitalize="none" keyboardType="email-address" />
+
+              <Text style={[styles.inputLabel, styles.aerligLabel]}>Telefon</Text>
+              <TextInput style={[styles.input, styles.aerligInput]} value={phone} onChangeText={setPhone} placeholder="Telefon" keyboardType="phone-pad" />
+
+              <Text style={[styles.inputLabel, styles.aerligLabel]}>Adresse</Text>
+              <TextInput
+                style={[styles.input, styles.aerligInput]}
+                value={address}
+                onChangeText={setAddress}
+                placeholder="Gateadresse"
+                autoCapitalize="words"
+              />
+
+              <View style={styles.inlineRow}>
+                <TextInput
+                  style={[styles.input, styles.aerligInput, styles.inlineInput]}
+                  value={postalCode}
+                  onChangeText={setPostalCode}
+                  placeholder="Postnr"
+                  keyboardType="numeric"
+                />
+                <TextInput
+                  style={[styles.input, styles.aerligInput, styles.inlineInput, { marginRight: 0 }]}
+                  value={postalPlace}
+                  onChangeText={setPostalPlace}
+                  placeholder="Poststed"
+                  autoCapitalize="words"
+                />
+              </View>
+
+              <Text style={[styles.inputLabel, styles.aerligLabel]}>Profilbilde (valgfritt)</Text>
+              {profilePhotoData ? (
+                <View style={{ alignItems: 'center', marginBottom: 10 }}>
+                  <Image
+                    source={{ uri: profilePhotoData }}
+                    style={{ width: 110, height: 110, borderRadius: 16, marginBottom: 10 }}
+                  />
+                  <TouchableOpacity
+                    style={[styles.aerligSecondaryButton, { marginTop: 0, paddingVertical: 12, width: '100%' }]}
+                    onPress={() => {
+                      setProfilePhotoData('');
+                      if (profileId) saveProfile({ silent: true, override: { photo_data: '' } });
+                    }}
+                  >
+                    <Text style={styles.aerligSecondaryButtonText}>Fjern bilde</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+              <TouchableOpacity style={[styles.aerligSecondaryButton, { marginTop: 0, paddingVertical: 12 }]} onPress={pickProfilePhoto}>
+                <Text style={styles.aerligSecondaryButtonText}>{profilePhotoData ? 'Bytt bilde' : 'Velg bilde'}</Text>
+              </TouchableOpacity>
+              <Text style={[styles.helpText, styles.aerligHelpText]}>Du kan velge om bildet skal være med i hver PDF når du lager søknad.</Text>
+              {profilePhotoData ? (
+                <View style={{ marginTop: 8 }}>
+                  <Text style={[styles.inputLabel, styles.aerligLabel]}>Bilde i PDF som standard</Text>
+                  <Text style={[styles.helpText, styles.aerligHelpText]}>Dette blir standardvalget hver gang du lager ny søknad/PDF (kan overstyres per søknad).</Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={[styles.messageText, styles.aerligMessageText]}>{includePhotoDefault ? 'På' : 'Av'}</Text>
+                    <Switch
+                      value={includePhotoDefault}
+                      onValueChange={(v) => {
+                        setIncludePhotoDefault(!!v);
+                        setIncludePhotoInPdf(!!v);
+                        if (profileId) saveProfile({ silent: true, override: { include_photo_default: !!v } });
+                      }}
+                    />
+                  </View>
+                </View>
+              ) : null}
+
+              <TouchableOpacity
+                style={[styles.aerligPrimaryButton, { marginTop: 16 }]}
+                onPress={() => { setExpandPersonCard(false); saveProfile(); }}
+              >
+                <Text style={styles.aerligPrimaryButtonText}>Lagre</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
         {/* Experience accordion card */}
         <View style={[styles.profileSummaryCardFull, { marginBottom: 12 }]}>
           <TouchableOpacity
@@ -3728,98 +3835,6 @@ export default function App() {
               </View>
             </View>
           )}
-        </View>
-
-        <View style={styles.profileField}>
-          <Text style={[styles.inputLabel, styles.aerligLabel]}>Navn</Text>
-          <TextInput style={[styles.input, styles.aerligInput]} value={name} onChangeText={setName} placeholder="Navn" />
-        </View>
-
-        <View style={styles.profileField}>
-          <Text style={[styles.inputLabel, styles.aerligLabel]}>Profilbilde (valgfritt)</Text>
-          {profilePhotoData ? (
-            <View style={{ alignItems: 'center', marginBottom: 10 }}>
-              <Image
-                source={{ uri: profilePhotoData }}
-                style={{ width: 110, height: 110, borderRadius: 16, marginBottom: 10 }}
-              />
-              <TouchableOpacity
-                style={[styles.aerligSecondaryButton, { marginTop: 0, paddingVertical: 12, width: '100%' }]}
-                onPress={() => {
-                  setProfilePhotoData('');
-                  if (profileId) {
-                    saveProfile({ silent: true, override: { photo_data: '' } });
-                  }
-                }}
-              >
-                <Text style={styles.aerligSecondaryButtonText}>Fjern bilde</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
-
-          <TouchableOpacity style={[styles.aerligSecondaryButton, { marginTop: 0, paddingVertical: 12 }]} onPress={pickProfilePhoto}>
-            <Text style={styles.aerligSecondaryButtonText}>{profilePhotoData ? 'Bytt bilde' : 'Velg bilde'}</Text>
-          </TouchableOpacity>
-
-          <Text style={[styles.helpText, styles.aerligHelpText]}>Du kan velge om bildet skal være med i hver PDF når du lager søknad.</Text>
-
-          {profilePhotoData ? (
-            <View style={{ marginTop: 8 }}>
-              <Text style={[styles.inputLabel, styles.aerligLabel]}>Bilde i PDF som standard</Text>
-              <Text style={[styles.helpText, styles.aerligHelpText]}>Dette blir standardvalget hver gang du lager ny søknad/PDF (kan overstyres per søknad).</Text>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={[styles.messageText, styles.aerligMessageText]}>{includePhotoDefault ? 'På' : 'Av'}</Text>
-                <Switch
-                  value={includePhotoDefault}
-                  onValueChange={(v) => {
-                    setIncludePhotoDefault(!!v);
-                    setIncludePhotoInPdf(!!v);
-                    if (profileId) {
-                      saveProfile({ silent: true, override: { include_photo_default: !!v } });
-                    }
-                  }}
-                />
-              </View>
-            </View>
-          ) : null}
-        </View>
-
-        <View style={styles.profileField}>
-          <Text style={[styles.inputLabel, styles.aerligLabel]}>E-post</Text>
-          <TextInput style={[styles.input, styles.aerligInput]} value={profileEmail} onChangeText={setProfileEmail} placeholder="E-post" autoCapitalize="none" keyboardType="email-address" />
-        </View>
-
-        <View style={styles.profileField}>
-          <Text style={[styles.inputLabel, styles.aerligLabel]}>Telefon</Text>
-          <TextInput style={[styles.input, styles.aerligInput]} value={phone} onChangeText={setPhone} placeholder="Telefon" keyboardType="phone-pad" />
-        </View>
-
-        <View style={styles.profileField}>
-          <Text style={[styles.inputLabel, styles.aerligLabel]}>Adresse</Text>
-          <TextInput
-            style={[styles.input, styles.aerligInput]}
-            value={address}
-            onChangeText={setAddress}
-            placeholder="Gateadresse"
-            autoCapitalize="words"
-          />
-        </View>
-
-        <View style={styles.inlineRow}>
-          <TextInput
-            style={[styles.input, styles.aerligInput, styles.inlineInput]}
-            value={postalCode}
-            onChangeText={setPostalCode}
-            placeholder="Postnr"
-            keyboardType="numeric"
-          />
-          <TextInput
-            style={[styles.input, styles.aerligInput, styles.inlineInput, { marginRight: 0 }]}
-            value={postalPlace}
-            onChangeText={setPostalPlace}
-            placeholder="Poststed"
-            autoCapitalize="words"
-          />
         </View>
 
         <View style={styles.profileField}>
