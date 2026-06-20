@@ -223,9 +223,9 @@ export default function App() {
   const [skills, setSkills] = useState('');
   const [skillInput, setSkillInput] = useState('');
   const [consentAnalytics, setConsentAnalytics] = useState(false);
-  const [languagesList, setLanguagesList] = useState([]);
+  const [languagesList, setLanguagesList] = useState([]); // [{name, level}]
   const [customLanguageInput, setCustomLanguageInput] = useState('');
-  const [cvGaps, setCvGaps] = useState('');
+  const [cvGapsList, setCvGapsList] = useState([]); // [{from, to, description}]
   const [savingProfile, setSavingProfile] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState('idle'); // 'idle'|'pending'|'saving'|'saved'|'error'
   const autoSaveTimerRef = useRef(null);
@@ -254,7 +254,13 @@ export default function App() {
   const [expandPersonCard, setExpandPersonCard] = useState(false);
   const [expandExpCard, setExpandExpCard] = useState(false);
   const [expandEduCard, setExpandEduCard] = useState(false);
+  const [expandLangCard, setExpandLangCard] = useState(false);
+  const [expandGapsCard, setExpandGapsCard] = useState(false);
+  const [expandRefCard, setExpandRefCard] = useState(false);
   const [expandSkillsCard, setExpandSkillsCard] = useState(false);
+  const [editingLanguageIndex, setEditingLanguageIndex] = useState(-1);
+  const [editingGapIndex, setEditingGapIndex] = useState(-1);
+  const [editingReferenceIndex, setEditingReferenceIndex] = useState(-1);
 
   const [applications, setApplications] = useState([]);
   const [applicationsLoading, setApplicationsLoading] = useState(false);
@@ -512,7 +518,7 @@ export default function App() {
     setSkillInput('');
     setConsentAnalytics(false);
     setLanguagesList([]);
-    setCvGaps('');
+    setCvGapsList([]);
     setExperienceEntries([]);
     setEducationEntries([]);
     setReferenceEntries([]);
@@ -772,8 +778,8 @@ export default function App() {
           setSkills(profile.skills || '');
           setConsentAnalytics(!!profile.consent_analytics);
           if (!profile.has_seen_onboarding) setShowOnboarding(true);
-          setLanguagesList(Array.isArray(profile.languages) ? profile.languages : (profile.languages ? [profile.languages] : []));
-          setCvGaps(profile.cv_gaps || '');
+          setLanguagesList((Array.isArray(profile.languages) ? profile.languages : (profile.languages ? [profile.languages] : [])).map(normalizeLangEntry));
+          setCvGapsList(parseCvGapsText(profile.cv_gaps || ''));
 
           const experienceRaw = Array.isArray(profile.experience)
             ? profile.experience
@@ -1015,7 +1021,7 @@ export default function App() {
 
     // languages: array → languagesList (only if empty)
     if (Array.isArray(preview.languages) && preview.languages.length > 0 && languagesList.length === 0) {
-      setLanguagesList(preview.languages);
+      setLanguagesList(preview.languages.map(normalizeLangEntry));
     }
 
     // experience: array of {title, company, from, to, current} (only if empty)
@@ -1062,9 +1068,9 @@ export default function App() {
       experience: override.experience ?? experienceEntries,
       education: override.education ?? educationEntries,
       skills: override.skills ?? skills,
-      languages: override.languages ?? languagesList,
+      languages: override.languages ?? serializeLangList(languagesList),
       references: override.references ?? referenceEntries,
-      cv_gaps: override.cv_gaps ?? cvGaps,
+      cv_gaps: override.cv_gaps ?? serializeCvGaps(cvGapsList),
     };
 
     try {
@@ -1100,8 +1106,8 @@ export default function App() {
           photo_data: profilePhotoData, include_photo_default: includePhotoDefault,
           consent_analytics: consentAnalytics,
           experience: experienceEntries, education: educationEntries,
-          skills, languages: languagesList,
-          references: referenceEntries, cv_gaps: cvGaps,
+          skills, languages: serializeLangList(languagesList),
+          references: referenceEntries, cv_gaps: serializeCvGaps(cvGapsList),
         }),
       });
       setProfileId(data.id);
@@ -1134,7 +1140,7 @@ export default function App() {
     };
   }, [
     name, profileEmail, phone, address, postalCode, postalPlace,
-    skills, cvGaps,
+    skills, cvGapsList,
     experienceEntries, educationEntries, referenceEntries, languagesList,
   ]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -3089,6 +3095,38 @@ export default function App() {
     setSkills(normalized.join(', '));
   }
 
+  // Language serialization: {name, level} ↔ "Norsk — Morsmål" strings
+  function normalizeLangEntry(l) {
+    if (typeof l === 'string') {
+      const parts = l.split(' — ');
+      return { name: parts[0]?.trim() || '', level: parts[1]?.trim() || '' };
+    }
+    return { name: String(l?.name || '').trim(), level: String(l?.level || '').trim() };
+  }
+  function serializeLangList(list) {
+    return (list || []).map((l) => (l.level ? `${l.name} — ${l.level}` : l.name)).filter(Boolean);
+  }
+
+  // CV gaps serialization: [{from, to, description}] ↔ multi-line text
+  function parseCvGapsText(text) {
+    if (!text?.trim()) return [];
+    try {
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed)) return parsed.map((g) => ({ from: String(g.from || ''), to: String(g.to || ''), description: String(g.description || '') }));
+    } catch {}
+    return text.split('\n').filter(Boolean).map((line) => {
+      const m = line.match(/^(\d{4})(?:[–\-](\d{4}))?\s*[:：]\s*(.+)$/);
+      return m ? { from: m[1], to: m[2] || '', description: m[3].trim() } : { from: '', to: '', description: line.trim() };
+    });
+  }
+  function serializeCvGaps(list) {
+    return (list || []).map((g) => {
+      const period = g.from ? (g.to ? `${g.from}–${g.to}` : g.from) : '';
+      const desc = g.description || '';
+      return period ? `${period}: ${desc}` : desc;
+    }).filter(Boolean).join('\n');
+  }
+
   async function pickProfilePhoto() {
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -3837,122 +3875,284 @@ export default function App() {
           )}
         </View>
 
-        <View style={styles.profileField}>
-          <Text style={[styles.inputLabel, styles.aerligLabel]}>Språk</Text>
-          <View style={{ marginBottom: 8 }}>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-              {languagesList.map((lang, i) => (
-                <TouchableOpacity key={i} style={[styles.smallButton, styles.aerligSmallButton, { marginRight: 8, marginBottom: 8 }]} onPress={() => setLanguagesList(languagesList.filter((l) => l !== lang))}>
-                  <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>{lang} ✕</Text>
-                </TouchableOpacity>
-              ))}
+        {/* Språk accordion card */}
+        <View style={[styles.profileSummaryCardFull, { marginBottom: 12 }]}>
+          <TouchableOpacity
+            onPress={() => setExpandLangCard((v) => { const n = !v; if (!n) setEditingLanguageIndex(-1); return n; })}
+            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+            activeOpacity={0.7}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={[styles.profileCardIcon, { marginBottom: 0 }]}>🗣️</Text>
+              <View>
+                <Text style={styles.profileCardLabel}>Språk</Text>
+                <Text style={styles.profileCardValue}>
+                  {languagesList.length > 0 ? `${languagesList.length} språk` : 'Ikke utfylt'}
+                </Text>
+              </View>
             </View>
-          </View>
-          <TouchableOpacity style={[styles.input, styles.aerligInput]} onPress={() => setShowLanguageList(!showLanguageList)}>
-            <Text style={styles.aerligPlaceholderText}>Legg til språk</Text>
+            <Text style={{ color: '#6B7280', fontSize: 14 }}>{expandLangCard ? '▲' : '▼'}</Text>
           </TouchableOpacity>
-          {showLanguageList && (
-            <View style={[styles.dropdownList, styles.aerligDropdownList]}>
-              <TextInput
-                style={[styles.input, styles.aerligInput, { margin: 8 }]}
-                placeholder="Legg til eget språk (skriv og trykk 'Legg til')"
-                value={customLanguageInput}
-                onChangeText={setCustomLanguageInput}
-                autoCapitalize="words"
-              />
+
+          {expandLangCard && (
+            <View style={{ marginTop: 12 }}>
+              <View style={{ height: 1, backgroundColor: '#E8E6E0', marginBottom: 12 }} />
+              {languagesList.map((lang, index) => (
+                <View key={index} style={[styles.aerligCard, styles.aerligListRow]}>
+                  <View style={[styles.aerligEntryHeader, styles.aerligListRowHeader]}>
+                    <View style={{ flex: 1, paddingRight: 10 }}>
+                      <Text style={styles.aerligEntryTitle} numberOfLines={1}>{lang.name || 'Språk'}</Text>
+                      {lang.level ? <Text style={styles.aerligEntrySub} numberOfLines={1}>{lang.level}</Text> : null}
+                    </View>
+                  </View>
+                  <View style={styles.aerligRowActions}>
+                    <TouchableOpacity
+                      style={[styles.filterChip, styles.aerligFilterChip, styles.aerligRowActionChip]}
+                      onPress={() => setEditingLanguageIndex((cur) => (cur === index ? -1 : index))}
+                    >
+                      <Text style={[styles.filterChipText, styles.aerligFilterChipText]}>
+                        {editingLanguageIndex === index ? 'Ferdig' : 'Rediger'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.filterChip, styles.aerligFilterChip, styles.aerligRowActionChip, styles.aerligRowActionChipDanger]}
+                      onPress={() => {
+                        setLanguagesList((prev) => prev.filter((_, i) => i !== index));
+                        setEditingLanguageIndex((cur) => cur === index ? -1 : cur > index ? cur - 1 : cur);
+                      }}
+                    >
+                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, styles.aerligRowActionTextDanger]}>Fjern</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {editingLanguageIndex === index && (
+                    <View style={{ marginTop: 8 }}>
+                      <TextInput
+                        style={[styles.input, styles.aerligInput, styles.aerligInputCompact]}
+                        value={lang.name}
+                        placeholder="Språk (f.eks. Norsk)"
+                        autoCapitalize="words"
+                        onChangeText={(v) => {
+                          const items = [...languagesList];
+                          items[index] = { ...items[index], name: v };
+                          setLanguagesList(items);
+                        }}
+                      />
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                        {['Morsmål', 'Flytende', 'Godt', 'Grunnleggende'].map((lvl) => (
+                          <TouchableOpacity
+                            key={lvl}
+                            style={[styles.filterChip, styles.aerligFilterChip, lang.level === lvl && styles.aerligFilterChipActive]}
+                            onPress={() => {
+                              const items = [...languagesList];
+                              items[index] = { ...items[index], level: lang.level === lvl ? '' : lvl };
+                              setLanguagesList(items);
+                            }}
+                          >
+                            <Text style={[styles.filterChipText, styles.aerligFilterChipText, lang.level === lvl && styles.aerligFilterChipTextActive]}>{lvl}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                </View>
+              ))}
               <TouchableOpacity
-                style={[styles.smallButton, styles.aerligSmallButton, { marginHorizontal: 8, marginTop: 0, marginBottom: 8 }]}
+                style={[styles.smallButton, styles.aerligSmallButton]}
                 onPress={() => {
-                  const v = (customLanguageInput || '').trim();
-                  if (!v) return;
-                  if (!languagesList.includes(v)) {
-                    setLanguagesList([...languagesList, v]);
-                  }
-                  setCustomLanguageInput('');
-                  setShowLanguageList(false);
+                  const next = [...languagesList, { name: '', level: '' }];
+                  setLanguagesList(next);
+                  setEditingLanguageIndex(next.length - 1);
                 }}
               >
-                <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>Legg til</Text>
+                <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>+ Legg til språk</Text>
               </TouchableOpacity>
-
-              {languageOptions.map((lang) => (
-                <TouchableOpacity
-                  key={lang}
-                  style={styles.dropdownItem}
-                  onPress={() => {
-                    if (!languagesList.includes(lang)) setLanguagesList([...languagesList, lang]);
-                    setCustomLanguageInput('');
-                    setShowLanguageList(false);
-                  }}
-                >
-                  <Text style={[styles.dropdownItemText, styles.aerligDropdownItemText]}>{lang}</Text>
-                </TouchableOpacity>
-              ))}
             </View>
           )}
         </View>
 
-        <View style={styles.profileField}>
-          <Text style={[styles.inputLabel, styles.aerligLabel]}>Hull i CV</Text>
-          <Text style={[styles.helpText, styles.aerligHelpText]}>Skriv kort om pauser eller hull i arbeids- eller utdanningshistorikken.</Text>
-          <TextInput style={[styles.input, styles.aerligInput, styles.textArea]} value={cvGaps} onChangeText={setCvGaps} placeholder="Hull i CV" multiline />
-        </View>
+        {/* Hull i CV accordion card */}
+        <View style={[styles.profileSummaryCardFull, { marginBottom: 12 }]}>
+          <TouchableOpacity
+            onPress={() => setExpandGapsCard((v) => { const n = !v; if (!n) setEditingGapIndex(-1); return n; })}
+            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+            activeOpacity={0.7}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={[styles.profileCardIcon, { marginBottom: 0 }]}>📅</Text>
+              <View>
+                <Text style={styles.profileCardLabel}>Hull i CV</Text>
+                <Text style={styles.profileCardValue}>
+                  {cvGapsList.length > 0 ? `${cvGapsList.length} periode${cvGapsList.length === 1 ? '' : 'r'}` : 'Ingen registrert'}
+                </Text>
+              </View>
+            </View>
+            <Text style={{ color: '#6B7280', fontSize: 14 }}>{expandGapsCard ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
 
-        <View style={styles.profileField}>
-          <Text style={[styles.inputLabel, styles.aerligLabel]}>Referanser</Text>
-          <Text style={[styles.helpText, styles.aerligHelpText]}>Legg inn referanser du kan oppgi ved behov (navn, relasjon og kontaktinfo).</Text>
-
-          {referenceEntries.map((ref, index) => (
-            <View key={index} style={styles.aerligCard}>
-              <TextInput
-                style={[styles.input, styles.aerligInput]}
-                value={ref.name}
-                placeholder="Navn"
-                onChangeText={(value) => {
-                  const items = [...referenceEntries];
-                  items[index].name = value;
-                  setReferenceEntries(items);
-                }}
-              />
-              <TextInput
-                style={[styles.input, styles.aerligInput]}
-                value={ref.relation}
-                placeholder="Relasjon (f.eks. Leder i X / Kollega)"
-                onChangeText={(value) => {
-                  const items = [...referenceEntries];
-                  items[index].relation = value;
-                  setReferenceEntries(items);
-                }}
-              />
-              <TextInput
-                style={[styles.input, styles.aerligInput]}
-                value={ref.contact}
-                placeholder="Kontakt (telefon eller e-post)"
-                onChangeText={(value) => {
-                  const items = [...referenceEntries];
-                  items[index].contact = value;
-                  setReferenceEntries(items);
-                }}
-                autoCapitalize="none"
-              />
+          {expandGapsCard && (
+            <View style={{ marginTop: 12 }}>
+              <View style={{ height: 1, backgroundColor: '#E8E6E0', marginBottom: 8 }} />
+              <Text style={[styles.helpText, styles.aerligHelpText, { marginBottom: 12 }]}>
+                Hull i CV brukes til å forklare perioder uten arbeidserfaring i søknaden din.
+              </Text>
+              {cvGapsList.map((gap, index) => (
+                <View key={index} style={[styles.aerligCard, styles.aerligListRow]}>
+                  <View style={[styles.aerligEntryHeader, styles.aerligListRowHeader]}>
+                    <View style={{ flex: 1, paddingRight: 10 }}>
+                      <Text style={styles.aerligEntryTitle} numberOfLines={1}>
+                        {gap.from ? (gap.to ? `${gap.from}–${gap.to}` : gap.from) : 'Periode'}
+                      </Text>
+                      <Text style={styles.aerligEntrySub} numberOfLines={2}>{gap.description || 'Forklaring'}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.aerligRowActions}>
+                    <TouchableOpacity
+                      style={[styles.filterChip, styles.aerligFilterChip, styles.aerligRowActionChip]}
+                      onPress={() => setEditingGapIndex((cur) => (cur === index ? -1 : index))}
+                    >
+                      <Text style={[styles.filterChipText, styles.aerligFilterChipText]}>
+                        {editingGapIndex === index ? 'Ferdig' : 'Rediger'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.filterChip, styles.aerligFilterChip, styles.aerligRowActionChip, styles.aerligRowActionChipDanger]}
+                      onPress={() => {
+                        setCvGapsList((prev) => prev.filter((_, i) => i !== index));
+                        setEditingGapIndex((cur) => cur === index ? -1 : cur > index ? cur - 1 : cur);
+                      }}
+                    >
+                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, styles.aerligRowActionTextDanger]}>Fjern</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {editingGapIndex === index && (
+                    <View style={styles.aerligEntryEditRow}>
+                      <TextInput
+                        style={[styles.input, styles.aerligInput, styles.aerligInputCompact, styles.inlineInput]}
+                        value={gap.from}
+                        placeholder="Fra (år)"
+                        keyboardType="numeric"
+                        onChangeText={(v) => { const items = [...cvGapsList]; items[index] = { ...items[index], from: v }; setCvGapsList(items); }}
+                      />
+                      <TextInput
+                        style={[styles.input, styles.aerligInput, styles.aerligInputCompact, styles.inlineInput]}
+                        value={gap.to}
+                        placeholder="Til (år)"
+                        keyboardType="numeric"
+                        onChangeText={(v) => { const items = [...cvGapsList]; items[index] = { ...items[index], to: v }; setCvGapsList(items); }}
+                      />
+                      <TextInput
+                        style={[styles.input, styles.aerligInput, styles.aerligInputCompact, styles.inlineInput, { marginRight: 0, flex: 2 }]}
+                        value={gap.description}
+                        placeholder="Forklaring"
+                        onChangeText={(v) => { const items = [...cvGapsList]; items[index] = { ...items[index], description: v }; setCvGapsList(items); }}
+                      />
+                    </View>
+                  )}
+                </View>
+              ))}
               <TouchableOpacity
-                style={[styles.removeButton, styles.aerligRemoveButton]}
+                style={[styles.smallButton, styles.aerligSmallButton]}
                 onPress={() => {
-                  const items = referenceEntries.filter((_, i) => i !== index);
-                  setReferenceEntries(items);
+                  const next = [...cvGapsList, { from: '', to: '', description: '' }];
+                  setCvGapsList(next);
+                  setEditingGapIndex(next.length - 1);
                 }}
               >
-                <Text style={[styles.removeButtonText, styles.aerligRemoveButtonText]}>Fjern</Text>
+                <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>+ Legg til periode</Text>
               </TouchableOpacity>
             </View>
-          ))}
+          )}
+        </View>
 
+        {/* Referanser accordion card */}
+        <View style={[styles.profileSummaryCardFull, { marginBottom: 12 }]}>
           <TouchableOpacity
-            style={[styles.smallButton, styles.aerligSmallButton]}
-            onPress={() => setReferenceEntries([...(referenceEntries || []), { name: '', relation: '', contact: '' }])}
+            onPress={() => setExpandRefCard((v) => { const n = !v; if (!n) setEditingReferenceIndex(-1); return n; })}
+            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+            activeOpacity={0.7}
           >
-            <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>Legg til referanse</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={[styles.profileCardIcon, { marginBottom: 0 }]}>👥</Text>
+              <View>
+                <Text style={styles.profileCardLabel}>Referanser</Text>
+                <Text style={styles.profileCardValue}>
+                  {referenceEntries.length > 0 ? `${referenceEntries.length} referanse${referenceEntries.length === 1 ? '' : 'r'}` : 'Ikke utfylt'}
+                </Text>
+              </View>
+            </View>
+            <Text style={{ color: '#6B7280', fontSize: 14 }}>{expandRefCard ? '▲' : '▼'}</Text>
           </TouchableOpacity>
+
+          {expandRefCard && (
+            <View style={{ marginTop: 12 }}>
+              <View style={{ height: 1, backgroundColor: '#E8E6E0', marginBottom: 8 }} />
+              <Text style={[styles.helpText, styles.aerligHelpText, { marginBottom: 12 }]}>
+                Referanser kan inkluderes automatisk i søknaden din.
+              </Text>
+              {referenceEntries.map((ref, index) => (
+                <View key={index} style={[styles.aerligCard, styles.aerligListRow]}>
+                  <View style={[styles.aerligEntryHeader, styles.aerligListRowHeader]}>
+                    <View style={{ flex: 1, paddingRight: 10 }}>
+                      <Text style={styles.aerligEntryTitle} numberOfLines={1}>{ref.name || 'Navn'}</Text>
+                      <Text style={styles.aerligEntrySub} numberOfLines={1}>{ref.relation || ref.title || ''}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.aerligRowActions}>
+                    <TouchableOpacity
+                      style={[styles.filterChip, styles.aerligFilterChip, styles.aerligRowActionChip]}
+                      onPress={() => setEditingReferenceIndex((cur) => (cur === index ? -1 : index))}
+                    >
+                      <Text style={[styles.filterChipText, styles.aerligFilterChipText]}>
+                        {editingReferenceIndex === index ? 'Ferdig' : 'Rediger'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.filterChip, styles.aerligFilterChip, styles.aerligRowActionChip, styles.aerligRowActionChipDanger]}
+                      onPress={() => {
+                        setReferenceEntries((prev) => prev.filter((_, i) => i !== index));
+                        setEditingReferenceIndex((cur) => cur === index ? -1 : cur > index ? cur - 1 : cur);
+                      }}
+                    >
+                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, styles.aerligRowActionTextDanger]}>Fjern</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {editingReferenceIndex === index && (
+                    <View style={{ marginTop: 8 }}>
+                      <TextInput
+                        style={[styles.input, styles.aerligInput, styles.aerligInputCompact]}
+                        value={ref.name}
+                        placeholder="Navn"
+                        onChangeText={(v) => { const items = [...referenceEntries]; items[index] = { ...items[index], name: v }; setReferenceEntries(items); }}
+                      />
+                      <TextInput
+                        style={[styles.input, styles.aerligInput, styles.aerligInputCompact]}
+                        value={ref.relation || ''}
+                        placeholder="Stilling / tittel (f.eks. Leder i X)"
+                        onChangeText={(v) => { const items = [...referenceEntries]; items[index] = { ...items[index], relation: v }; setReferenceEntries(items); }}
+                      />
+                      <TextInput
+                        style={[styles.input, styles.aerligInput, styles.aerligInputCompact]}
+                        value={ref.contact || ''}
+                        placeholder="Telefon eller e-post"
+                        autoCapitalize="none"
+                        onChangeText={(v) => { const items = [...referenceEntries]; items[index] = { ...items[index], contact: v }; setReferenceEntries(items); }}
+                      />
+                    </View>
+                  )}
+                </View>
+              ))}
+              <TouchableOpacity
+                style={[styles.smallButton, styles.aerligSmallButton]}
+                onPress={() => {
+                  const next = [...(referenceEntries || []), { name: '', relation: '', contact: '' }];
+                  setReferenceEntries(next);
+                  setEditingReferenceIndex(next.length - 1);
+                }}
+              >
+                <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>+ Legg til referanse</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         <View style={styles.profileField}>
