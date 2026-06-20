@@ -444,6 +444,14 @@ export default function App() {
     refreshCareerTip({ force: true });
   }, [uiLanguage]);
 
+  // Load dashboard stats silently when home tab is shown
+  useEffect(() => {
+    if (activeTab !== 'home') return;
+    if (!profileId) return;
+    loadJobAnalyses({ silent: true });
+    loadApplications();
+  }, [activeTab, profileId]);
+
   async function doAuth() {
     if (!authEmail) {
       Alert.alert('Feil', 'Skriv inn e-post');
