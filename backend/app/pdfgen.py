@@ -148,6 +148,8 @@ class _Theme:
     cv_subheader_color: colors.Color = None       # color of CV section sub-headers
     section_underline: colors.Color = None        # thin rule under CV sub-headers
     section_spacing: float = 0.0                  # extra cm between sections (kreativ)
+    entry_gap: float = 0.25                       # cm gap between experience entries
+    body_leading: float = 0.50                    # cm line height for body text
 
     def __post_init__(self):
         if self.cv_subheader_color is None:
@@ -185,7 +187,9 @@ THEME_KREATIV = _Theme(
     section_accent=colors.HexColor("#E8501A"),
     cv_subheader_color=colors.HexColor("#E8501A"),
     section_underline=colors.HexColor("#E8501A"),
-    section_spacing=0.18,
+    section_spacing=0.20,
+    entry_gap=0.45,
+    body_leading=0.53,
 )
 
 THEME = THEME_PROFESJONELL  # backward-compat alias
@@ -514,9 +518,12 @@ class _SidebarPdfDoc:
         *,
         font: str = "Helvetica",
         size: float = 10.1,
-        leading: float = 0.48 * cm,
+        leading: float = None,
     ) -> None:
         """Render bullet lines with consistent indent + wrap."""
+
+        if leading is None:
+            leading = max(0.48 * cm, self.theme.body_leading * cm - 0.02 * cm)
 
         c = self.c
         bullet_x = self.main_left
@@ -552,8 +559,11 @@ class _SidebarPdfDoc:
 
         self.y -= 0.12 * cm
 
-    def _cv_paragraph(self, text: str, *, font: str = "Helvetica", size: float = 10.2, leading: float = 0.50 * cm) -> None:
+    def _cv_paragraph(self, text: str, *, font: str = "Helvetica", size: float = 10.2, leading: float = None) -> None:
         """Paragraph renderer for CV text (slightly tighter than cover letter)."""
+
+        if leading is None:
+            leading = self.theme.body_leading * cm
 
         c = self.c
         max_w = self.main_w
@@ -601,23 +611,41 @@ class _SidebarPdfDoc:
         return (s, "")
 
     def _cv_entry_header(self, title_line: str) -> None:
-        """Render one entry header line with optional right-aligned period."""
+        """Render an experience entry header: title (bold) + period right-aligned, then employer on next line."""
 
         c = self.c
         left, period = self._extract_period_tail(title_line)
 
-        self._ensure_space(0.95 * cm)
+        # Split "Job Title – Employer" or "Job Title | Employer" into two parts
+        m = re.search(r'\s+[–\-|]\s+', left)
+        if m:
+            title_part = left[:m.start()].strip()
+            employer_part = left[m.end():].strip()
+        else:
+            title_part = left or title_line
+            employer_part = ""
 
+        space_needed = (0.55 + (0.48 if employer_part else 0)) * cm + 0.3 * cm
+        self._ensure_space(space_needed)
+
+        # Title line (bold) with period right-aligned
         c.setFillColor(self.theme.text)
         c.setFont("Helvetica-Bold", 10.8)
-        c.drawString(self.main_left, self.y, left or title_line)
+        c.drawString(self.main_left, self.y, title_part)
 
         if period:
             c.setFillColor(colors.HexColor("#64748b"))
             c.setFont("Helvetica", 9)
             c.drawRightString(self.main_left + self.main_w, self.y, period)
 
-        self.y -= 0.55 * cm
+        self.y -= 0.52 * cm
+
+        # Employer line (normal weight, slightly muted)
+        if employer_part:
+            c.setFillColor(self.theme.muted)
+            c.setFont("Helvetica", 10)
+            c.drawString(self.main_left, self.y, employer_part)
+            self.y -= 0.46 * cm
 
     def _draw_cv_text(self, text: str) -> None:
         """Render the AI-produced tailored_cv with improved layout.
@@ -753,7 +781,7 @@ class _SidebarPdfDoc:
                         entry_bullets = []
 
                     if not first_entry:
-                        self.y -= 0.20 * cm
+                        self.y -= self.theme.entry_gap * cm
                     first_entry = False
 
                     self._cv_entry_header(s)
@@ -1277,15 +1305,32 @@ class _ClassicPdfDoc:
     def _cv_entry_header(self, title_line: str) -> None:
         c = self.c
         left, period = self._extract_period_tail(title_line)
-        self._ensure_space(0.95 * cm)
+
+        m = re.search(r'\s+[–\-|]\s+', left)
+        if m:
+            title_part = left[:m.start()].strip()
+            employer_part = left[m.end():].strip()
+        else:
+            title_part = left or title_line
+            employer_part = ""
+
+        space_needed = (0.55 + (0.48 if employer_part else 0)) * cm + 0.3 * cm
+        self._ensure_space(space_needed)
+
         c.setFillColor(self._COLOR_BLACK)
         c.setFont(self._FONT_HEAD, 10.8)
-        c.drawString(self.left, self.y, left or title_line)
+        c.drawString(self.left, self.y, title_part)
         if period:
             c.setFillColor(self._COLOR_MUTED)
             c.setFont(self._FONT_BODY, 9)
             c.drawRightString(self.right, self.y, period)
-        self.y -= 0.55 * cm
+        self.y -= 0.52 * cm
+
+        if employer_part:
+            c.setFillColor(self._COLOR_MID)
+            c.setFont(self._FONT_BODY, 10)
+            c.drawString(self.left, self.y, employer_part)
+            self.y -= 0.46 * cm
 
     def _draw_cv_text(self, text: str) -> None:
         """Render AI-produced tailored_cv — same section logic as sidebar variant."""
@@ -1374,7 +1419,7 @@ class _ClassicPdfDoc:
                             self._cv_bullet_lines(entry_bullets)
                             entry_bullets = []
                         if not first:
-                            self.y -= 0.20 * cm
+                            self.y -= 0.30 * cm
                         first = False
                         self._cv_entry_header(s)
                 if entry_bullets:
