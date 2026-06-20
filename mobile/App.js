@@ -886,14 +886,14 @@ export default function App() {
   }, [schoolFilter, schoolKindFilter, showSchoolListIndex]);
 
   useEffect(() => {
-    if (!editExperience && editingExperienceIndex >= 0) {
+    if (!expandExpCard && editingExperienceIndex >= 0) {
       setEditingExperienceIndex(-1);
     }
-  }, [editExperience, editingExperienceIndex]);
+  }, [expandExpCard, editingExperienceIndex]);
 
   // Når brukeren ikke redigerer utdanning, skjul evt. åpen skole-dropdown.
   useEffect(() => {
-    if (!editEducation) {
+    if (!expandEduCard) {
       if (showSchoolListIndex >= 0) {
         setShowSchoolListIndex(-1);
         setSchoolFilter('');
@@ -902,7 +902,7 @@ export default function App() {
         setEditingEducationIndex(-1);
       }
     }
-  }, [editEducation, showSchoolListIndex, editingEducationIndex]);
+  }, [expandEduCard, showSchoolListIndex, editingEducationIndex]);
 
   // Hvis brukeren bytter hvilken utdanning som redigeres, lukk skole-dropdown.
   useEffect(() => {
