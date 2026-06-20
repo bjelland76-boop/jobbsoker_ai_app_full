@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import {
   SafeAreaView,
   ScrollView,
@@ -13,6 +14,8 @@ import {
   Animated,
   StyleSheet,
   Alert,
+  ActivityIndicator,
+  Modal,
   Image,
   Platform,
   NativeModules,
@@ -234,6 +237,11 @@ export default function App() {
   const [experienceEntries, setExperienceEntries] = useState([]);
   const [educationEntries, setEducationEntries] = useState([]);
   const [referenceEntries, setReferenceEntries] = useState([]);
+
+  // CV import
+  const [cvImportModalVisible, setCvImportModalVisible] = useState(false);
+  const [cvImportLoading, setCvImportLoading] = useState(false);
+  const [cvImportPreview, setCvImportPreview] = useState(null);
 
   // Profil v2: visning og redigering separat (erfaring/utdanning)
   const [editExperience, setEditExperience] = useState(false);
@@ -886,6 +894,85 @@ export default function App() {
       setSchoolFilter('');
     }
   }, [showSchoolListIndex, editingEducationIndex]);
+
+  async function _sendCvFile({ uri, name: fileName, mimeType }) {
+    setCvImportLoading(true);
+    setCvImportModalVisible(false);
+    try {
+      const formData = new FormData();
+      formData.append('file', { uri, name: fileName || 'cv', type: mimeType || 'application/octet-stream' });
+      const result = await apiFetch('/profile/import-cv', { method: 'POST', body: formData });
+      setCvImportPreview(result);
+    } catch (e) {
+      Alert.alert('Feil', 'Kunne ikke lese CV-en: ' + (e.message || 'Ukjent feil'));
+    } finally {
+      setCvImportLoading(false);
+    }
+  }
+
+  async function importCvFromFile() {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      await _sendCvFile({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType });
+    } catch (e) {
+      Alert.alert('Feil', 'Kunne ikke velge fil: ' + (e.message || 'Ukjent feil'));
+    }
+  }
+
+  async function importCvFromCamera() {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Tillatelse mangler', 'Kameratilgang er nødvendig for å ta bilde av CV-en.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.85,
+    });
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    await _sendCvFile({ uri: asset.uri, name: 'cv.jpg', mimeType: 'image/jpeg' });
+  }
+
+  async function importCvFromGallery() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Tillatelse mangler', 'Galleritilgang er nødvendig for å velge bilde av CV-en.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.85,
+    });
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    const ext = (asset.uri.split('.').pop() || 'jpg').toLowerCase();
+    const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
+    await _sendCvFile({ uri: asset.uri, name: `cv.${ext}`, mimeType });
+  }
+
+  function applyCvImport(preview) {
+    if (preview.name && !name) setName(preview.name);
+    if (preview.email && !profileEmail) setProfileEmail(preview.email);
+    if (preview.phone && !phone) setPhone(preview.phone);
+    if (preview.address && !address) setAddress(preview.address);
+    if (preview.skills && !skills) setSkills(preview.skills);
+
+    if (preview.experience && experienceEntries.length === 0) {
+      setExperienceEntries([{ company: '', title: preview.experience, from: '', to: '', current: false }]);
+    }
+    if (preview.education && educationEntries.length === 0) {
+      setEducationEntries([{ school: preview.education, degree: '', from: '', to: '' }]);
+    }
+
+    setCvImportPreview(null);
+    Alert.alert('Profil oppdatert!', 'Husk å trykke "Lagre profil" for å lagre endringene.');
+  }
 
   async function saveProfile({ silent = false, override = {} } = {}) {
     if (!name) {
@@ -2908,6 +2995,99 @@ export default function App() {
       <View style={styles.aerligPageCard}>
         <Text style={styles.aerligPageTitle}>Profil</Text>
         <Text style={styles.aerligPageSubtitle}>Personopplysninger, erfaring og referanser.</Text>
+
+        {/* CV Import */}
+        <TouchableOpacity
+          style={[styles.aerligSecondaryButton, { marginBottom: 16, marginTop: 4 }]}
+          onPress={() => setCvImportModalVisible(true)}
+          disabled={cvImportLoading}
+        >
+          {cvImportLoading ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <ActivityIndicator size="small" color={THEME.colors.primary} />
+              <Text style={styles.aerligSecondaryButtonText}>Leser CV-en din...</Text>
+            </View>
+          ) : (
+            <Text style={styles.aerligSecondaryButtonText}>Importer CV</Text>
+          )}
+        </TouchableOpacity>
+
+        {/* Import source picker modal */}
+        <Modal
+          visible={cvImportModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setCvImportModalVisible(false)}
+        >
+          <View style={styles.cvModalOverlay}>
+            <View style={styles.cvModalCard}>
+              <Text style={styles.cvModalTitle}>Importer CV</Text>
+              <Text style={styles.cvModalSubtitle}>Velg kilde</Text>
+              <TouchableOpacity style={styles.aerligSecondaryButton} onPress={importCvFromFile}>
+                <Text style={styles.aerligSecondaryButtonText}>Velg fil (PDF eller .docx)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.aerligSecondaryButton, { marginTop: 10 }]} onPress={importCvFromCamera}>
+                <Text style={styles.aerligSecondaryButtonText}>Ta bilde av CV (kamera)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.aerligSecondaryButton, { marginTop: 10 }]} onPress={importCvFromGallery}>
+                <Text style={styles.aerligSecondaryButtonText}>Velg bilde fra galleri</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.aerligDangerButton, { marginTop: 16 }]}
+                onPress={() => setCvImportModalVisible(false)}
+              >
+                <Text style={styles.aerligDangerButtonText}>Avbryt</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* CV import preview/confirm modal */}
+        {cvImportPreview && (
+          <Modal
+            visible={!!cvImportPreview}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setCvImportPreview(null)}
+          >
+            <View style={styles.cvModalOverlay}>
+              <View style={[styles.cvModalCard, { maxHeight: '80%' }]}>
+                <ScrollView>
+                  <Text style={styles.cvModalTitle}>Hva vi fant i CV-en</Text>
+                  {[
+                    ['Navn', cvImportPreview.name],
+                    ['E-post', cvImportPreview.email],
+                    ['Telefon', cvImportPreview.phone],
+                    ['Adresse', cvImportPreview.address],
+                    ['Ferdigheter', cvImportPreview.skills],
+                    ['Erfaring', cvImportPreview.experience],
+                    ['Utdanning', cvImportPreview.education],
+                  ].filter(([, v]) => v).map(([label, value]) => (
+                    <View key={label} style={{ marginBottom: 8 }}>
+                      <Text style={[styles.inputLabel, styles.aerligLabel]}>{label}</Text>
+                      <Text style={{ color: '#374151', fontSize: 14, lineHeight: 20 }}>{value}</Text>
+                    </View>
+                  ))}
+                  <Text style={[styles.helpText, styles.aerligHelpText, { marginTop: 8 }]}>
+                    Felter som allerede er fylt ut i profilen din vil ikke bli overskrevet.
+                  </Text>
+                </ScrollView>
+                <TouchableOpacity
+                  style={[styles.aerligPrimaryButton, { marginTop: 16 }]}
+                  onPress={() => applyCvImport(cvImportPreview)}
+                >
+                  <Text style={styles.aerligPrimaryButtonText}>Importer</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.aerligDangerButton, { marginTop: 10 }]}
+                  onPress={() => setCvImportPreview(null)}
+                >
+                  <Text style={styles.aerligDangerButtonText}>Avbryt</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+        )}
 
         <View style={styles.profileField}>
           <Text style={[styles.inputLabel, styles.aerligLabel]}>Navn</Text>
@@ -5118,6 +5298,37 @@ const styles = StyleSheet.create({
     color: '#E8622A',
     fontWeight: '900',
   },
+  cvModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  cvModalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 420,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 10,
+  },
+  cvModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  cvModalSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 16,
+  },
+
   aerligDangerButton: {
     marginTop: 12,
     backgroundColor: '#FFFFFF',

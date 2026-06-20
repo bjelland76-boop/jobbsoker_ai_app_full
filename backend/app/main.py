@@ -987,6 +987,28 @@ def mark_onboarding_seen(profile_id: int, current_user: User = Depends(get_curre
     return profile_to_dict(profile)
 
 
+@app.post("/profile/import-cv")
+async def import_cv(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    """Extract profile fields from an uploaded CV (PDF, docx, or image)."""
+    from .cv_importer import extract_and_parse
+
+    data = await file.read()
+    if len(data) > 20 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Filen er for stor (maks 20 MB)")
+
+    try:
+        result = extract_and_parse(file.filename or "", file.content_type or "", data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Kunne ikke lese filen: {e}")
+
+    return result
+
+
 @app.get("/settings", response_model=SettingsOut)
 def get_settings(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     s = db.scalars(select(AppSetting).where(AppSetting.user_id == current_user.id)).first()
