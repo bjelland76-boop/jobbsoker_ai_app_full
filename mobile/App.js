@@ -895,7 +895,35 @@ export default function App() {
     }
   }, [showSchoolListIndex, editingEducationIndex]);
 
-  async function _sendCvFile({ uri, name: fileName, mimeType }) {
+  async function _sendCvBlob(blob, fileName, mimeType) {
+    setCvImportLoading(true);
+    setCvImportModalVisible(false);
+    try {
+      const formData = new FormData();
+      formData.append('file', blob, fileName || 'cv');
+      const result = await apiFetch('/profile/import-cv', { method: 'POST', body: formData });
+      setCvImportPreview(result);
+    } catch (e) {
+      Alert.alert('Feil', 'Kunne ikke lese CV-en: ' + (e.message || 'Ukjent feil'));
+    } finally {
+      setCvImportLoading(false);
+    }
+  }
+
+  async function _sendCvFile({ uri, name: fileName, mimeType, nativeFile }) {
+    // On web, use the native File object directly (URI is a blob: URL that fetch can't read as FormData)
+    if (Platform.OS === 'web' && nativeFile) {
+      await _sendCvBlob(nativeFile, fileName, mimeType);
+      return;
+    }
+    // On web without nativeFile, fetch the blob from the URI
+    if (Platform.OS === 'web') {
+      const resp = await fetch(uri);
+      const blob = await resp.blob();
+      await _sendCvBlob(blob, fileName, mimeType);
+      return;
+    }
+    // Native: use React Native's {uri, name, type} FormData shorthand
     setCvImportLoading(true);
     setCvImportModalVisible(false);
     try {
@@ -918,7 +946,7 @@ export default function App() {
       });
       if (result.canceled) return;
       const asset = result.assets[0];
-      await _sendCvFile({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType });
+      await _sendCvFile({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType, nativeFile: asset.file });
     } catch (e) {
       Alert.alert('Feil', 'Kunne ikke velge fil: ' + (e.message || 'Ukjent feil'));
     }
