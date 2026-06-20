@@ -3121,8 +3121,24 @@ export default function App() {
     }
   }
 
-  const renderProfile = () => (
-    <View style={styles.aerligHomeWrap}>
+  const renderProfile = () => {
+    const _initials = (name || '').trim().split(/\s+/).slice(0, 2).map((w) => (w[0] || '').toUpperCase()).join('');
+    const _skillsList = skills ? skills.split(',').map((s) => s.trim()).filter(Boolean) : [];
+    let _strength = 0;
+    if (name && name.trim() && name.trim() !== 'Ærlig JobbCoach') _strength += 10;
+    if (profileEmail) _strength += 10;
+    if (phone) _strength += 10;
+    if (address) _strength += 10;
+    if (profilePhotoData) _strength += 10;
+    if (experienceEntries.length > 0) _strength += 20;
+    if (educationEntries.length > 0) _strength += 15;
+    if (_skillsList.length >= 3) _strength += 15;
+    const _city = postalPlace || address || '—';
+    const _visibleSkills = _skillsList.slice(0, 6);
+    const _extraSkills = _skillsList.length - _visibleSkills.length;
+
+    return (
+    <View style={[styles.aerligHomeWrap, { backgroundColor: '#F7F5F0' }]}>
       <View style={styles.aerligPageCard}>
         <Text style={styles.aerligPageTitle}>Profil</Text>
         <Text style={styles.aerligPageSubtitle}>Personopplysninger, erfaring og referanser.</Text>
@@ -3255,6 +3271,68 @@ export default function App() {
               </View>
             </View>
           </Modal>
+        )}
+
+        {/* Variant C: profile summary header */}
+        <View style={styles.profileSummaryHeader}>
+          <View style={styles.profileAvatar}>
+            <Text style={styles.profileAvatarText}>{_initials || '?'}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.profileSummaryName}>{name || 'Navn'}</Text>
+            <Text style={styles.profileSummaryStrengthLabel}>Profilstyrke: {_strength}%</Text>
+            <View style={styles.profileStrengthTrack}>
+              <View style={[styles.profileStrengthFill, { width: `${_strength}%` }]} />
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.profileCardGrid}>
+          <View style={styles.profileSummaryCard}>
+            <Text style={styles.profileCardIcon}>📱</Text>
+            <Text style={styles.profileCardLabel}>Telefon</Text>
+            <Text style={styles.profileCardValue} numberOfLines={1}>{phone || '—'}</Text>
+          </View>
+          <View style={styles.profileSummaryCard}>
+            <Text style={styles.profileCardIcon}>📍</Text>
+            <Text style={styles.profileCardLabel}>Sted</Text>
+            <Text style={styles.profileCardValue} numberOfLines={1}>{_city}</Text>
+          </View>
+          <View style={styles.profileSummaryCard}>
+            <Text style={styles.profileCardIcon}>💼</Text>
+            <Text style={styles.profileCardLabel}>Erfaring</Text>
+            <Text style={styles.profileCardValue}>
+              {experienceEntries.length > 0 ? `${experienceEntries.length} stilling${experienceEntries.length === 1 ? '' : 'er'}` : '—'}
+            </Text>
+          </View>
+          <View style={styles.profileSummaryCard}>
+            <Text style={styles.profileCardIcon}>🎓</Text>
+            <Text style={styles.profileCardLabel}>Utdanning</Text>
+            <Text style={styles.profileCardValue}>
+              {educationEntries.length > 0 ? `${educationEntries.length} grad${educationEntries.length === 1 ? '' : 'er'}` : '—'}
+            </Text>
+          </View>
+        </View>
+
+        {_skillsList.length > 0 && (
+          <View style={[styles.profileSummaryCard, { marginBottom: 16, flexGrow: 0 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 }}>
+              <Text style={styles.profileCardIcon}>⚡</Text>
+              <Text style={[styles.profileCardLabel, { marginBottom: 0 }]}>Ferdigheter</Text>
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+              {_visibleSkills.map((s, i) => (
+                <View key={i} style={styles.profileSkillChip}>
+                  <Text style={styles.profileSkillChipText}>{s}</Text>
+                </View>
+              ))}
+              {_extraSkills > 0 && (
+                <View style={[styles.profileSkillChip, styles.profileSkillChipExtra]}>
+                  <Text style={[styles.profileSkillChipText, { color: '#6B7280' }]}>+{_extraSkills} til</Text>
+                </View>
+              )}
+            </View>
+          </View>
         )}
 
         <View style={styles.profileField}>
@@ -3955,6 +4033,7 @@ export default function App() {
       </View>
     </View>
   );
+  };
 
   if (!authReady) {
     return (
@@ -5724,5 +5803,96 @@ const styles = StyleSheet.create({
   },
   aerligRowActionTextDanger: {
     color: THEME.colors.danger,
+  },
+
+  // Variant C profile summary
+  profileSummaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  profileAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: '#E8501A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  profileAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '500',
+  },
+  profileSummaryName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  profileSummaryStrengthLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  profileStrengthTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#E8E6E0',
+    overflow: 'hidden',
+  },
+  profileStrengthFill: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#E8501A',
+  },
+  profileCardGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 12,
+  },
+  profileSummaryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 0.5,
+    borderColor: '#E8E6E0',
+    flex: 1,
+    minWidth: '45%',
+  },
+  profileCardIcon: {
+    fontSize: 18,
+    marginBottom: 4,
+  },
+  profileCardLabel: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginBottom: 2,
+  },
+  profileCardValue: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  profileSkillChip: {
+    backgroundColor: '#FEF2EE',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#FDDDD4',
+  },
+  profileSkillChipText: {
+    fontSize: 12,
+    color: '#E8501A',
+    fontWeight: '500',
+  },
+  profileSkillChipExtra: {
+    backgroundColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
   },
 });
