@@ -199,6 +199,12 @@ THEME = THEME_PROFESJONELL  # backward-compat alias
 
 # CV section titles produced by the LLM (tailored_cv is plain text).
 # We only use these to improve rendering/layout; we do NOT change content.
+# Matches standalone year or year-range lines produced by the LLM, e.g. "2013–2016", "2022–nå"
+_YEAR_ONLY_RE = re.compile(
+    r'^(?:(?:19|20)\d{2})(?:\s*[–\-]\s*(?:(?:19|20)\d{2}|nå|Nå|present|Present))?\s*$'
+)
+
+
 CV_SECTION_TITLES: list[str] = [
     "Profesjonell oppsummering",
     "Kjerneferdigheter",
@@ -612,30 +618,18 @@ class _SidebarPdfDoc:
 
         return (s, "")
 
-    def _cv_entry_header(self, title_line: str) -> None:
-        """Render an experience entry header: title (bold) + period right-aligned, then employer on next line."""
-
+    def _cv_entry_header_fields(self, title: str, employer: str, period: str) -> None:
+        """Render a pre-parsed experience entry: title (bold) + period (right), employer below."""
         c = self.c
-        left, period = self._extract_period_tail(title_line)
-
-        # Split "Job Title – Employer" or "Job Title | Employer" into two parts
-        m = re.search(r'\s+[–\-|]\s+', left)
-        if m:
-            title_part = left[:m.start()].strip()
-            employer_part = left[m.end():].strip()
-        else:
-            title_part = left or title_line
-            employer_part = ""
-
-        space_needed = (0.57 + (0.48 if employer_part else 0)) * cm + 0.3 * cm
+        space_needed = (0.57 + (0.48 if employer else 0)) * cm + 0.3 * cm
         self._ensure_space(space_needed)
 
-        # Title line: 11.5pt bold, near-black
+        # Title: 11.5pt bold, near-black
         c.setFillColor(self.theme.text)
         c.setFont("Helvetica-Bold", 11.5)
-        c.drawString(self.main_left, self.y, title_part)
+        c.drawString(self.main_left, self.y, title)
 
-        # Period: 9pt italic, light grey — right-aligned on same line as title
+        # Period: 9pt italic, light grey, right-aligned
         if period:
             c.setFillColor(colors.HexColor("#94a3b8"))
             c.setFont("Helvetica-Oblique", 9)
@@ -643,15 +637,26 @@ class _SidebarPdfDoc:
 
         self.y -= 0.54 * cm
 
-        # Employer line: 10.5pt normal, muted grey
-        if employer_part:
+        # Employer: 10.5pt normal, muted grey
+        if employer:
             c.setFillColor(self.theme.muted)
             c.setFont("Helvetica", 10.5)
-            c.drawString(self.main_left, self.y, employer_part)
+            c.drawString(self.main_left, self.y, employer)
             self.y -= 0.48 * cm
 
-        # Small gap before description bullets (margin-top ~4px)
-        self.y -= 0.10 * cm
+        self.y -= 0.10 * cm  # gap before description
+
+    def _cv_entry_header(self, title_line: str) -> None:
+        """Parse a combined 'Title – Employer (period)' line and delegate to _cv_entry_header_fields."""
+        left, period = self._extract_period_tail(title_line)
+        m = re.search(r'\s+[–\-|]\s+', left)
+        if m:
+            title = left[:m.start()].strip()
+            employer = left[m.end():].strip()
+        else:
+            title = left or title_line
+            employer = ""
+        self._cv_entry_header_fields(title, employer, period)
 
     def _draw_cv_text(self, text: str) -> None:
         """Render the AI-produced tailored_cv with improved layout.
@@ -759,41 +764,103 @@ class _SidebarPdfDoc:
 
             sec_cf = section_title.casefold()
 
-            # Experience / education: treat non-bullet lines as entry headers.
+            # Experience / education: smart multi-format entry rendering.
             if sec_cf in _SEC_EXPERIENCE:
-                entry_bullets: list[str] = []
-                first_entry = True
-
+                # Group lines into per-entry chunks using blank lines as separators.
+                chunks: list[list[str]] = []
+                cur_chunk: list[str] = []
                 for ln in content:
                     s = (ln or "").strip()
                     if not s:
-                        if entry_bullets:
-                            self._cv_bullet_lines(entry_bullets)
-                            entry_bullets = []
+                        if cur_chunk:
+                            chunks.append(cur_chunk)
+                            cur_chunk = []
+                    elif not _is_placeholder_line(s):
+                        cur_chunk.append(s)
+                if cur_chunk:
+                    chunks.append(cur_chunk)
+
+                # No blank-line separation: try to split on title boundary heuristic.
+                if len(chunks) == 1:
+                    rechunked: list[list[str]] = []
+                    running: list[str] = []
+                    past_period = False
+                    for s in chunks[0]:
+                        is_yr = bool(_YEAR_ONLY_RE.match(s))
+                        is_b = s.startswith(("•", "-"))
+                        if past_period and not is_yr and not is_b:
+                            # Short line with no sentence-ending → likely a new title
+                            if len(s) <= 60 and s[-1:] not in ".!?":
+                                rechunked.append(running)
+                                running = [s]
+                                past_period = False
+                                continue
+                        if is_yr:
+                            past_period = True
+                        running.append(s)
+                    if running:
+                        rechunked.append(running)
+                    if len(rechunked) > 1:
+                        chunks = rechunked
+
+                first_entry = True
+                for chunk in chunks:
+                    if not chunk:
                         continue
-
-                    # Skip placeholder/noise lines inside the section.
-                    if _is_placeholder_line(s):
-                        continue
-
-                    is_bullet = s.startswith("•") or s.startswith("-")
-
-                    if is_bullet:
-                        entry_bullets.append(s)
-                        continue
-
-                    if entry_bullets:
-                        self._cv_bullet_lines(entry_bullets)
-                        entry_bullets = []
-
                     if not first_entry:
                         self.y -= self.theme.entry_gap * cm
                     first_entry = False
 
-                    self._cv_entry_header(s)
+                    # Parse chunk into title / employer / period / desc_lines
+                    first_line = chunk[0]
+                    rest = chunk[1:]
 
-                if entry_bullets:
-                    self._cv_bullet_lines(entry_bullets)
+                    # Detect combined "Title – Employer (period)" or "Title – Employer 2020–2023"
+                    m_par = re.search(r'\(([^)]*(?:19|20)\d{2}[^)]*)\)\s*$', first_line)
+                    m_trail = re.search(
+                        r'((?:19|20)\d{2}[^\n]{0,18}(?:–|-)\s*(?:(?:19|20)\d{2}|nå|Nå|present|Present))\s*$',
+                        first_line,
+                    )
+                    m_sep = re.search(r'\s+[–\-|]\s+', first_line)
+
+                    if m_sep and (m_par or m_trail):
+                        # Combined format
+                        if m_par:
+                            period = m_par.group(1).strip()
+                            left = first_line[:m_par.start()].strip(" -–—|")
+                        else:
+                            period = m_trail.group(1).strip()
+                            left = first_line[:m_trail.start()].strip(" -–—|")
+                        ms = re.search(r'\s+[–\-|]\s+', left)
+                        if ms:
+                            title = left[:ms.start()].strip()
+                            employer = left[ms.end():].strip()
+                        else:
+                            title = left
+                            employer = ""
+                        desc_lines = rest
+                    else:
+                        # Separate-line format: Title / Employer / Period / Desc
+                        title = first_line
+                        employer = ""
+                        period = ""
+                        idx = 0
+                        if idx < len(rest) and not bool(_YEAR_ONLY_RE.match(rest[idx])) and not rest[idx].startswith(("•", "-")):
+                            employer = rest[idx]
+                            idx += 1
+                        if idx < len(rest) and bool(_YEAR_ONLY_RE.match(rest[idx])):
+                            period = rest[idx]
+                            idx += 1
+                        desc_lines = rest[idx:]
+
+                    self._cv_entry_header_fields(title, employer, period)
+
+                    bullets = [s for s in desc_lines if s.startswith(("•", "-"))]
+                    prose = [s for s in desc_lines if not s.startswith(("•", "-"))]
+                    if prose:
+                        self._cv_paragraph("\n".join(prose))
+                    if bullets:
+                        self._cv_bullet_lines(bullets)
 
             # Bullet-friendly sections.
             elif sec_cf in _SEC_BULLETS:
@@ -1308,25 +1375,16 @@ class _ClassicPdfDoc:
             return (s[: m.start()].strip(" -–—|"), (m.group(1) or "").strip())
         return (s, "")
 
-    def _cv_entry_header(self, title_line: str) -> None:
+    def _cv_entry_header_fields(self, title: str, employer: str, period: str) -> None:
+        """Render a pre-parsed experience entry."""
         c = self.c
-        left, period = self._extract_period_tail(title_line)
-
-        m = re.search(r'\s+[–\-|]\s+', left)
-        if m:
-            title_part = left[:m.start()].strip()
-            employer_part = left[m.end():].strip()
-        else:
-            title_part = left or title_line
-            employer_part = ""
-
-        space_needed = (0.57 + (0.48 if employer_part else 0)) * cm + 0.3 * cm
+        space_needed = (0.57 + (0.48 if employer else 0)) * cm + 0.3 * cm
         self._ensure_space(space_needed)
 
         # Title: 11.5pt bold serif, near-black
         c.setFillColor(self._COLOR_BLACK)
         c.setFont(self._FONT_HEAD, 11.5)
-        c.drawString(self.left, self.y, title_part)
+        c.drawString(self.left, self.y, title)
         # Period: 9pt italic, light grey
         if period:
             c.setFillColor(colors.HexColor("#94a3b8"))
@@ -1335,14 +1393,25 @@ class _ClassicPdfDoc:
         self.y -= 0.54 * cm
 
         # Employer: 10.5pt normal, dark grey
-        if employer_part:
+        if employer:
             c.setFillColor(self._COLOR_MID)
             c.setFont(self._FONT_BODY, 10.5)
-            c.drawString(self.left, self.y, employer_part)
+            c.drawString(self.left, self.y, employer)
             self.y -= 0.48 * cm
 
-        # Small gap before description bullets (margin-top ~4px)
-        self.y -= 0.10 * cm
+        self.y -= 0.10 * cm  # gap before description
+
+    def _cv_entry_header(self, title_line: str) -> None:
+        """Parse a combined 'Title – Employer (period)' line and delegate."""
+        left, period = self._extract_period_tail(title_line)
+        m = re.search(r'\s+[–\-|]\s+', left)
+        if m:
+            title = left[:m.start()].strip()
+            employer = left[m.end():].strip()
+        else:
+            title = left or title_line
+            employer = ""
+        self._cv_entry_header_fields(title, employer, period)
 
     def _draw_cv_text(self, text: str) -> None:
         """Render AI-produced tailored_cv — same section logic as sidebar variant."""
@@ -1413,29 +1482,96 @@ class _ClassicPdfDoc:
             sec_cf = sec_title.casefold()
 
             if sec_cf in _SEC_EXPERIENCE:
-                entry_bullets: list[str] = []
-                first = True
+                # Group by blank lines into per-entry chunks
+                chunks: list[list[str]] = []
+                cur_chunk: list[str] = []
                 for ln in content:
                     s = (ln or "").strip()
                     if not s:
-                        if entry_bullets:
-                            self._cv_bullet_lines(entry_bullets)
-                            entry_bullets = []
+                        if cur_chunk:
+                            chunks.append(cur_chunk)
+                            cur_chunk = []
+                    elif not _is_placeholder(s):
+                        cur_chunk.append(s)
+                if cur_chunk:
+                    chunks.append(cur_chunk)
+
+                if len(chunks) == 1:
+                    rechunked: list[list[str]] = []
+                    running: list[str] = []
+                    past_period = False
+                    for s in chunks[0]:
+                        is_yr = bool(_YEAR_ONLY_RE.match(s))
+                        is_b = s.startswith(("•", "-"))
+                        if past_period and not is_yr and not is_b:
+                            if len(s) <= 60 and s[-1:] not in ".!?":
+                                rechunked.append(running)
+                                running = [s]
+                                past_period = False
+                                continue
+                        if is_yr:
+                            past_period = True
+                        running.append(s)
+                    if running:
+                        rechunked.append(running)
+                    if len(rechunked) > 1:
+                        chunks = rechunked
+
+                first = True
+                for chunk in chunks:
+                    if not chunk:
                         continue
-                    if _is_placeholder(s):
-                        continue
-                    if s.startswith("•") or s.startswith("-"):
-                        entry_bullets.append(s)
+                    if not first:
+                        self.y -= 0.42 * cm
+                    first = False
+
+                    first_line = chunk[0]
+                    rest = chunk[1:]
+
+                    m_par = re.search(r'\(([^)]*(?:19|20)\d{2}[^)]*)\)\s*$', first_line)
+                    m_trail = re.search(
+                        r'((?:19|20)\d{2}[^\n]{0,18}(?:–|-)\s*(?:(?:19|20)\d{2}|nå|Nå|present|Present))\s*$',
+                        first_line,
+                    )
+                    m_sep = re.search(r'\s+[–\-|]\s+', first_line)
+
+                    if m_sep and (m_par or m_trail):
+                        if m_par:
+                            period = m_par.group(1).strip()
+                            left = first_line[:m_par.start()].strip(" -–—|")
+                        else:
+                            period = m_trail.group(1).strip()
+                            left = first_line[:m_trail.start()].strip(" -–—|")
+                        ms = re.search(r'\s+[–\-|]\s+', left)
+                        if ms:
+                            title = left[:ms.start()].strip()
+                            employer = left[ms.end():].strip()
+                        else:
+                            title = left
+                            employer = ""
+                        desc_lines = rest
                     else:
-                        if entry_bullets:
-                            self._cv_bullet_lines(entry_bullets)
-                            entry_bullets = []
-                        if not first:
-                            self.y -= 0.42 * cm
-                        first = False
-                        self._cv_entry_header(s)
-                if entry_bullets:
-                    self._cv_bullet_lines(entry_bullets)
+                        title = first_line
+                        employer = ""
+                        period = ""
+                        idx = 0
+                        if idx < len(rest) and not bool(_YEAR_ONLY_RE.match(rest[idx])) and not rest[idx].startswith(("•", "-")):
+                            employer = rest[idx]
+                            idx += 1
+                        if idx < len(rest) and bool(_YEAR_ONLY_RE.match(rest[idx])):
+                            period = rest[idx]
+                            idx += 1
+                        desc_lines = rest[idx:]
+
+                    self._cv_entry_header_fields(title, employer, period)
+
+                    bullets = [s for s in desc_lines if s.startswith(("•", "-"))]
+                    prose = [s for s in desc_lines if not s.startswith(("•", "-"))]
+                    if prose:
+                        self._cv_paragraph("\n".join(prose))
+                    if bullets:
+                        self._cv_bullet_lines(bullets)
+
             elif sec_cf in _SEC_BULLETS:
                 real = [ln for ln in content if not _is_placeholder(ln)]
                 bulletish = [ln for ln in real if (ln or "").strip().startswith(("•", "-"))]
