@@ -251,6 +251,9 @@ export default function App() {
   const [editEducation, setEditEducation] = useState(false);
   const [editingExperienceIndex, setEditingExperienceIndex] = useState(-1);
   const [editingEducationIndex, setEditingEducationIndex] = useState(-1);
+  const [expandExpCard, setExpandExpCard] = useState(false);
+  const [expandEduCard, setExpandEduCard] = useState(false);
+  const [expandSkillsCard, setExpandSkillsCard] = useState(false);
 
   const [applications, setApplications] = useState([]);
   const [applicationsLoading, setApplicationsLoading] = useState(false);
@@ -3287,7 +3290,8 @@ export default function App() {
           </View>
         </View>
 
-        <View style={styles.profileCardGrid}>
+        {/* 2-col row: phone + location */}
+        <View style={styles.profileCardRow}>
           <View style={styles.profileSummaryCard}>
             <Text style={styles.profileCardIcon}>📱</Text>
             <Text style={styles.profileCardLabel}>Telefon</Text>
@@ -3298,29 +3302,383 @@ export default function App() {
             <Text style={styles.profileCardLabel}>Sted</Text>
             <Text style={styles.profileCardValue} numberOfLines={1}>{_city}</Text>
           </View>
-          <View style={styles.profileSummaryCard}>
-            <Text style={styles.profileCardIcon}>💼</Text>
-            <Text style={styles.profileCardLabel}>Erfaring</Text>
-            <Text style={styles.profileCardValue}>
-              {experienceEntries.length > 0 ? `${experienceEntries.length} stilling${experienceEntries.length === 1 ? '' : 'er'}` : '—'}
-            </Text>
-          </View>
-          <View style={styles.profileSummaryCard}>
-            <Text style={styles.profileCardIcon}>🎓</Text>
-            <Text style={styles.profileCardLabel}>Utdanning</Text>
-            <Text style={styles.profileCardValue}>
-              {educationEntries.length > 0 ? `${educationEntries.length} grad${educationEntries.length === 1 ? '' : 'er'}` : '—'}
-            </Text>
-          </View>
         </View>
 
-        {_skillsList.length > 0 && (
-          <View style={[styles.profileSummaryCard, { marginBottom: 16, flexGrow: 0 }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 }}>
-              <Text style={styles.profileCardIcon}>⚡</Text>
+        {/* Experience accordion card */}
+        <View style={[styles.profileSummaryCardFull, { marginBottom: 12 }]}>
+          <TouchableOpacity
+            onPress={() => setExpandExpCard((v) => {
+              const next = !v;
+              if (!next) setEditingExperienceIndex(-1);
+              return next;
+            })}
+            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+            activeOpacity={0.7}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={[styles.profileCardIcon, { marginBottom: 0 }]}>💼</Text>
+              <View>
+                <Text style={styles.profileCardLabel}>Erfaring</Text>
+                <Text style={styles.profileCardValue}>
+                  {experienceEntries.length > 0 ? `${experienceEntries.length} stilling${experienceEntries.length === 1 ? '' : 'er'}` : 'Ingen lagt til'}
+                </Text>
+              </View>
+            </View>
+            <Text style={{ color: '#6B7280', fontSize: 14 }}>{expandExpCard ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+
+          {expandExpCard && (
+            <View style={{ marginTop: 12 }}>
+              <View style={{ height: 1, backgroundColor: '#E8E6E0', marginBottom: 12 }} />
+              {experienceEntries.map((entry, index) => (
+                <View key={index} style={[styles.aerligCard, styles.aerligListRow]}>
+                  <View style={[styles.aerligEntryHeader, styles.aerligListRowHeader]}>
+                    <View style={{ flex: 1, paddingRight: 10 }}>
+                      <Text style={styles.aerligEntryTitle} numberOfLines={1}>{entry.title || 'Stillingstittel'}</Text>
+                      <Text style={styles.aerligEntrySub} numberOfLines={1}>{entry.company || 'Arbeidsgiver'}</Text>
+                    </View>
+                    <Text style={styles.aerligEntryYears} numberOfLines={1}>
+                      {`${(entry.from || '—').trim() || '—'}–${entry.current ? 'nå' : (((entry.to || '—').trim()) || '—')}`}
+                    </Text>
+                  </View>
+
+                  <View style={styles.aerligRowActions}>
+                    <TouchableOpacity
+                      style={[styles.filterChip, styles.aerligFilterChip, styles.aerligRowActionChip]}
+                      onPress={() => setEditingExperienceIndex((cur) => (cur === index ? -1 : index))}
+                    >
+                      <Text style={[styles.filterChipText, styles.aerligFilterChipText]}>
+                        {editingExperienceIndex === index ? 'Ferdig' : 'Rediger'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.filterChip, styles.aerligFilterChip, styles.aerligRowActionChip, styles.aerligRowActionChipDanger]}
+                      onPress={() => {
+                        setExperienceEntries((prev) => (prev || []).filter((_, i) => i !== index));
+                        setEditingExperienceIndex((cur) => {
+                          if (cur === index) return -1;
+                          if (cur > index) return cur - 1;
+                          return cur;
+                        });
+                      }}
+                    >
+                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, styles.aerligRowActionTextDanger]}>Fjern</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {editingExperienceIndex === index ? (
+                    <>
+                      <View style={styles.aerligEntryEditRow}>
+                        <TextInput
+                          style={[styles.input, styles.aerligInput, styles.aerligInputCompact, { flex: 1, marginRight: 8 }]}
+                          value={entry.title}
+                          placeholder="Stillingstittel"
+                          onChangeText={(value) => {
+                            const items = [...experienceEntries];
+                            items[index].title = value;
+                            setExperienceEntries(items);
+                          }}
+                        />
+                        <TextInput
+                          style={[styles.input, styles.aerligInput, styles.aerligInputCompact, { flex: 1, marginRight: 0 }]}
+                          value={entry.company}
+                          placeholder="Arbeidsgiver"
+                          onChangeText={(value) => {
+                            const items = [...experienceEntries];
+                            items[index].company = value;
+                            setExperienceEntries(items);
+                          }}
+                        />
+                      </View>
+
+                      <View style={[styles.aerligEntryEditRow, { alignItems: 'center', marginBottom: 8 }]}>
+                        <TouchableOpacity
+                          style={[styles.checkbox, styles.aerligCheckbox, { marginLeft: 0 }, entry.current && styles.aerligCheckboxOn]}
+                          onPress={() => {
+                            const items = [...experienceEntries];
+                            const next = !items[index].current;
+                            items[index].current = next;
+                            if (next) items[index].to = '';
+                            setExperienceEntries(items);
+                          }}
+                        >
+                          <Text style={[styles.checkboxText, styles.aerligCheckboxText, entry.current && styles.aerligCheckboxTextOn]}>{entry.current ? '✓' : ''}</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.aerligInlineNote}>Jobber her fremdeles</Text>
+                      </View>
+
+                      <View style={styles.aerligEntryEditRow}>
+                        <TextInput
+                          style={[styles.input, styles.aerligInput, styles.aerligInputCompact, styles.inlineInput]}
+                          value={entry.from || ''}
+                          placeholder="Fra (år/mnd)"
+                          onChangeText={(value) => {
+                            const items = [...experienceEntries];
+                            items[index].from = value;
+                            setExperienceEntries(items);
+                          }}
+                        />
+                        <TextInput
+                          style={[styles.input, styles.aerligInput, styles.aerligInputCompact, styles.inlineInput, { marginRight: 0 }, entry.current && { opacity: 0.6 }]}
+                          value={entry.current ? 'Nå' : (entry.to || '')}
+                          placeholder={entry.current ? 'Nå' : 'Til (år/mnd)'}
+                          editable={!entry.current}
+                          onChangeText={(value) => {
+                            const items = [...experienceEntries];
+                            items[index].to = value;
+                            setExperienceEntries(items);
+                          }}
+                        />
+                      </View>
+                    </>
+                  ) : null}
+                </View>
+              ))}
+
+              <TouchableOpacity
+                style={[styles.smallButton, styles.aerligSmallButton]}
+                onPress={() => {
+                  const next = [...(experienceEntries || []), { title: '', company: '', from: '', to: '', current: false }];
+                  setExperienceEntries(next);
+                  setEditingExperienceIndex(next.length - 1);
+                }}
+              >
+                <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>+ Legg til erfaring</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {/* Education accordion card */}
+        <View style={[styles.profileSummaryCardFull, { marginBottom: 12 }]}>
+          <TouchableOpacity
+            onPress={() => setExpandEduCard((v) => {
+              const next = !v;
+              if (!next) {
+                setEditingEducationIndex(-1);
+                setShowSchoolListIndex(-1);
+                setSchoolFilter('');
+              }
+              return next;
+            })}
+            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+            activeOpacity={0.7}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={[styles.profileCardIcon, { marginBottom: 0 }]}>🎓</Text>
+              <View>
+                <Text style={styles.profileCardLabel}>Utdanning</Text>
+                <Text style={styles.profileCardValue}>
+                  {educationEntries.length > 0 ? `${educationEntries.length} grad${educationEntries.length === 1 ? '' : 'er'}` : 'Ingen lagt til'}
+                </Text>
+              </View>
+            </View>
+            <Text style={{ color: '#6B7280', fontSize: 14 }}>{expandEduCard ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+
+          {expandEduCard && (
+            <View style={{ marginTop: 12 }}>
+              <View style={{ height: 1, backgroundColor: '#E8E6E0', marginBottom: 12 }} />
+              {educationEntries.map((entry, index) => (
+                <View key={index} style={[styles.aerligCard, styles.aerligListRow]}>
+                  <View style={[styles.aerligEntryHeader, styles.aerligListRowHeader]}>
+                    <View style={{ flex: 1, paddingRight: 10 }}>
+                      <Text style={styles.aerligEntryTitle} numberOfLines={1}>{entry.school || 'Skole'}</Text>
+                      <Text style={styles.aerligEntrySub} numberOfLines={1}>{entry.degree || 'Studie/program'}</Text>
+                    </View>
+                    <Text style={styles.aerligEntryYears} numberOfLines={1}>
+                      {`${(entry.from || '—').trim() || '—'}–${((entry.to || '—').trim()) || '—'}`}
+                    </Text>
+                  </View>
+
+                  <View style={styles.aerligRowActions}>
+                    <TouchableOpacity
+                      style={[styles.filterChip, styles.aerligFilterChip, styles.aerligRowActionChip]}
+                      onPress={() => {
+                        setEditingEducationIndex((cur) => (cur === index ? -1 : index));
+                        setShowSchoolListIndex(-1);
+                        setSchoolFilter('');
+                      }}
+                    >
+                      <Text style={[styles.filterChipText, styles.aerligFilterChipText]}>
+                        {editingEducationIndex === index ? 'Ferdig' : 'Rediger'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.filterChip, styles.aerligFilterChip, styles.aerligRowActionChip, styles.aerligRowActionChipDanger]}
+                      onPress={() => {
+                        setEducationEntries((prev) => (prev || []).filter((_, i) => i !== index));
+                        setEditingEducationIndex((cur) => {
+                          if (cur === index) return -1;
+                          if (cur > index) return cur - 1;
+                          return cur;
+                        });
+                        setShowSchoolListIndex((cur) => {
+                          if (cur === index) return -1;
+                          if (cur > index) return cur - 1;
+                          return cur;
+                        });
+                        if (showSchoolListIndex === index) setSchoolFilter('');
+                      }}
+                    >
+                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, styles.aerligRowActionTextDanger]}>Fjern</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {editingEducationIndex === index ? (
+                    <>
+                      <View style={styles.aerligEntryEditRow}>
+                        <TouchableOpacity
+                          style={[styles.input, styles.aerligInput, styles.aerligInputCompact, { flex: 1, marginRight: 8 }]}
+                          onPress={() => {
+                            setShowSchoolListIndex(index);
+                            setSchoolFilter('');
+                            setSchoolKindFilter('all');
+                            setSchoolResults([]);
+                          }}
+                        >
+                          <Text style={entry.school ? styles.aerligInputText : styles.aerligPlaceholderText}>
+                            {entry.school || 'Velg skole'}
+                          </Text>
+                        </TouchableOpacity>
+                        <TextInput
+                          style={[styles.input, styles.aerligInput, styles.aerligInputCompact, { flex: 1, marginRight: 0 }]}
+                          value={entry.degree}
+                          placeholder="Grad / studieretning"
+                          onChangeText={(value) => {
+                            const items = [...educationEntries];
+                            items[index].degree = value;
+                            setEducationEntries(items);
+                          }}
+                        />
+                      </View>
+
+                      {showSchoolListIndex === index && (
+                        <View style={[styles.dropdownList, styles.aerligDropdownList]}>
+                          <TextInput
+                            style={[styles.input, styles.aerligInput, { margin: 8 }]}
+                            placeholder="Søk: videregående, universitet eller nettskole..."
+                            value={schoolFilter}
+                            onChangeText={setSchoolFilter}
+                            autoCapitalize="words"
+                          />
+                          <View style={[styles.filterChipRow, styles.aerligFilterChipRow]}>
+                            {[
+                              { key: 'all', label: 'Alle' },
+                              { key: 'vgs', label: 'VGS' },
+                              { key: 'universitet', label: 'Uni/høyskole' },
+                              { key: 'nettskole', label: 'Nettskole' },
+                            ].map((item) => {
+                              const active = schoolKindFilter === item.key;
+                              return (
+                                <TouchableOpacity
+                                  key={item.key}
+                                  style={[styles.filterChip, styles.aerligFilterChip, active && styles.aerligFilterChipActive]}
+                                  onPress={() => setSchoolKindFilter(item.key)}
+                                >
+                                  <Text style={[styles.filterChipText, styles.aerligFilterChipText, active && styles.aerligFilterChipTextActive]}>{item.label}</Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                          {schoolFilter.trim().length < 2 ? (
+                            <Text style={[styles.helpText, styles.aerligHelpText, { marginLeft: 12, marginBottom: 8 }]}>Skriv minst 2 bokstaver for forslag.</Text>
+                          ) : null}
+                          {schoolResultsLoading ? (
+                            <Text style={[styles.helpText, styles.aerligHelpText, { marginLeft: 12, marginBottom: 8 }]}>Laster skoler...</Text>
+                          ) : null}
+                          {!schoolResultsLoading && schoolFilter.trim().length >= 2 && (
+                            (schoolResults.length === 0 &&
+                              schoolOptions.filter((s) => s.toLowerCase().includes(schoolFilter.toLowerCase())).length === 0)
+                          ) ? (
+                            <Text style={[styles.helpText, styles.aerligHelpText, { marginLeft: 12, marginBottom: 8 }]}>Ingen treff.</Text>
+                          ) : null}
+                          {(schoolFilter.trim().length >= 2
+                            ? (schoolResults.length > 0
+                                ? schoolResults
+                                : schoolOptions
+                                    .filter((s) => s.toLowerCase().includes(schoolFilter.toLowerCase()))
+                                    .map((name) => ({ name, kind: 'lokal', kommune: null })))
+                            : [])
+                            .map((option) => (
+                              <TouchableOpacity
+                                key={option.name}
+                                style={styles.dropdownItem}
+                                onPress={() => {
+                                  const items = [...educationEntries];
+                                  items[index].school = option.name;
+                                  setEducationEntries(items);
+                                  setShowSchoolListIndex(-1);
+                                  setSchoolFilter('');
+                                }}
+                              >
+                                <Text style={[styles.dropdownItemText, styles.aerligDropdownItemText]}>{option.name}</Text>
+                                {option.kind || option.kommune ? (
+                                  <Text style={[styles.dropdownItemSub, styles.aerligDropdownItemSub]}>
+                                    {[option.kind, option.kommune].filter(Boolean).join(' • ')}
+                                  </Text>
+                                ) : null}
+                              </TouchableOpacity>
+                            ))}
+                        </View>
+                      )}
+
+                      <View style={styles.aerligEntryEditRow}>
+                        <TextInput
+                          style={[styles.input, styles.aerligInput, styles.aerligInputCompact, styles.inlineInput]}
+                          value={entry.from}
+                          placeholder="Fra (år/mnd)"
+                          onChangeText={(value) => {
+                            const items = [...educationEntries];
+                            items[index].from = value;
+                            setEducationEntries(items);
+                          }}
+                        />
+                        <TextInput
+                          style={[styles.input, styles.aerligInput, styles.aerligInputCompact, styles.inlineInput, { marginRight: 0 }]}
+                          value={entry.to}
+                          placeholder="Til (år/mnd)"
+                          onChangeText={(value) => {
+                            const items = [...educationEntries];
+                            items[index].to = value;
+                            setEducationEntries(items);
+                          }}
+                        />
+                      </View>
+                    </>
+                  ) : null}
+                </View>
+              ))}
+
+              <TouchableOpacity
+                style={[styles.smallButton, styles.aerligSmallButton]}
+                onPress={() => {
+                  const next = [...(educationEntries || []), { school: '', degree: '', from: '', to: '' }];
+                  setEducationEntries(next);
+                  setEditingEducationIndex(next.length - 1);
+                  setShowSchoolListIndex(-1);
+                  setSchoolFilter('');
+                }}
+              >
+                <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>+ Legg til utdanning</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {/* Skills card with inline edit */}
+        <View style={[styles.profileSummaryCardFull, { marginBottom: 20 }]}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: _skillsList.length > 0 ? 8 : 0 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={[styles.profileCardIcon, { marginBottom: 0 }]}>⚡</Text>
               <Text style={[styles.profileCardLabel, { marginBottom: 0 }]}>Ferdigheter</Text>
             </View>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+            <TouchableOpacity onPress={() => setExpandSkillsCard((v) => !v)}>
+              <Text style={{ fontSize: 12, color: '#E8501A', fontWeight: '500' }}>{expandSkillsCard ? 'Lukk' : 'Rediger'}</Text>
+            </TouchableOpacity>
+          </View>
+          {_skillsList.length > 0 && (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: expandSkillsCard ? 12 : 0 }}>
               {_visibleSkills.map((s, i) => (
                 <View key={i} style={styles.profileSkillChip}>
                   <Text style={styles.profileSkillChipText}>{s}</Text>
@@ -3332,8 +3690,45 @@ export default function App() {
                 </View>
               )}
             </View>
-          </View>
-        )}
+          )}
+          {expandSkillsCard && (
+            <View>
+              <View style={{ height: 1, backgroundColor: '#E8E6E0', marginBottom: 12 }} />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                {skillsItems.map((item, i) => (
+                  <TouchableOpacity
+                    key={`${item}-${i}`}
+                    style={[styles.profileSkillChip, { flexDirection: 'row', alignItems: 'center' }]}
+                    onPress={() => setSkillsItems(skillsItems.filter((_, idx) => idx !== i))}
+                  >
+                    <Text style={styles.profileSkillChipText}>{item} ✕</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TextInput
+                  style={[styles.input, styles.aerligInput, { flex: 1, marginBottom: 0 }]}
+                  value={skillInput}
+                  onChangeText={setSkillInput}
+                  placeholder="Ny ferdighet"
+                  autoCapitalize="sentences"
+                />
+                <TouchableOpacity
+                  style={[styles.aerligSecondaryButton, { marginTop: 0, paddingHorizontal: 16 }]}
+                  onPress={() => {
+                    const v = String(skillInput || '').trim();
+                    if (!v) return;
+                    const exists = skillsItems.some((it) => String(it).toLowerCase() === v.toLowerCase());
+                    if (!exists) setSkillsItems([...skillsItems, v]);
+                    setSkillInput('');
+                  }}
+                >
+                  <Text style={styles.aerligSecondaryButtonText}>Legg til</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </View>
 
         <View style={styles.profileField}>
           <Text style={[styles.inputLabel, styles.aerligLabel]}>Navn</Text>
@@ -3425,409 +3820,6 @@ export default function App() {
             placeholder="Poststed"
             autoCapitalize="words"
           />
-        </View>
-
-        <View style={styles.profileField}>
-          <Text style={[styles.inputLabel, styles.aerligLabel]}>Erfaring</Text>
-
-          <TouchableOpacity
-            style={[styles.smallButton, styles.aerligSmallButton, { marginTop: 0 }]}
-            onPress={() => {
-              setEditExperience((v) => {
-                const next = !v;
-                if (!next) setEditingExperienceIndex(-1);
-                return next;
-              });
-            }}
-          >
-            <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>Rediger erfaring</Text>
-          </TouchableOpacity>
-
-          {experienceEntries.map((entry, index) => (
-            <View key={index} style={[styles.aerligCard, styles.aerligListRow]}>
-              <View style={[styles.aerligEntryHeader, styles.aerligListRowHeader]}>
-                <View style={{ flex: 1, paddingRight: 10 }}>
-                  <Text style={styles.aerligEntryTitle} numberOfLines={1}>{entry.title || 'Stillingstittel'}</Text>
-                  <Text style={styles.aerligEntrySub} numberOfLines={1}>{entry.company || 'Arbeidsgiver'}</Text>
-                </View>
-                <Text style={styles.aerligEntryYears} numberOfLines={1}>
-                  {`${(entry.from || '—').trim() || '—'}–${entry.current ? 'nå' : (((entry.to || '—').trim()) || '—')}`}
-                </Text>
-              </View>
-
-              {editExperience ? (
-                <View style={styles.aerligRowActions}>
-                  <TouchableOpacity
-                    style={[styles.filterChip, styles.aerligFilterChip, styles.aerligRowActionChip]}
-                    onPress={() => {
-                      setEditingExperienceIndex((cur) => (cur === index ? -1 : index));
-                    }}
-                  >
-                    <Text style={[styles.filterChipText, styles.aerligFilterChipText]}>
-                      {editingExperienceIndex === index ? 'Ferdig' : 'Rediger'}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.filterChip, styles.aerligFilterChip, styles.aerligRowActionChip, styles.aerligRowActionChipDanger]}
-                    onPress={() => {
-                      setExperienceEntries((prev) => (prev || []).filter((_, i) => i !== index));
-                      setEditingExperienceIndex((cur) => {
-                        if (cur === index) return -1;
-                        if (cur > index) return cur - 1;
-                        return cur;
-                      });
-                    }}
-                  >
-                    <Text style={[styles.filterChipText, styles.aerligFilterChipText, styles.aerligRowActionTextDanger]}>Fjern</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : null}
-
-              {editExperience && editingExperienceIndex === index ? (
-                <>
-                  <View style={styles.aerligEntryEditRow}>
-                    <TextInput
-                      style={[styles.input, styles.aerligInput, styles.aerligInputCompact, { flex: 1, marginRight: 8 }]}
-                      value={entry.title}
-                      placeholder="Stillingstittel"
-                      onChangeText={(value) => {
-                        const items = [...experienceEntries];
-                        items[index].title = value;
-                        setExperienceEntries(items);
-                      }}
-                    />
-                    <TextInput
-                      style={[styles.input, styles.aerligInput, styles.aerligInputCompact, { flex: 1, marginRight: 0 }]}
-                      value={entry.company}
-                      placeholder="Arbeidsgiver"
-                      onChangeText={(value) => {
-                        const items = [...experienceEntries];
-                        items[index].company = value;
-                        setExperienceEntries(items);
-                      }}
-                    />
-                  </View>
-
-                  <View style={[styles.aerligEntryEditRow, { alignItems: 'center', marginBottom: 8 }]}>
-                    <TouchableOpacity
-                      style={[styles.checkbox, styles.aerligCheckbox, { marginLeft: 0 }, entry.current && styles.aerligCheckboxOn]}
-                      onPress={() => {
-                        const items = [...experienceEntries];
-                        const next = !items[index].current;
-                        items[index].current = next;
-                        if (next) {
-                          items[index].to = '';
-                        }
-                        setExperienceEntries(items);
-                      }}
-                    >
-                      <Text style={[styles.checkboxText, styles.aerligCheckboxText, entry.current && styles.aerligCheckboxTextOn]}>{entry.current ? '✓' : ''}</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.aerligInlineNote}>
-                      Jobber her fremdeles
-                    </Text>
-                  </View>
-
-                  <View style={styles.aerligEntryEditRow}>
-                    <TextInput
-                      style={[styles.input, styles.aerligInput, styles.aerligInputCompact, styles.inlineInput]}
-                      value={entry.from || ''}
-                      placeholder="Fra (år/mnd)"
-                      onChangeText={(value) => {
-                        const items = [...experienceEntries];
-                        items[index].from = value;
-                        setExperienceEntries(items);
-                      }}
-                    />
-                    <TextInput
-                      style={[styles.input, styles.aerligInput, styles.aerligInputCompact, styles.inlineInput, { marginRight: 0 }, entry.current && { opacity: 0.6 }]}
-                      value={entry.current ? 'Nå' : (entry.to || '')}
-                      placeholder={entry.current ? 'Nå' : 'Til (år/mnd)'}
-                      editable={!entry.current}
-                      onChangeText={(value) => {
-                        const items = [...experienceEntries];
-                        items[index].to = value;
-                        setExperienceEntries(items);
-                      }}
-                    />
-                  </View>
-                </>
-              ) : null}
-            </View>
-          ))}
-
-          {editExperience ? (
-            <TouchableOpacity
-              style={[styles.smallButton, styles.aerligSmallButton]}
-              onPress={() => {
-                const next = [...(experienceEntries || []), { title: '', company: '', from: '', to: '', current: false }];
-                setExperienceEntries(next);
-                setEditingExperienceIndex(next.length - 1);
-              }}
-            >
-              <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>Legg til erfaring</Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
-
-        <View style={styles.profileField}>
-          <Text style={[styles.inputLabel, styles.aerligLabel]}>Utdanning</Text>
-
-          <TouchableOpacity
-            style={[styles.smallButton, styles.aerligSmallButton, { marginTop: 0 }]}
-            onPress={() => {
-              setEditEducation((v) => {
-                const next = !v;
-                if (!next) {
-                  setEditingEducationIndex(-1);
-                  setShowSchoolListIndex(-1);
-                  setSchoolFilter('');
-                }
-                return next;
-              });
-            }}
-          >
-            <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>Rediger utdanning</Text>
-          </TouchableOpacity>
-
-          {educationEntries.map((entry, index) => (
-            <View key={index} style={[styles.aerligCard, styles.aerligListRow]}>
-              <View style={[styles.aerligEntryHeader, styles.aerligListRowHeader]}>
-                <View style={{ flex: 1, paddingRight: 10 }}>
-                  <Text style={styles.aerligEntryTitle} numberOfLines={1}>{entry.school || 'Skole'}</Text>
-                  <Text style={styles.aerligEntrySub} numberOfLines={1}>{entry.degree || 'Studie/program'}</Text>
-                </View>
-                <Text style={styles.aerligEntryYears} numberOfLines={1}>
-                  {`${(entry.from || '—').trim() || '—'}–${((entry.to || '—').trim()) || '—'}`}
-                </Text>
-              </View>
-
-              {editEducation ? (
-                <View style={styles.aerligRowActions}>
-                  <TouchableOpacity
-                    style={[styles.filterChip, styles.aerligFilterChip, styles.aerligRowActionChip]}
-                    onPress={() => {
-                      setEditingEducationIndex((cur) => (cur === index ? -1 : index));
-                      setShowSchoolListIndex(-1);
-                      setSchoolFilter('');
-                    }}
-                  >
-                    <Text style={[styles.filterChipText, styles.aerligFilterChipText]}>
-                      {editingEducationIndex === index ? 'Ferdig' : 'Rediger'}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.filterChip, styles.aerligFilterChip, styles.aerligRowActionChip, styles.aerligRowActionChipDanger]}
-                    onPress={() => {
-                      setEducationEntries((prev) => (prev || []).filter((_, i) => i !== index));
-                      setEditingEducationIndex((cur) => {
-                        if (cur === index) return -1;
-                        if (cur > index) return cur - 1;
-                        return cur;
-                      });
-                      setShowSchoolListIndex((cur) => {
-                        if (cur === index) return -1;
-                        if (cur > index) return cur - 1;
-                        return cur;
-                      });
-                      if (showSchoolListIndex === index) setSchoolFilter('');
-                    }}
-                  >
-                    <Text style={[styles.filterChipText, styles.aerligFilterChipText, styles.aerligRowActionTextDanger]}>Fjern</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : null}
-
-              {editEducation && editingEducationIndex === index ? (
-                <>
-                  <View style={styles.aerligEntryEditRow}>
-                    <TouchableOpacity
-                      style={[styles.input, styles.aerligInput, styles.aerligInputCompact, { flex: 1, marginRight: 8 }]}
-                      onPress={() => {
-                        setShowSchoolListIndex(index);
-                        setSchoolFilter('');
-                        setSchoolKindFilter('all');
-                        setSchoolResults([]);
-                      }}
-                    >
-                      <Text style={entry.school ? styles.aerligInputText : styles.aerligPlaceholderText}>
-                        {entry.school || 'Velg skole'}
-                      </Text>
-                    </TouchableOpacity>
-
-                    <TextInput
-                      style={[styles.input, styles.aerligInput, styles.aerligInputCompact, { flex: 1, marginRight: 0 }]}
-                      value={entry.degree}
-                      placeholder="Grad / studieretning"
-                      onChangeText={(value) => {
-                        const items = [...educationEntries];
-                        items[index].degree = value;
-                        setEducationEntries(items);
-                      }}
-                    />
-                  </View>
-
-                  {showSchoolListIndex === index && (
-                    <View style={[styles.dropdownList, styles.aerligDropdownList]}>
-                      <TextInput
-                        style={[styles.input, styles.aerligInput, { margin: 8 }]}
-                        placeholder="Søk: videregående, universitet eller nettskole..."
-                        value={schoolFilter}
-                        onChangeText={setSchoolFilter}
-                        autoCapitalize="words"
-                      />
-
-                      <View style={[styles.filterChipRow, styles.aerligFilterChipRow]}>
-                        {[
-                          { key: 'all', label: 'Alle' },
-                          { key: 'vgs', label: 'VGS' },
-                          { key: 'universitet', label: 'Uni/høyskole' },
-                          { key: 'nettskole', label: 'Nettskole' },
-                        ].map((item) => {
-                          const active = schoolKindFilter === item.key;
-                          return (
-                            <TouchableOpacity
-                              key={item.key}
-                              style={[styles.filterChip, styles.aerligFilterChip, active && styles.aerligFilterChipActive]}
-                              onPress={() => setSchoolKindFilter(item.key)}
-                            >
-                              <Text style={[styles.filterChipText, styles.aerligFilterChipText, active && styles.aerligFilterChipTextActive]}>{item.label}</Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
-
-                      {schoolFilter.trim().length < 2 ? (
-                        <Text style={[styles.helpText, styles.aerligHelpText, { marginLeft: 12, marginBottom: 8 }]}>Skriv minst 2 bokstaver for forslag.</Text>
-                      ) : null}
-
-                      {schoolResultsLoading ? (
-                        <Text style={[styles.helpText, styles.aerligHelpText, { marginLeft: 12, marginBottom: 8 }]}>Laster skoler...</Text>
-                      ) : null}
-
-                      {!schoolResultsLoading && schoolFilter.trim().length >= 2 && (
-                        (schoolResults.length === 0 &&
-                          schoolOptions.filter((s) => s.toLowerCase().includes(schoolFilter.toLowerCase())).length === 0)
-                      ) ? (
-                        <Text style={[styles.helpText, styles.aerligHelpText, { marginLeft: 12, marginBottom: 8 }]}>Ingen treff.</Text>
-                      ) : null}
-
-                      {(schoolFilter.trim().length >= 2
-                        ? (schoolResults.length > 0
-                            ? schoolResults
-                            : schoolOptions
-                                .filter((s) => s.toLowerCase().includes(schoolFilter.toLowerCase()))
-                                .map((name) => ({ name, kind: 'lokal', kommune: null })))
-                        : [])
-                        .map((option) => (
-                          <TouchableOpacity
-                            key={option.name}
-                            style={styles.dropdownItem}
-                            onPress={() => {
-                              const items = [...educationEntries];
-                              items[index].school = option.name;
-                              setEducationEntries(items);
-                              setShowSchoolListIndex(-1);
-                              setSchoolFilter('');
-                            }}
-                          >
-                            <Text style={[styles.dropdownItemText, styles.aerligDropdownItemText]}>{option.name}</Text>
-                            {option.kind || option.kommune ? (
-                              <Text style={[styles.dropdownItemSub, styles.aerligDropdownItemSub]}>
-                                {[option.kind, option.kommune].filter(Boolean).join(' • ')}
-                              </Text>
-                            ) : null}
-                          </TouchableOpacity>
-                        ))}
-                    </View>
-                  )}
-
-                  <View style={styles.aerligEntryEditRow}>
-                    <TextInput
-                      style={[styles.input, styles.aerligInput, styles.aerligInputCompact, styles.inlineInput]}
-                      value={entry.from}
-                      placeholder="Fra (år/mnd)"
-                      onChangeText={(value) => {
-                        const items = [...educationEntries];
-                        items[index].from = value;
-                        setEducationEntries(items);
-                      }}
-                    />
-                    <TextInput
-                      style={[styles.input, styles.aerligInput, styles.aerligInputCompact, styles.inlineInput, { marginRight: 0 }]}
-                      value={entry.to}
-                      placeholder="Til (år/mnd)"
-                      onChangeText={(value) => {
-                        const items = [...educationEntries];
-                        items[index].to = value;
-                        setEducationEntries(items);
-                      }}
-                    />
-                  </View>
-                </>
-              ) : null}
-            </View>
-          ))}
-
-          {editEducation ? (
-            <TouchableOpacity
-              style={[styles.smallButton, styles.aerligSmallButton]}
-              onPress={() => {
-                const next = [...(educationEntries || []), { school: '', degree: '', from: '', to: '' }];
-                setEducationEntries(next);
-                setEditingEducationIndex(next.length - 1);
-                setShowSchoolListIndex(-1);
-                setSchoolFilter('');
-              }}
-            >
-              <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>Legg til utdanning</Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
-
-                <View style={styles.profileField}>
-          <Text style={[styles.inputLabel, styles.aerligLabel]}>Ferdigheter og sertifiseringer</Text>
-
-          <View style={{ marginBottom: 8 }}>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-              {skillsItems.map((item, i) => (
-                <TouchableOpacity
-                  key={`${item}-${i}`}
-                  style={[styles.smallButton, styles.aerligSmallButton, { marginRight: 8, marginBottom: 8 }]}
-                  onPress={() => setSkillsItems(skillsItems.filter((_, idx) => idx !== i))}
-                >
-                  <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>{item} ✕</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <TextInput
-            style={[styles.input, styles.aerligInput]}
-            value={skillInput}
-            onChangeText={setSkillInput}
-            placeholder="Skriv én ferdighet/sertifisering"
-            autoCapitalize="sentences"
-          />
-
-          <TouchableOpacity
-            style={[styles.smallButton, styles.aerligSmallButton, { marginTop: 0 }]}
-            onPress={() => {
-              const v = String(skillInput || '').trim();
-              if (!v) return;
-
-              const exists = skillsItems.some((it) => String(it).toLowerCase() === v.toLowerCase());
-              if (!exists) {
-                setSkillsItems([...skillsItems, v]);
-              }
-
-              setSkillInput('');
-            }}
-          >
-            <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>Legg til</Text>
-          </TouchableOpacity>
         </View>
 
         <View style={styles.profileField}>
@@ -5855,6 +5847,11 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 12,
   },
+  profileCardRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
   profileSummaryCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
@@ -5862,7 +5859,13 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: '#E8E6E0',
     flex: 1,
-    minWidth: '45%',
+  },
+  profileSummaryCardFull: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 0.5,
+    borderColor: '#E8E6E0',
   },
   profileCardIcon: {
     fontSize: 18,
