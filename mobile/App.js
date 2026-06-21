@@ -1988,6 +1988,10 @@ export default function App() {
       a: 'Analyser en jobb først, åpne analysen og trykk \'Generer CV og søknad\'. Appen lager dokumenter tilpasset nettopp denne stillingen basert på profilen din.',
     },
     {
+      q: 'Hva er forskjellen på PDF og e-post?',
+      a: 'Når du trykker \'Generer CV og søknad\' får du en PDF som inneholder både søknadstekst og CV samlet i ett dokument — praktisk for digital innsending. Vil du ha søknadsteksten og CV-en som separate dokumenter, bruker du \'Send til e-post\' — da mottar du søknadsbrevet og CV-en som to separate filer i innboksen din.',
+    },
+    {
       q: 'Kan jeg få CV-en på engelsk?',
       a: 'Ja — når du genererer CV velger du norsk eller engelsk. Søknadsbrevet følger samme språkvalg.',
     },
