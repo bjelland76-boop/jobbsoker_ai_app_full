@@ -461,8 +461,10 @@ class _SidebarPdfDoc:
             y -= 0.43 * cm
         else:
             for ln in lang_lines[:12]:
-                for wln in _wrap_lines(ln, self.sidebar_w - 2 * pad_x, "Helvetica", 9.5):
-                    c.drawString(pad_x, y, f"• {wln}" if wln == ln else f"  {wln}")
+                # Convert "Norsk — Morsmål" → "Norsk (Morsmål)" for display
+                display = re.sub(r"^(.+?)\s+[–\-]\s+(.+)$", r"\1 (\2)", ln.strip())
+                for wln in _wrap_lines(display, self.sidebar_w - 2 * pad_x, "Helvetica", 9.5):
+                    c.drawString(pad_x, y, f"• {wln}" if wln == display else f"  {wln}")
                     y -= 0.43 * cm
 
     # ---------- Main content helpers ----------
@@ -1077,9 +1079,13 @@ class _SidebarPdfDoc:
             degree = str(it.get("degree") or "").strip()
             _from = str(it.get("from") or "").strip()
             _to = str(it.get("to") or "").strip()
+            status = str(it.get("status") or "fullfort").strip().lower()
 
             head = " – ".join([x for x in [degree, school] if x])
-            period = " ".join([x for x in [_from, "–", _to] if x and x != "–"])
+            if status == "pagaende":
+                period = (_from + " –" if _from else "") + " pågående"
+            else:
+                period = " ".join([x for x in [_from, "–", _to] if x and x != "–"])
 
             self._ensure_space(1.2 * cm)
 

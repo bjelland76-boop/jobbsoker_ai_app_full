@@ -51,6 +51,81 @@ def _style_instructions(application_style: str) -> str:
     return "Vanlig søknad: 2–3 avsnitt, naturlig norsk stil."
 
 
+def _completed_edu_degree_names(profile: Any) -> list[str]:
+    """Return lowercase degree names for all FULLFØRT education entries."""
+    try:
+        items = json.loads(getattr(profile, "education", "") or "[]")
+    except Exception:
+        return []
+    if not isinstance(items, list):
+        return []
+    names: list[str] = []
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        status = str(it.get("status") or "fullfort").strip().lower()
+        if status != "pagaende":
+            degree = str(it.get("degree") or "").strip().lower()
+            school = str(it.get("school") or "").strip().lower()
+            if degree:
+                names.append(degree)
+            if school:
+                names.append(school)
+    return names
+
+
+def _filter_completed_edu_from_match(match: dict, completed_names: list[str]) -> dict:
+    """Remove match fields that incorrectly suggest completing FULLFØRT education."""
+    if not completed_names:
+        return match
+
+    def _mentions_completed(text: str) -> bool:
+        t = text.lower()
+        return any(name in t for name in completed_names)
+
+    def _filter_list(items: list) -> list:
+        return [x for x in (items or []) if not _mentions_completed(str(x))]
+
+    result = dict(match)
+    result["recommended_cv_changes"] = _filter_list(result.get("recommended_cv_changes") or [])
+    result["missing"] = _filter_list(result.get("missing") or [])
+    # Clear main_risk if it singles out completed education
+    if _mentions_completed(str(result.get("main_risk") or "")):
+        result["main_risk"] = ""
+    return result
+
+
+def _format_education_for_prompt(edu_raw: Any) -> str:
+    """Format education JSON into readable text with explicit STATUS for LLM context."""
+    if not edu_raw:
+        return ""
+    try:
+        items = json.loads(edu_raw) if isinstance(edu_raw, str) else edu_raw
+    except Exception:
+        return str(edu_raw)
+    if not isinstance(items, list):
+        return str(items)
+    lines = []
+    for it in items:
+        if isinstance(it, str):
+            lines.append(it)
+            continue
+        if not isinstance(it, dict):
+            continue
+        degree = str(it.get("degree") or "").strip()
+        school = str(it.get("school") or "").strip()
+        _from = str(it.get("from") or "").strip()
+        _to = str(it.get("to") or "").strip()
+        status = str(it.get("status") or "fullfort").strip().lower()
+        parts = [x for x in [degree, school] if x]
+        period = "–".join([x for x in [_from, _to] if x])
+        if period:
+            parts.append(period)
+        parts.append("STATUS: " + ("PÅGÅENDE" if status == "pagaende" else "FULLFØRT"))
+        lines.append(", ".join(parts))
+    return "; ".join(lines)
+
+
 def _build_cv_text_for_match(profile: Any) -> str:
     # Strictly keep skills/titles/responsibilities-ish fields for token reduction.
     parts: list[str] = []
@@ -67,6 +142,21 @@ def _build_cv_text_for_match(profile: Any) -> str:
     if exp:
         parts.append(f"Experience: {exp}")
 
+    edu_formatted = _format_education_for_prompt(getattr(profile, "education", "") or "")
+    if edu_formatted:
+        parts.append(f"Education: {edu_formatted}")
+
+    lang_raw = (getattr(profile, "languages", "") or "").strip()
+    if lang_raw:
+        try:
+            lang_list = json.loads(lang_raw)
+            if isinstance(lang_list, list):
+                lang_raw = ", ".join(str(l) for l in lang_list if l)
+        except Exception:
+            pass
+        if lang_raw:
+            parts.append(f"Languages: {lang_raw}")
+
     cv_free = (getattr(profile, "cv_text", "") or "").strip()
     if cv_free:
         parts.append(f"CV: {cv_free}")
@@ -81,7 +171,6 @@ def _build_cv_text_for_generation(profile: Any) -> str:
         ("Target role", "target_role"),
         ("Skills", "skills"),
         ("Experience", "experience"),
-        ("Education", "education"),
         ("Languages", "languages"),
         ("CV gaps", "cv_gaps"),
         ("CV", "cv_text"),
@@ -89,6 +178,13 @@ def _build_cv_text_for_generation(profile: Any) -> str:
         v = (getattr(profile, attr, "") or "").strip()
         if v:
             parts.append(f"{label}: {v}")
+
+    # Education formatted with explicit STATUS to prevent misinterpretation
+    edu_formatted = _format_education_for_prompt(getattr(profile, "education", "") or "")
+    if edu_formatted:
+        # Insert after Experience (before Languages)
+        lang_idx = next((i for i, p in enumerate(parts) if p.startswith("Languages:")), len(parts))
+        parts.insert(lang_idx, f"Education: {edu_formatted}")
 
     return "\n".join(parts)
 
@@ -436,6 +532,18 @@ Core Skills:
 Work Experience:
 - Only roles found in Candidate Experience.
 - For each role: 2–5 short bullet points with responsibilities/results (do not invent).
+
+Education:
+- Only institutions found in Candidate Education.
+- For periods: use the EXACT year values from the data (e.g. "2022–2025").
+- If STATUS is PÅGÅENDE: write the period as e.g. "2023– (In Progress)". If STATUS is FULLFØRT: write ONLY the years (e.g. "2022–2025"), never add "In Progress" or similar.
+
+Languages:
+- List each language as "Language (Level)" e.g. "Norwegian (Native)", "English (Fluent)".
+- Use the level exactly as given in the Candidate data (translated to English if writing in English).
+
+cover_letter:
+- NEVER mention language level (e.g. do not write "fluent in English", "native Norwegian speaker") — omit language proficiency entirely.
 """.strip()
     else:
         prompt = f"""
@@ -488,6 +596,18 @@ Kjerneferdigheter:
 Arbeidserfaring:
 - Kun roller som finnes i Candidate Experience.
 - For hver rolle: 2–5 korte punkter med ansvar/resultater (ikke oppfinn).
+
+Utdanning:
+- Kun institusjoner som finnes i Candidate Education.
+- For perioder: bruk de NØYAKTIGE årstallene fra dataen (f.eks. "2022–2025").
+- Hvis STATUS er PÅGÅENDE: skriv perioden som f.eks. "2023– (pågående)". Hvis STATUS er FULLFØRT: skriv KUN årstallene (f.eks. "2022–2025"), legg ALDRI til "pågående" eller lignende.
+
+Språk:
+- Skriv hvert språk som "Språknavn (Nivå)" f.eks. "Norsk (Morsmål)", "Engelsk (Flytende)".
+- Bruk nivået nøyaktig slik det er oppgitt i Candidate-dataen.
+
+cover_letter:
+- Nevn ALDRI språknivå i søknadsbrevet — verken direkte ("flytende norsk") eller indirekte ("morsmål er norsk"). Utelat språkferdigheter fullstendig fra søknadsteksten.
 """.strip()
 
     client = _get_client()
@@ -643,8 +763,8 @@ Candidate:
 {SHARED_ANTI_HALLUCINATION_RULES_EN}
 
 {m1}: 3–4 paragraphs, no bullet points. Mention role and company by name. No contact details or date.
-{m2}: Plain text (ATS-friendly), no markdown, no tables. Sections in order: Professional Summary / Core Skills / Work Experience / Education / Languages / References. Professional Summary: 3–5 concrete sentences. Core Skills: 8–12 bullets (•). Work Experience: only actual roles from Candidate data, 2–5 bullets each.
-{m3}: 3–4 sentences, polite, reference the role and company.""".strip()
+{m2}: Plain text (ATS-friendly), no markdown, no tables. Sections in order: Professional Summary / Core Skills / Work Experience / Education / Languages / References. Professional Summary: 3–5 concrete sentences. Core Skills: 8–12 bullets (•). Work Experience: only actual roles from Candidate data, 2–5 bullets each. Education periods: use EXACT year values from data; if STATUS is PÅGÅENDE write e.g. "2023– (In Progress)"; if STATUS is FULLFØRT write only the years (e.g. "2022–2025"). Languages: format as "Language (Level)" e.g. "Norwegian (Native)".
+{m3}: 3–4 sentences, polite, reference the role and company. NEVER mention language level or language proficiency in the cover letter.""".strip()
     else:
         prompt = f"""Svar med NØYAKTIG disse tre seksjonene med overskrifter, ingenting annet:
 
@@ -676,8 +796,8 @@ Candidate:
 {SHARED_ANTI_HALLUCINATION_RULES}
 
 {m1}: {style_text} Ingen punktlister. Nevn stilling og bedrift med navn. Ingen kontaktinfo eller dato.
-{m2}: Ren tekst (ATS-vennlig), ingen markdown, ingen tabeller. Seksjoner i rekkefølge: Profesjonell oppsummering / Kjerneferdigheter / Arbeidserfaring / Utdanning / Språk / Referanser. Profesjonell oppsummering: 3–5 konkrete setninger. Kjerneferdigheter: 8–12 punkter (•). Arbeidserfaring: kun roller fra Candidate-data, 2–5 punkter hver.
-{m3}: 3–4 setninger, høflig, referer til stilling og bedrift.""".strip()
+{m2}: Ren tekst (ATS-vennlig), ingen markdown, ingen tabeller. Seksjoner i rekkefølge: Profesjonell oppsummering / Kjerneferdigheter / Arbeidserfaring / Utdanning / Språk / Referanser. Profesjonell oppsummering: 3–5 konkrete setninger. Kjerneferdigheter: 8–12 punkter (•). Arbeidserfaring: kun roller fra Candidate-data, 2–5 punkter hver. Utdanningsperioder: bruk NØYAKTIGE årstall fra dataen; hvis STATUS er PÅGÅENDE skriv f.eks. "2023– (pågående)"; hvis STATUS er FULLFØRT skriv kun årstallene (f.eks. "2022–2025"). Språk: skriv som "Språknavn (Nivå)" f.eks. "Norsk (Morsmål)".
+{m3}: 3–4 setninger, høflig, referer til stilling og bedrift. Nevn ALDRI språknivå i søknadsbrevet.""".strip()
 
     client = _get_client()
     full_text = ""
@@ -720,6 +840,7 @@ def analyze_job_url(
     cv_text = _build_cv_text_for_match(profile)
 
     match = analyze_job_match(job_text, cv_text)
+    match = _filter_completed_edu_from_match(match, _completed_edu_degree_names(profile))
     job_title, company = _guess_job_title_company(job_text)
 
     allowed_styles = {"kort", "vanlig", "profesjonell"}

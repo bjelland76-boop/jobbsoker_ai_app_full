@@ -825,7 +825,7 @@ export default function App() {
 
           const education = educationRaw.map((e) => {
             if (typeof e === 'string') {
-              return { school: e, degree: '', from: '', to: '' };
+              return { school: e, degree: '', from: '', to: '', status: 'fullfort' };
             }
             const obj = (e && typeof e === 'object') ? e : {};
             return {
@@ -833,6 +833,7 @@ export default function App() {
               degree: obj.degree || '',
               from: obj.from || '',
               to: obj.to || '',
+              status: obj.status || 'fullfort',
             };
           });
 
@@ -1065,13 +1066,14 @@ export default function App() {
       })));
     }
 
-    // education: array of {school, degree, from, to} (only if empty)
+    // education: array of {school, degree, from, to, status} (only if empty)
     if (Array.isArray(preview.education) && preview.education.length > 0 && educationEntries.length === 0) {
       setEducationEntries(preview.education.map((e) => ({
         school: e.school || '',
         degree: e.degree || '',
         from: e.from || '',
         to: e.to || '',
+        status: e.status || 'fullfort',
       })));
     }
 
@@ -3774,9 +3776,17 @@ export default function App() {
                       <Text style={styles.aerligEntryTitle} numberOfLines={1}>{entry.school || 'Skole'}</Text>
                       <Text style={styles.aerligEntrySub} numberOfLines={1}>{entry.degree || 'Studie/program'}</Text>
                     </View>
-                    <Text style={styles.aerligEntryYears} numberOfLines={1}>
-                      {`${(entry.from || '—').trim() || '—'}–${((entry.to || '—').trim()) || '—'}`}
-                    </Text>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={styles.aerligEntryYears} numberOfLines={1}>
+                        {entry.status === 'pagaende'
+                          ? `${(entry.from || '—').trim() || '—'}–pågår`
+                          : `${(entry.from || '—').trim() || '—'}–${((entry.to || '—').trim()) || '—'}`}
+                      </Text>
+                      {entry.status === 'pagaende'
+                        ? <Text style={{ fontSize: 10, color: '#E8501A', fontWeight: '600', marginTop: 1 }}>Pågående</Text>
+                        : <Text style={{ fontSize: 10, color: '#16a34a', fontWeight: '600', marginTop: 1 }}>Fullført</Text>
+                      }
+                    </View>
                   </View>
 
                   <View style={styles.aerligRowActions}>
@@ -3926,12 +3936,35 @@ export default function App() {
                           style={[styles.input, styles.aerligInput, styles.aerligInputCompact, styles.inlineInput, { marginRight: 0 }]}
                           value={entry.to}
                           placeholder="Til (år/mnd)"
+                          editable={entry.status !== 'pagaende'}
                           onChangeText={(value) => {
                             const items = [...educationEntries];
                             items[index].to = value;
                             setEducationEntries(items);
                           }}
                         />
+                      </View>
+
+                      <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+                        {[
+                          { key: 'fullfort', label: 'Fullført', activeColor: '#16a34a' },
+                          { key: 'pagaende', label: 'Pågående', activeColor: '#E8501A' },
+                        ].map(({ key, label, activeColor }) => {
+                          const isActive = entry.status === key;
+                          return (
+                            <TouchableOpacity
+                              key={key}
+                              style={[styles.filterChip, styles.aerligFilterChip, isActive && { backgroundColor: activeColor, borderColor: activeColor }]}
+                              onPress={() => {
+                                const items = [...educationEntries];
+                                items[index] = { ...items[index], status: key };
+                                setEducationEntries(items);
+                              }}
+                            >
+                              <Text style={[styles.filterChipText, styles.aerligFilterChipText, isActive && { color: '#FFFFFF' }]}>{label}</Text>
+                            </TouchableOpacity>
+                          );
+                        })}
                       </View>
                     </>
                   ) : null}
@@ -3941,7 +3974,7 @@ export default function App() {
               <TouchableOpacity
                 style={[styles.smallButton, styles.aerligSmallButton]}
                 onPress={() => {
-                  const next = [...(educationEntries || []), { school: '', degree: '', from: '', to: '' }];
+                  const next = [...(educationEntries || []), { school: '', degree: '', from: '', to: '', status: 'fullfort' }];
                   setEducationEntries(next);
                   setEditingEducationIndex(next.length - 1);
                   setShowSchoolListIndex(-1);
@@ -4081,7 +4114,7 @@ export default function App() {
                         }}
                       />
                       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                        {['Morsmål', 'Flytende', 'Godt', 'Grunnleggende'].map((lvl) => (
+                        {['Nybegynner', 'Grunnleggende', 'Godt', 'Flytende', 'Morsmål'].map((lvl) => (
                           <TouchableOpacity
                             key={lvl}
                             style={[styles.filterChip, styles.aerligFilterChip, lang.level === lvl && styles.aerligFilterChipActive]}

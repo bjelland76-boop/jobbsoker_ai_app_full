@@ -100,6 +100,8 @@ def _extract_relevant(text: str) -> str:
         "responsibil",
         "duties",
         "tasks",
+        "education",
+        "status",
         # no
         "krav",
         "kvalifik",
@@ -109,6 +111,9 @@ def _extract_relevant(text: str) -> str:
         "ansvar",
         "arbeidsoppgaver",
         "oppgaver",
+        "utdanning",
+        "fullført",
+        "pågående",
     ]
 
     # Split on sentence-ish boundaries and common bullet separators.
@@ -324,6 +329,16 @@ def analyze_job_match(
         "Only list something as missing if the CV gives no reasonable basis to infer it.\n"
         "- Certifications/licences (fagbrev, forklift licence, etc.) listed under experience or education count as documented.\n"
         "- Do NOT flag soft skills (teamwork, communication) as missing — assume them unless the job explicitly tests them.\n"
+        "- EDUCATION STATUS: Education entries marked STATUS: FULLFØRT are COMPLETED qualifications. "
+        "Do NOT flag them as missing, incomplete, or suggest the candidate still needs to complete them. "
+        "Only education marked STATUS: PÅGÅENDE is currently in progress. "
+        "A recently completed degree (e.g. 2024–2025) is a strength, not a weakness.\n"
+        "- LANGUAGE REQUIREMENTS: If the job mentions language requirements (e.g. 'flytende norsk', 'English required', 'B2', 'norsk skriftlig'), "
+        "compare with the CV's Languages field. Level mapping: 'Morsmål'/'Flytende' satisfies fluency/B2+ requirements; "
+        "'Godt' satisfies intermediate requirements but NOT fluency; 'Grunnleggende'/'Nybegynner' does NOT satisfy fluency requirements. "
+        "If the candidate's level is insufficient for a required language, reduce score, add to 'missing', and mention it in 'main_risk' "
+        "with a short explanation (e.g. 'Job requires fluent Norwegian; candidate shows Grunnleggende'). "
+        "If no language level is listed in CV but the language appears in experience/education, assume adequate proficiency.\n"
         "Return JSON: {"
         '"score":0-100,'
         '"interview_probability":0-100,'
