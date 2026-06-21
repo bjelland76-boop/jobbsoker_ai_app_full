@@ -2250,7 +2250,10 @@ export default function App() {
         </View>
 
         <View style={styles.aerligTipCard}>
-          <Text style={styles.aerligTipTitle}>Karrieretips</Text>
+          <View style={styles.aerligTipLabel}>
+            <Text style={{ fontSize: 16 }}>💡</Text>
+            <Text style={styles.aerligTipLabelText}>KARRIERETIPS</Text>
+          </View>
           <Text style={styles.aerligTipText}>{tipText}</Text>
         </View>
       </View>
@@ -5909,12 +5912,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A1A2E',
   },
   aerligTipCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 22,
+    backgroundColor: '#FEF0EB',
+    borderRadius: 14,
     padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(26, 26, 46, 0.12)',
+    borderWidth: 0.5,
+    borderColor: '#F5C4A0',
     marginBottom: 8,
+  },
+  aerligTipLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 6,
+  },
+  aerligTipLabelText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#E8501A',
+    letterSpacing: 0.4,
   },
   aerligTipTitle: {
     fontSize: 13,
@@ -5923,9 +5938,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   aerligTipText: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: 'rgba(26, 26, 46, 0.76)',
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#7A2A0A',
+    fontWeight: '400',
   },
 
   // Profile (Ærlig. styling)
