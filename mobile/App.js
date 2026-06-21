@@ -178,6 +178,8 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [authTokenState, setAuthTokenState] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showFaq, setShowFaq] = useState(false);
+  const [faqOpenIndex, setFaqOpenIndex] = useState(-1);
   const [uiLanguage, setUiLanguage] = useState('no'); // no | en
   const [authEmail, setAuthEmail] = useState('');
   const [authCode, setAuthCode] = useState('');
@@ -1972,6 +1974,110 @@ export default function App() {
     { title: 'Søknadsstatus', value: '—', percent: 35, status: 'Oppdater status på søknader', tab: 'applications' },
   ];
 
+  const FAQ_ITEMS = [
+    {
+      q: 'Hvordan kommer jeg i gang?',
+      a: 'Start med å fylle ut profilen din — jo mer informasjon du legger inn, jo bedre blir CV og søknad. Deretter limer du inn en FINN.no-lenke på hjemskjermen og trykker \'Analyser jobb\'.',
+    },
+    {
+      q: 'Hva er match-score?',
+      a: 'Match-scoren viser hvor godt profilen din matcher kravene i jobbannonsen. Under 40% er svak match, 40–70% er god match, over 70% er sterk match.',
+    },
+    {
+      q: 'Hvordan genererer jeg CV og søknad?',
+      a: 'Analyser en jobb først, åpne analysen og trykk \'Generer CV og søknad\'. Appen lager dokumenter tilpasset nettopp denne stillingen basert på profilen din.',
+    },
+    {
+      q: 'Kan jeg få CV-en på engelsk?',
+      a: 'Ja — når du genererer CV velger du norsk eller engelsk. Søknadsbrevet følger samme språkvalg.',
+    },
+    {
+      q: 'Hvordan fungerer intervjutreningen?',
+      a: 'Åpne en jobbanalyse og trykk \'Intervju-øving\' der — intervjuet er tilpasset nettopp den stillingen du har analysert. Du får spørsmål én om gangen og kan svare ved å skrive eller snakke ved å trykke på mikrofon-knappen.',
+    },
+    {
+      q: 'Hva lagres i appen?',
+      a: 'Profilen din, CV-dokumenter, jobbanalyser og søknader lagres trygt og er tilgjengelige til du sletter kontoen. Se personvernerklæringen for detaljer.',
+    },
+    {
+      q: 'Hvordan legger jeg til erfaring og utdanning?',
+      a: 'Gå til Profil og trykk på \'Erfaring\' eller \'Utdanning\'-kortet for å ekspandere det. Trykk \'+ Legg til\' for å registrere en ny oppføring.',
+    },
+  ];
+
+  const renderFaq = () => (
+    <View style={{
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.50)', zIndex: 999,
+      justifyContent: 'center', alignItems: 'center', padding: 20,
+    }}>
+      <View style={{
+        backgroundColor: '#FFFFFF', borderRadius: 16,
+        width: '100%', maxWidth: 460, maxHeight: '88%',
+        shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 20, elevation: 14,
+        overflow: 'hidden',
+      }}>
+        {/* Header */}
+        <View style={{
+          flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+          paddingHorizontal: 20, paddingVertical: 16,
+          borderBottomWidth: 1, borderBottomColor: '#F0EDE8',
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{
+              width: 28, height: 28, borderRadius: 14,
+              backgroundColor: '#FEF0EB', borderWidth: 1.5, borderColor: '#E8501A',
+              alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Text style={{ color: '#E8501A', fontSize: 13, fontWeight: '700' }}>?</Text>
+            </View>
+            <Text style={{ fontSize: 17, fontWeight: '700', color: '#1A1A2E' }}>Hjelp & FAQ</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => { setShowFaq(false); setFaqOpenIndex(-1); }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={{ fontSize: 18, color: '#9CA3AF', fontWeight: '400' }}>✕</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Scrollable FAQ list */}
+        <ScrollView style={{ padding: 16 }} showsVerticalScrollIndicator={false}>
+          {FAQ_ITEMS.map((item, i) => (
+            <TouchableOpacity
+              key={i}
+              activeOpacity={0.7}
+              onPress={() => setFaqOpenIndex(faqOpenIndex === i ? -1 : i)}
+              style={{
+                backgroundColor: '#FAFAF9',
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: '#EEEBE5',
+                padding: 14,
+                marginBottom: 8,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+                <Text style={{ flex: 1, fontSize: 14, fontWeight: '500', color: '#1A1A2E', lineHeight: 20 }}>
+                  {item.q}
+                </Text>
+                <Text style={{ color: '#E8501A', fontSize: 12, marginTop: 3, fontWeight: '600' }}>
+                  {faqOpenIndex === i ? '▲' : '▼'}
+                </Text>
+              </View>
+              {faqOpenIndex === i && (
+                <Text style={{ fontSize: 13, color: '#6B7280', lineHeight: 20.8, marginTop: 10, fontWeight: '400' }}>
+                  {item.a}
+                </Text>
+              )}
+            </TouchableOpacity>
+          ))}
+          <View style={{ height: 8 }} />
+        </ScrollView>
+      </View>
+    </View>
+  );
+
   const renderOnboarding = () => (
     <View style={{
       position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
@@ -2098,7 +2204,7 @@ export default function App() {
                 </View>
               ) : null}
               <TouchableOpacity
-                onPress={() => setShowOnboarding(true)}
+                onPress={() => setShowFaq(true)}
                 style={{
                   width: 28, height: 28, borderRadius: 14,
                   backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#E8501A',
@@ -4541,6 +4647,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {showFaq && renderFaq()}
       {showOnboarding && renderOnboarding()}
       {activeTab === 'interview' ? (
         renderInterview()
