@@ -24,6 +24,7 @@ export default function InterviewScreen({
   t,
   analysis,
   apiFetch,
+  logEvent,
   setActiveTab,
   interviewMessages,
   setInterviewMessages,
@@ -137,6 +138,7 @@ export default function InterviewScreen({
         recordingRef.current = recording;
         setIsRecording(true);
         setInterviewError('');
+        logEvent?.('interview_voice_used');
       } catch (e) {
         setInterviewError('Kunne ikke starte opptak. Sjekk at appen har mikrofonillatelse.');
       }
@@ -178,6 +180,7 @@ export default function InterviewScreen({
         isFinal: false,
       }]);
       setInterviewStarted(true);
+      logEvent?.('interview_started');
     } catch (e) {
       setInterviewError('Kunne ikke kontakte coach akkurat nå. Du kan likevel øve med et standardspørsmål.');
       setInterviewMessages([{
@@ -188,6 +191,7 @@ export default function InterviewScreen({
         isFinal: false,
       }]);
       setInterviewStarted(true);
+      logEvent?.('interview_started');
     } finally {
       setInterviewLoading(false);
     }
@@ -242,6 +246,7 @@ export default function InterviewScreen({
 
       if (aiMessage.isFinal) {
         setIsFinal(true);
+        logEvent?.('interview_completed');
         setTimeout(() => scrollRef.current?.scrollToEnd?.({ animated: true }), 200);
       }
     } catch (e) {

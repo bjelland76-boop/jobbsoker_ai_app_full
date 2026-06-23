@@ -282,6 +282,9 @@ export default function App() {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
 
+  const [adminStats, setAdminStats] = useState(null);
+  const [adminStatsLoading, setAdminStatsLoading] = useState(false);
+
   const [interviewIndex, setInterviewIndex] = useState(0);
   const [interviewNotes, setInterviewNotes] = useState({});
 
@@ -293,6 +296,7 @@ export default function App() {
   const [interviewStarted, setInterviewStarted] = useState(false);
 
   const mascotAnim = useRef(new Animated.Value(0)).current;
+  const profileCompletedLoggedRef = useRef(false);
 
   // Cartoon-style "teacher" avatar (generated). If you want a different look,
   // change the seed (e.g. seed=Kari or seed=Per).
@@ -302,6 +306,14 @@ export default function App() {
 
   const strings = I18N[uiLanguage] || I18N.no;
   const t = (key) => strings[key] ?? I18N.no[key] ?? String(key);
+
+  function logEvent(action, metadata = null) {
+    apiFetch('/events/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, metadata }),
+    }).catch(() => {});
+  }
 
   async function refreshCareerTip({ force = false } = {}) {
     const tips = CAREER_TIPS.no;
@@ -371,6 +383,7 @@ export default function App() {
         if (t) {
           setAuthToken(t);
           setAuthTokenState(t);
+          logEvent('app_opened');
         }
       } catch (e) {
         // ignore
@@ -1042,6 +1055,7 @@ export default function App() {
   }
 
   function applyCvImport(preview) {
+    logEvent('cv_imported');
     if (preview.name && !name) setName(preview.name);
     if (preview.email && !profileEmail) setProfileEmail(preview.email);
     if (preview.phone && !phone) setPhone(preview.phone);
@@ -1191,6 +1205,24 @@ export default function App() {
       setApplicationEmail(profileEmail);
     }
   }, [profileEmail]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!authTokenState) return;
+    let _strength = 0;
+    if (name && name.trim() && name.trim() !== 'Ærlig JobbCoach') _strength += 10;
+    if (profileEmail) _strength += 10;
+    if (phone) _strength += 10;
+    if (address) _strength += 10;
+    if (profilePhotoData) _strength += 10;
+    if (experienceEntries.length > 0) _strength += 20;
+    if (educationEntries.length > 0) _strength += 15;
+    const _skillsList = skills ? skills.split(',').map((s) => s.trim()).filter(Boolean) : [];
+    if (_skillsList.length >= 3) _strength += 15;
+    if (_strength >= 100 && !profileCompletedLoggedRef.current) {
+      profileCompletedLoggedRef.current = true;
+      logEvent('profile_completed');
+    }
+  }, [name, profileEmail, phone, address, profilePhotoData, experienceEntries, educationEntries, skills, authTokenState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let mounted = true;
@@ -1498,6 +1530,7 @@ export default function App() {
     setTailoredCvJobTitle('');
 
     setLoading(true);
+    logEvent('analyze_job_started');
     try {
       const data = await apiFetch('/analyze-url', {
         method: 'POST',
@@ -1512,12 +1545,14 @@ export default function App() {
       setAnalysis(data);
       if (data?.cv_mal) setCvTemplate(data.cv_mal);
       setProfileUpdatedSinceAnalysis(false);
+      logEvent('analyze_job_completed');
       // If triggered from "Ny søknad" we still want to show the analysis screen.
       setActiveTab('analysis');
       // Refresh the history list (best-effort).
       loadJobAnalyses({ silent: true });
     } catch (e) {
       console.error('[Assistant] analyzeJob failed', e);
+      logEvent('analyze_job_failed');
       Alert.alert('Feil', errText(e));
     } finally {
       setLoading(false);
@@ -1651,6 +1686,9 @@ export default function App() {
     await flushAutoSave();
     generationLockRef.current = true;
     setIsGenerating(true);
+    logEvent('generate_cv_started', { language: cvLanguage, template: cvTemplate });
+    logEvent(cvLanguage === 'en' ? 'cv_language_english' : 'cv_language_norwegian');
+    logEvent('cv_template_' + cvTemplate);
 
     const prevPackage = applicationPackage;
     const failMsg = (uiLanguage === 'en')
@@ -1741,6 +1779,7 @@ export default function App() {
 
         if (hasAnyText) {
           setApplicationPackage(safePkg);
+          logEvent('generate_cv_completed');
           if (analysis?.job_id) {
             setTailoredCvJobTitle(analysis?.job_title || 'denne stillingen');
             if (pkg.cvMal) setCvTemplate(pkg.cvMal);
@@ -2009,6 +2048,62 @@ export default function App() {
     },
   ];
 
+  const renderAdminStats = () => {
+    async function loadStats() {
+      setAdminStatsLoading(true);
+      try {
+        const data = await apiFetch('/events/stats');
+        setAdminStats(data);
+      } catch (e) {
+        Alert.alert('Feil', 'Kunne ikke hente statistikk');
+      } finally {
+        setAdminStatsLoading(false);
+      }
+    }
+
+    return (
+      <View style={[styles.aerligCard, { margin: 16, marginTop: 8, backgroundColor: '#1a1a2e', borderRadius: 16 }]}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>Admin — Bruksstatistikk (7 dager)</Text>
+          <TouchableOpacity
+            onPress={loadStats}
+            style={{ backgroundColor: '#E8501A', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}
+          >
+            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{adminStatsLoading ? '...' : 'Last inn'}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {adminStats && (
+          <>
+            <Text style={{ color: '#F5C4A0', fontSize: 12, fontWeight: '700', marginBottom: 4 }}>TOPP HANDLINGER</Text>
+            {adminStats.top_actions.map((row, i) => (
+              <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 }}>
+                <Text style={{ color: '#ccc', fontSize: 12 }}>{row.action}</Text>
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{row.count}</Text>
+              </View>
+            ))}
+
+            <Text style={{ color: '#F5C4A0', fontSize: 12, fontWeight: '700', marginTop: 12, marginBottom: 4 }}>UNIKE BRUKERE PER DAG</Text>
+            {adminStats.daily_users.map((row, i) => (
+              <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 }}>
+                <Text style={{ color: '#ccc', fontSize: 12 }}>{row.day}</Text>
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{row.unique_users}</Text>
+              </View>
+            ))}
+
+            <Text style={{ color: '#F5C4A0', fontSize: 12, fontWeight: '700', marginTop: 12, marginBottom: 4 }}>CV-MAL</Text>
+            {adminStats.templates.map((row, i) => (
+              <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 }}>
+                <Text style={{ color: '#ccc', fontSize: 12 }}>{row.template}</Text>
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{row.count}</Text>
+              </View>
+            ))}
+          </>
+        )}
+      </View>
+    );
+  };
+
   const renderFaq = () => (
     <View style={{
       position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
@@ -2208,7 +2303,7 @@ export default function App() {
                 </View>
               ) : null}
               <TouchableOpacity
-                onPress={() => setShowFaq(true)}
+                onPress={() => { setShowFaq(true); logEvent('faq_opened'); }}
                 style={{
                   width: 28, height: 28, borderRadius: 14,
                   backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#E8501A',
@@ -2366,6 +2461,7 @@ export default function App() {
           </View>
           <Text style={styles.aerligTipText}>{tipText}</Text>
         </View>
+        {profileEmail === 'bjelland76@gmail.com' && renderAdminStats()}
       </View>
     );
   };
@@ -3260,6 +3356,7 @@ export default function App() {
       t={t}
       analysis={analysis}
       apiFetch={apiFetch}
+      logEvent={logEvent}
       setActiveTab={setActiveTab}
       interviewMessages={interviewMessages}
       setInterviewMessages={setInterviewMessages}
@@ -3346,6 +3443,7 @@ export default function App() {
         throw new Error(err.detail || 'Opplasting feilet');
       }
       await loadProfileDocuments();
+      logEvent('document_uploaded', { type: documentType });
     } catch (e) {
       Alert.alert('Feil', e.message || 'Kunne ikke laste opp dokumentet');
     }

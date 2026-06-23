@@ -47,6 +47,7 @@ from .models import (
     LoginCode,
     Profile,
     ProfileDocument,
+    UsageEvent,
     User,
 )
 from .pdf_dedupe import compute_pdf_content_hash
@@ -2484,3 +2485,81 @@ def stats_global(db: Session = Depends(get_db)):
         .where(Profile.consent_analytics == True)  # noqa: E712
     ).all()
     return _calc_stats(rows)
+
+
+# ---------------------------------------------------------------------------
+# Usage event logging
+# ---------------------------------------------------------------------------
+
+class EventLogIn(BaseModel):
+    action: str
+    metadata: dict | None = None
+
+
+@app.post("/events/log", status_code=204, tags=["events"])
+def log_event(
+    data: EventLogIn,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    action = (data.action or "").strip()[:100]
+    if not action:
+        return
+    meta_str = ""
+    if data.metadata:
+        try:
+            import json as _json
+            meta_str = _json.dumps(data.metadata, ensure_ascii=False)[:500]
+        except Exception:
+            pass
+    event = UsageEvent(user_id=current_user.id, action=action, metadata=meta_str)
+    db.add(event)
+    db.commit()
+
+
+_ADMIN_EMAIL = "bjelland76@gmail.com"
+
+
+@app.get("/events/stats", tags=["events"])
+def event_stats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.email != _ADMIN_EMAIL:
+        raise HTTPException(status_code=403, detail="Ikke tilgang")
+
+    cutoff = datetime.utcnow() - timedelta(days=7)
+
+    # Top 10 actions last 7 days
+    top_rows = db.execute(
+        text(
+            "SELECT action, COUNT(*) as cnt FROM usage_events "
+            "WHERE created_at >= :cutoff GROUP BY action ORDER BY cnt DESC LIMIT 10"
+        ),
+        {"cutoff": cutoff},
+    ).fetchall()
+    top_actions = [{"action": r[0], "count": r[1]} for r in top_rows]
+
+    # Unique users per day last 7 days
+    daily_rows = db.execute(
+        text(
+            "SELECT DATE(created_at) as day, COUNT(DISTINCT user_id) as users "
+            "FROM usage_events WHERE created_at >= :cutoff "
+            "GROUP BY day ORDER BY day DESC"
+        ),
+        {"cutoff": cutoff},
+    ).fetchall()
+    daily_users = [{"day": str(r[0]), "unique_users": r[1]} for r in daily_rows]
+
+    # Template breakdown
+    template_rows = db.execute(
+        text(
+            "SELECT action, COUNT(*) as cnt FROM usage_events "
+            "WHERE action IN ('cv_template_profesjonell','cv_template_kreativ','cv_template_klassisk') "
+            "AND created_at >= :cutoff GROUP BY action ORDER BY cnt DESC"
+        ),
+        {"cutoff": cutoff},
+    ).fetchall()
+    templates = [{"template": r[0].replace("cv_template_", ""), "count": r[1]} for r in template_rows]
+
+    return {"top_actions": top_actions, "daily_users": daily_users, "templates": templates}
