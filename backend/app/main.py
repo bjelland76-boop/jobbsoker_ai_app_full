@@ -2512,7 +2512,7 @@ def log_event(
             meta_str = _json.dumps(data.metadata, ensure_ascii=False)[:500]
         except Exception:
             pass
-    event = UsageEvent(user_id=current_user.id, action=action, metadata=meta_str)
+    event = UsageEvent(user_id=current_user.id, action=action, event_meta=meta_str)
     db.add(event)
     db.commit()
 

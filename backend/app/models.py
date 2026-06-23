@@ -167,5 +167,5 @@ class UsageEvent(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
     action: Mapped[str] = mapped_column(String(100), index=True)
-    metadata: Mapped[str] = mapped_column(Text, default="")
+    event_meta: Mapped[str] = mapped_column("metadata", Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
