@@ -7,7 +7,7 @@ import traceback
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 from fastapi import (
     BackgroundTasks,
@@ -2493,7 +2493,7 @@ def stats_global(db: Session = Depends(get_db)):
 
 class EventLogIn(BaseModel):
     action: str
-    metadata: dict | None = None
+    metadata: Optional[dict] = None
 
 
 @app.post("/events/log", status_code=204, tags=["events"])
