@@ -874,6 +874,7 @@ export default function useProfile({ onProfileSaved } = {}) {
     importCvFromGallery,
     applyCvImport,
     saveProfile,
+    saveProfileAuto,
     flushAutoSave,
     pickAndUploadDocument,
     deleteProfileDocument,
