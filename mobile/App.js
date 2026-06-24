@@ -146,6 +146,8 @@ function AppContent() {
 
 
 
+  const [tipText, setTipText] = useState('');
+
   const [notificationEmail, setNotificationEmail] = useState('');
   const [autoEmail, setAutoEmail] = useState(true);
   const [settingsLoading, setSettingsLoading] = useState(false);
