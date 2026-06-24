@@ -1,13 +1,17 @@
 import hashlib
 import json
+import logging
 import os
 import re
+import traceback
 from collections import OrderedDict
 from threading import Lock
 from typing import Any, List, Optional, TypedDict
 
 import anthropic
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 from .prompt_rules import SHARED_ANTI_HALLUCINATION_RULES
 
@@ -374,8 +378,10 @@ def analyze_job_match(
         MATCH_CACHE.set(key, dict(normalized))
         return normalized
 
-    except Exception:
+    except Exception as exc:
         # Never raise from the matcher (keep API stable); return safe defaults.
         # Do NOT cache failures so retries can succeed after transient errors.
+        logger.error("analyze_job_match failed — returning score=0. model=%s error=%s\n%s",
+                     model_id, exc, traceback.format_exc())
         normalized = _normalize_result({})
         return normalized
