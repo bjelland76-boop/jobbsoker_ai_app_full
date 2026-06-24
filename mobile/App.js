@@ -17,178 +17,85 @@ import {
   Modal,
   Image,
   Platform,
-  NativeModules,
   Linking,
   Switch,
 } from 'react-native';
 
 import { THEME } from './styles/theme';
 import { styles } from './styles/styles';
-import { I18N } from './i18n/no';
 import { INTERVIEW_QUESTIONS, CAREER_TIPS } from './constants/content';
 import { schoolOptions, languageOptions } from './constants/options';
 import InterviewScreen from './screens/InterviewScreen';
+import { AppProvider, useApp, apiFetch, setAuthToken } from './context/AppContext';
 
-function guessDevHost() {
-  // In Expo/React Native dev, this usually contains something like:
-  //   http://192.168.1.50:19000/index.bundle?platform=...
-  // but it can also be exp:// or exps:// depending on connection mode.
-  const scriptURL = NativeModules?.SourceCode?.scriptURL;
-  if (!scriptURL || typeof scriptURL !== 'string') return null;
 
-  try {
-    // URL is available in modern RN runtimes; fallback to regex if not.
-    // eslint-disable-next-line no-undef
-    const u = new URL(scriptURL);
-    return u?.hostname || null;
-  } catch (e) {
-    const m = scriptURL.match(/^[a-zA-Z]+:\/\/([^:\/]+)(?::\d+)?\//);
-    return m ? m[1] : null;
-  }
-}
+function AppContent() {
+  const {
+    authReady, authTokenState, userId,
+    authEmail, setAuthEmail,
+    authCode, setAuthCode,
+    codeSent, setCodeSent,
+    resendCooldown, setResendCooldown,
+    authLoading,
+    uiLanguage, setUiLanguage,
+    activeTab, setActiveTab,
+    showOnboarding, setShowOnboarding,
+    showFaq, setShowFaq,
+    faqOpenIndex, setFaqOpenIndex,
+    doAuth, logout, deleteAccount,
+    logEvent, errText,
+    setAndPersistUiLanguage, t,
+  } = useApp();
 
-const DEV_HOST = guessDevHost();
+  // Reset local profile/analysis state on logout
+  useEffect(() => {
+    if (authTokenState !== null) return;
+    setProfileId(null);
+    setName('Ærlig JobbCoach');
+    setProfileEmail('');
+    setPhone('');
+    setAddress('');
+    setPostalCode('');
+    setPostalPlace('');
+    setProfilePhotoData('');
+    setIncludePhotoDefault(true);
+    setIncludePhotoInPdf(true);
+    setSkills('');
+    setSkillInput('');
+    setConsentAnalytics(false);
+    setLanguagesList([]);
+    setCvGapsList([]);
+    setProfileDocsList([]);
+    setExperienceEntries([]);
+    setEducationEntries([]);
+    setReferenceEntries([]);
+    setEditExperience(false);
+    setEditEducation(false);
+    setEditingExperienceIndex(-1);
+    setEditingEducationIndex(-1);
+    setJobUrl('');
+    setAnalysis(null);
+    setJobAnalyses([]);
+    setCvAnalysis(null);
+    setApplicationStyle('vanlig');
+    setApplicationEmail('');
+    setApplicationPackage(null);
+    setGenerationBanner('');
+    setStreamingProgress('');
+    setIsGenerating(false);
+    generationLockRef.current = false;
+    setInterviewIndex(0);
+    setInterviewNotes({});
+    setInterviewMessages([]);
+    setInterviewDraft('');
+    setInterviewLoading(false);
+    setInterviewError('');
+    setInterviewStarted(false);
+    setApplications([]);
+    setStatsMe(null);
+    setDocuments([]);
+  }, [authTokenState]); // eslint-disable-line react-hooks/exhaustive-deps
 
-function validateApiBaseUrl(rawApiBaseUrl, { envProvided = false } = {}) {
-  const api = (rawApiBaseUrl || '').trim();
-  // __DEV__ is a React Native global (true in development, false in release builds)
-  // eslint-disable-next-line no-undef
-  const isDev = (typeof __DEV__ !== 'undefined') ? __DEV__ : true;
-
-  function fail(msg) {
-    const full = `[API] ${msg}`;
-    console.error(full);
-    throw new Error(full);
-  }
-
-  if (!api) {
-    if (!isDev) {
-      fail('Missing API base URL. Set EXPO_PUBLIC_API_URL to a public https://... backend URL for release builds.');
-    }
-    return api;
-  }
-
-  let hostname = '';
-  try {
-    // eslint-disable-next-line no-undef
-    const u = new URL(api);
-    hostname = String(u?.hostname || '');
-  } catch (e) {
-    if (!isDev) {
-      fail(`Invalid API base URL: "${api}". It must be an absolute http(s) URL, e.g. https://your-backend.example.com`);
-    }
-    console.warn('[API] Could not parse API base URL (dev):', api);
-    return api;
-  }
-
-  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-  const isLan192 = /^192\.168\.(\d{1,3})\.(\d{1,3})$/.test(hostname);
-
-  // In release builds we require an explicit env URL to avoid accidentally shipping
-  // a fallback like http://localhost:8000.
-  if (!isDev && !envProvided) {
-    fail('EXPO_PUBLIC_API_URL is required in release builds. Refusing to use an auto-guessed localhost/LAN URL.');
-  }
-
-  // Explicitly block localhost / 127.0.0.1 in release.
-  if (!isDev && isLocalhost) {
-    fail(`Release build is configured with a local API URL (${api}). Use a public https://... backend URL instead.`);
-  }
-
-  // Development allowances (explicitly permitted by task): localhost/127 and 192.168.x.x
-  if (isDev && (isLocalhost || isLan192)) {
-    return api;
-  }
-
-  return api;
-}
-
-const ENV_API = (process.env.EXPO_PUBLIC_API_URL || '').trim();
-const AUTO_API = (Platform.OS === 'web'
-  ? 'http://localhost:8000'
-  : DEV_HOST
-    ? `http://${DEV_HOST}:8000`
-    : 'http://localhost:8000');
-
-const API = validateApiBaseUrl(ENV_API || AUTO_API, { envProvided: !!ENV_API });
-
-if (__DEV__) console.log('API base URL:', API);
-
-let AUTH_TOKEN = null;
-let UNAUTHORIZED_HANDLER = null;
-
-function setAuthToken(token) {
-  AUTH_TOKEN = token;
-}
-
-function setUnauthorizedHandler(fn) {
-  UNAUTHORIZED_HANDLER = fn;
-}
-
-async function apiFetch(path, options) {
-  const opts = options ? { ...options } : {};
-  const headers = { ...(opts.headers || {}) };
-  if (AUTH_TOKEN) {
-    headers.Authorization = `Bearer ${AUTH_TOKEN}`;
-  }
-  opts.headers = headers;
-
-  const r = await fetch(API + path, opts);
-
-  let data = null;
-  try {
-    data = await r.json();
-  } catch (e) {
-    // ignore JSON parse errors
-  }
-
-  if (r.status === 401) {
-    const msg = (data && (data.detail || data.error)) || 'Sesjonen er utløpt. Logg inn på nytt.';
-    try {
-      if (UNAUTHORIZED_HANDLER) {
-        await UNAUTHORIZED_HANDLER();
-      }
-    } catch (e) {
-      // ignore
-    }
-    throw new Error(msg);
-  }
-
-  if (!r.ok) {
-    const msg = (data && (data.detail || data.error)) || r.statusText || 'Ukjent feil';
-    const err = new Error(msg);
-    err.status = r.status;
-    throw err;
-  }
-
-  return data;
-}
-
-const PRIVACY_URL = 'https://bjelland76-boop.github.io/jobbsoker_ai_app_full/';
-
-// Career tips shown on the Home screen.
-// We keep them locally and rotate them every few hours.
-const TIP_REFRESH_MS = 2 * 60 * 60 * 1000; // 2 hours
-
-export default function App() {
-  function errText(e) {
-    return (e && e.message) ? String(e.message) : String(e);
-  }
-
-  const [authReady, setAuthReady] = useState(false);
-  const [authTokenState, setAuthTokenState] = useState(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [showFaq, setShowFaq] = useState(false);
-  const [faqOpenIndex, setFaqOpenIndex] = useState(-1);
-  const [uiLanguage, setUiLanguage] = useState('no'); // no | en
-  const [authEmail, setAuthEmail] = useState('');
-  const [authCode, setAuthCode] = useState('');
-  const [codeSent, setCodeSent] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
-  const [authLoading, setAuthLoading] = useState(false);
-  const [userId, setUserId] = useState(null);
-
-  const [activeTab, setActiveTab] = useState('home');
   const [jobUrl, setJobUrl] = useState('');
   const [analysis, setAnalysis] = useState(null);
   const [tailoredCvJobTitle, setTailoredCvJobTitle] = useState('');
@@ -304,16 +211,6 @@ export default function App() {
     uri: 'https://api.dicebear.com/9.x/adventurer/png?seed=Teacher&backgroundColor=b6e3f4&size=256',
   };
 
-  const strings = I18N[uiLanguage] || I18N.no;
-  const t = (key) => strings[key] ?? I18N.no[key] ?? String(key);
-
-  function logEvent(action, metadata = null) {
-    apiFetch('/events/log', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, metadata }),
-    }).catch(() => {});
-  }
 
   async function refreshCareerTip({ force = false } = {}) {
     const tips = CAREER_TIPS.no;
@@ -350,78 +247,7 @@ export default function App() {
     }
   }
 
-  async function setAndPersistUiLanguage(nextLang) {
-    const v = nextLang === 'en' ? 'en' : 'no';
-    setUiLanguage(v);
-    try {
-      await AsyncStorage.setItem('uiLanguage', v);
-    } catch (e) {
-      // ignore
-    }
-  }
 
-  useEffect(() => {
-    setUnauthorizedHandler(async () => {
-      try {
-        await AsyncStorage.removeItem('authToken');
-      } catch (e) {
-        // ignore
-      }
-      setAuthToken(null);
-      setAuthTokenState(null);
-      resetUserState();
-    });
-
-    async function initAuth() {
-      try {
-        const lang = await AsyncStorage.getItem('uiLanguage');
-        if (lang) {
-          setUiLanguage(lang === 'en' ? 'en' : 'no');
-        }
-
-        const t = await AsyncStorage.getItem('authToken');
-        if (t) {
-          setAuthToken(t);
-          setAuthTokenState(t);
-          logEvent('app_opened');
-        }
-      } catch (e) {
-        // ignore
-      }
-      setAuthReady(true);
-    }
-
-    initAuth();
-
-    return () => {
-      setUnauthorizedHandler(null);
-    };
-  }, []);
-
-  useEffect(() => {
-    async function loadMe() {
-      try {
-        const me = await apiFetch('/auth/me');
-        setUserId(me?.id ?? null);
-      } catch (e) {
-        // 401 is handled centrally (auto logout)
-        setUserId(null);
-      }
-    }
-
-    if (!authTokenState) {
-      setUserId(null);
-      return;
-    }
-
-    loadMe();
-  }, [authTokenState]);
-
-  useEffect(() => {
-    if (!resendCooldown) return;
-    const t = setTimeout(() => setResendCooldown((s) => (s > 0 ? s - 1 : 0)), 1000);
-    return () => clearTimeout(t);
-  }, [resendCooldown]);
 
   useEffect(() => {
     if (activeTab !== 'home') return;
@@ -467,70 +293,8 @@ export default function App() {
     loadApplications();
   }, [activeTab, profileId]);
 
-  async function doAuth() {
-    if (!authEmail) {
-      Alert.alert('Feil', 'Skriv inn e-post');
-      return;
-    }
-
-    setAuthLoading(true);
-    try {
-      if (!codeSent) {
-        // Step 1: request a one-time code
-        await apiFetch('/auth/request-code', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: authEmail }),
-        });
-
-        setCodeSent(true);
-        setAuthCode('');
-        setResendCooldown(30);
-        Alert.alert('Kode sendt', 'Sjekk e-posten din for en engangskode.');
-      } else {
-        // Step 2: verify the code and receive a token
-        if (!authCode || String(authCode).trim().length < 4) {
-          Alert.alert('Feil', 'Skriv inn engangskoden');
-          return;
-        }
-
-        const res = await apiFetch('/auth/verify-code', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: authEmail, code: String(authCode).trim() }),
-        });
-
-        const token = res?.access_token;
-        if (!token) throw new Error('Mangler token fra server');
-
-        setAuthToken(token);
-        setAuthTokenState(token);
-        await AsyncStorage.setItem('authToken', token);
-
-        setCodeSent(false);
-        setResendCooldown(0);
-        setAuthCode('');
-        setActiveTab('home');
-      }
-    } catch (e) {
-      if (e.status === 429) {
-        Alert.alert('For mange forsøk', 'Vent noen minutter og prøv igjen.');
-      } else {
-        Alert.alert('Feil', errText(e));
-      }
-    }
-    setAuthLoading(false);
-  }
 
   function resetUserState() {
-    setUserId(null);
-    setActiveTab('home');
-
-    // Auth UI state
-    setAuthEmail('');
-    setAuthCode('');
-    setCodeSent(false);
-    setResendCooldown(0);
 
     // Profile
     setProfileId(null);
@@ -592,47 +356,6 @@ export default function App() {
     return !hasExperience && !hasEducation && !hasSkills;
   }
 
-  async function logout() {
-    try {
-      await AsyncStorage.removeItem('authToken');
-    } catch (e) {
-      // ignore
-    }
-    setAuthToken(null);
-    setAuthTokenState(null);
-    resetUserState();
-  }
-
-  async function deleteAccount() {
-    const msg = 'Dette sletter kontoen din og all lagret data (profil, analyser, dokumenter og statistikk). Dette kan ikke angres.';
-
-    const doDelete = async () => {
-      try {
-        await apiFetch('/me', { method: 'DELETE' });
-        Alert.alert('Slettet', 'Kontoen og alle data er slettet.');
-        await logout();
-      } catch (e) {
-        Alert.alert('Feil', errText(e));
-      }
-    };
-
-    if (Platform.OS === 'web') {
-      // eslint-disable-next-line no-alert
-      if (window.confirm('Slett konto og data\n\n' + msg)) {
-        await doDelete();
-      }
-      return;
-    }
-
-    Alert.alert(
-      'Slett konto og data',
-      msg,
-      [
-        { text: 'Avbryt', style: 'cancel' },
-        { text: 'Slett', style: 'destructive', onPress: doDelete },
-      ]
-    );
-  }
 
   const renderAuth = () => (
     <View style={{
@@ -4779,3 +4502,10 @@ export default function App() {
   );
 }
 
+export default function App() {
+  return (
+    <AppProvider>
+      <AppContent />
+    </AppProvider>
+  );
+}
