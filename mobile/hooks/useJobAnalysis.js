@@ -547,6 +547,7 @@ export default function useJobAnalysis({
             url: jobUrl,
             application_style: applicationStyle,
             include_photo: includePhoto,
+            language: cvLanguage,
           }),
         });
       }

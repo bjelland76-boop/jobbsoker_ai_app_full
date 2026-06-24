@@ -2275,7 +2275,7 @@ def analyze_url_and_send(
     if not profile or profile.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
 
-    logger.info("analyze_url_and_send language=%r application_style=%r", data.language, data.application_style)
+    print(f"[send] language={data.language!r} application_style={data.application_style!r}", flush=True)
 
     result: dict = {"cv": "", "coverLetter": "", "pdfUrl": ""}
     email_meta: dict = {}
