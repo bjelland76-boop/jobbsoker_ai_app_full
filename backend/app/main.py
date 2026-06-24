@@ -1,9 +1,12 @@
 import json
+import logging
 import os
 import hmac
 import re
 import secrets
 import traceback
+
+logger = logging.getLogger(__name__)
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -2271,6 +2274,8 @@ def analyze_url_and_send(
     profile = db.get(Profile, data.profile_id)
     if not profile or profile.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
+
+    logger.info("analyze_url_and_send language=%r application_style=%r", data.language, data.application_style)
 
     result: dict = {"cv": "", "coverLetter": "", "pdfUrl": ""}
     email_meta: dict = {}
