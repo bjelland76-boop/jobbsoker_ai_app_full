@@ -131,6 +131,11 @@ def ensure_profile_columns() -> None:
             "content_hash",
             "content_hash TEXT DEFAULT ''",
         )
+        ensure_col(
+            "generated_applications",
+            "language",
+            "language TEXT DEFAULT 'no'",
+        )
 
         # job_analysis_history
         ensure_col(
@@ -364,6 +369,7 @@ class SendAnalysisIn(BaseModel):
     to_email: str | None = None
     application_style: str = "vanlig"  # kort | vanlig | profesjonell
     include_photo: bool = True
+    language: str = "no"  # "no" | "en"
 
 
 class ProgressIn(BaseModel):
@@ -1125,6 +1131,34 @@ def save_settings(data: SettingsIn, current_user: User = Depends(get_current_use
     }
 
 
+_CV_PRESERVE_KEYS = (
+    "tailored_cv", "cover_letter", "email_text",
+    "tailored_cv_en", "cover_letter_en", "email_text_en",
+    "tailored_for_job", "cv_mal",
+)
+
+
+def _preserve_cv_keys_on_reanalysis(
+    db: Session, profile_id: int, job_id: int, new_result: dict
+) -> None:
+    """Copy previously generated CV texts into new_result so re-analysing does not wipe them."""
+    existing = db.scalars(
+        select(JobAnalysisHistory).where(
+            JobAnalysisHistory.profile_id == profile_id,
+            JobAnalysisHistory.job_id == job_id,
+        )
+    ).first()
+    if not existing or not existing.analysis_json:
+        return
+    try:
+        old = json.loads(existing.analysis_json)
+    except Exception:
+        return
+    for key in _CV_PRESERVE_KEYS:
+        if old.get(key) and not new_result.get(key):
+            new_result[key] = old[key]
+
+
 def _upsert_analysis_history(
     db: Session,
     profile_id: int,
@@ -1205,6 +1239,7 @@ def list_generated_applications(
                 "id": approw.id,
                 "job": job_to_dict(job),
                 "created_at": approw.created_at,
+                "language": getattr(approw, "language", "no") or "no",
                 "cover_pdf_url": f"/generated-applications/{approw.id}/pdf/cover",
                 "cv_pdf_url": f"/generated-applications/{approw.id}/pdf/cv",
             }
@@ -1363,6 +1398,8 @@ def get_job_analysis(
         data = {"data": data}
 
     data["job_id"] = job_id
+    data["has_tailored_cv_no"] = bool(_to_text(data.get("tailored_cv")))
+    data["has_tailored_cv_en"] = bool(_to_text(data.get("tailored_cv_en")))
     return data
 
 
@@ -1783,6 +1820,7 @@ def generate_tailored_cv(
             template=template_id,
             include_photo=include_photo_bool,
             content_hash=content_hash,
+            language=lang,
         )
         db.add(approw)
         db.commit()
@@ -1953,6 +1991,7 @@ def stream_documents(
                         template=f"{effective_template}_v1",
                         include_photo=include_photo_bool,
                         content_hash=content_hash,
+                        language=lang,
                     )
                     fresh_db.add(approw)
                     fresh_db.commit()
@@ -1986,6 +2025,7 @@ def generateApplicationPackage(
     *,
     application_style: str = "vanlig",
     include_photo: bool = True,
+    language: str = "no",
     current_user: User,
     db: Session,
 ) -> tuple[dict, dict]:
@@ -2012,6 +2052,7 @@ def generateApplicationPackage(
         url,
         application_style=application_style,
         generate_documents=True,
+        language=language,
     )
 
     job_desc = (result.pop("__job_text", "") or "").strip()
@@ -2113,6 +2154,7 @@ def generateApplicationPackage(
             template=template_id,
             include_photo=include_photo_flag,
             content_hash=content_hash,
+            language=language,
         )
 
         db.add(approw)
@@ -2189,6 +2231,9 @@ def analyze_url(
         db.commit()
         db.refresh(job)
 
+        # Preserve any previously generated CV texts when re-analyzing the same job
+        _preserve_cv_keys_on_reanalysis(db, data.profile_id, job.id, result)
+
         _upsert_analysis_history(
             db,
             data.profile_id,
@@ -2198,6 +2243,8 @@ def analyze_url(
         )
 
         result["job_id"] = job.id
+        result["has_tailored_cv_no"] = bool(_to_text(result.get("tailored_cv")))
+        result["has_tailored_cv_en"] = bool(_to_text(result.get("tailored_cv_en")))
         return result
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -2235,6 +2282,7 @@ def analyze_url_and_send(
             data.url,
             application_style=data.application_style,
             include_photo=bool(data.include_photo),
+            language=data.language,
             current_user=current_user,
             db=db,
         )

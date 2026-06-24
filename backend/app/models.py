@@ -83,6 +83,9 @@ class GeneratedApplication(Base):
     # TEXT column with default '' (legacy rows). Indexed for fast lookups.
     content_hash: Mapped[str] = mapped_column(Text, default="", index=True)
 
+    # Language the CV/letter was generated in: "no" | "en"
+    language: Mapped[str] = mapped_column(String(5), default="no")
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 

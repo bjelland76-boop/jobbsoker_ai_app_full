@@ -376,6 +376,6 @@ def analyze_job_match(
 
     except Exception:
         # Never raise from the matcher (keep API stable); return safe defaults.
+        # Do NOT cache failures so retries can succeed after transient errors.
         normalized = _normalize_result({})
-        MATCH_CACHE.set(key, dict(normalized))
         return normalized
