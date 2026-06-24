@@ -826,6 +826,7 @@ def analyze_job_url(
     application_style: str = "vanlig",
     *,
     generate_documents: bool = False,
+    language: str = "no",
 ) -> dict:
     """Analyze a job ad URL.
 
@@ -910,6 +911,7 @@ def analyze_job_url(
             job_text=job_text,
             application_style=style_norm,
             match_context=match,
+            language=language,
         )
         result.update(docs)
 

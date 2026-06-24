@@ -32,7 +32,13 @@ export default function useJobAnalysis({
   const [appSortOrder, setAppSortOrder] = useState('newest');
   const [applicationStyle, setApplicationStyle] = useState('vanlig');
   const [applicationEmail, setApplicationEmail] = useState('');
-  const [applicationPackage, setApplicationPackage] = useState(null);
+  const [applicationPackageByLang, setApplicationPackageByLang] = useState({ no: null, en: null });
+  // Computed: always reflects the package for the currently selected language.
+  // Switching cvLanguage automatically swaps displayed content + pdfUrl.
+  const applicationPackage = applicationPackageByLang[cvLanguage] ?? null;
+  function setApplicationPackage(pkg) {
+    setApplicationPackageByLang(prev => ({ ...prev, [cvLanguage]: pkg }));
+  }
   const [sending, setSending] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [streamingProgress, setStreamingProgress] = useState('');
@@ -58,7 +64,7 @@ export default function useJobAnalysis({
     setCvAnalysis(null);
     setApplicationStyle('vanlig');
     setApplicationEmail('');
-    setApplicationPackage(null);
+    setApplicationPackageByLang({ no: null, en: null });
     setGenerationBanner('');
     setStreamingProgress('');
     setIsGenerating(false);
@@ -195,6 +201,9 @@ export default function useJobAnalysis({
     if (!profileId) return;
 
     setLoading(true);
+    setApplicationPackageByLang({ no: null, en: null });
+    setTailoredCvJobTitle('');
+    setGenerationBanner('');
     try {
       const data = await apiFetch(`/job-analyses/${jobId}?profile_id=${profileId}`);
       setAnalysis(data);
@@ -299,7 +308,7 @@ export default function useJobAnalysis({
 
     await flushAutoSave?.();
 
-    setApplicationPackage(null);
+    setApplicationPackageByLang({ no: null, en: null });
     setGenerationBanner('');
     setTailoredCvJobTitle('');
 
@@ -386,6 +395,7 @@ export default function useJobAnalysis({
           to_email: applicationEmail,
           application_style: applicationStyle,
           include_photo: includePhoto,
+          language: cvLanguage,
         }),
       });
 
@@ -446,6 +456,31 @@ export default function useJobAnalysis({
     }
 
     if (generationLockRef.current || isGenerating) return;
+
+    // Confirm before overwriting an existing CV in the selected language
+    if (analysis?.job_id) {
+      const alreadyExists = cvLanguage === 'en'
+        ? analysis?.has_tailored_cv_en
+        : analysis?.has_tailored_cv_no;
+      if (alreadyExists) {
+        const langLabel = cvLanguage === 'en'
+          ? (uiLanguage === 'en' ? 'English' : 'engelsk')
+          : (uiLanguage === 'en' ? 'Norwegian' : 'norsk');
+        const confirmed = await new Promise(resolve => {
+          Alert.alert(
+            uiLanguage === 'en' ? 'Regenerate CV?' : 'Generer ny CV?',
+            uiLanguage === 'en'
+              ? `You already have a CV in ${langLabel}. Generate a new one? This will replace the existing one.`
+              : `Du har allerede en CV på ${langLabel}. Vil du generere en ny? Dette erstatter den eksisterende.`,
+            [
+              { text: uiLanguage === 'en' ? 'Cancel' : 'Avbryt', style: 'cancel', onPress: () => resolve(false) },
+              { text: uiLanguage === 'en' ? 'Generate new' : 'Generer ny', onPress: () => resolve(true) },
+            ]
+          );
+        });
+        if (!confirmed) return;
+      }
+    }
 
     await flushAutoSave?.();
     generationLockRef.current = true;
@@ -531,6 +566,9 @@ export default function useJobAnalysis({
           if (analysis?.job_id) {
             setTailoredCvJobTitle(analysis?.job_title || 'denne stillingen');
             if (pkg.cvMal) setCvTemplate(pkg.cvMal);
+            // Update local analysis flags so badges reflect the new language immediately
+            const flagKey = cvLanguage === 'en' ? 'has_tailored_cv_en' : 'has_tailored_cv_no';
+            setAnalysis(prev => prev ? { ...prev, [flagKey]: true } : prev);
           }
 
           if (safePkg.pdfUrl && safePkg.pdfUrl.trim()) {
@@ -730,7 +768,7 @@ export default function useJobAnalysis({
     appSortOrder, setAppSortOrder,
     applicationStyle, setApplicationStyle,
     applicationEmail, setApplicationEmail,
-    applicationPackage, setApplicationPackage,
+    applicationPackage, applicationPackageByLang, setApplicationPackage,
     sending,
     generatingPdf,
     streamingProgress,

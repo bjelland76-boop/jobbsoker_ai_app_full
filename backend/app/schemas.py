@@ -102,6 +102,10 @@ class JobAnalysisOut(BaseModel):
     # Visual CV template auto-selected based on job type.
     cv_mal: str = "profesjonell"
 
+    # Whether a generated CV already exists for each language (used by frontend confirm dialog).
+    has_tailored_cv_no: bool = False
+    has_tailored_cv_en: bool = False
+
 
 class AnalyzeAndSendOut(BaseModel):
     """Legacy response model (kept for backwards compatibility).

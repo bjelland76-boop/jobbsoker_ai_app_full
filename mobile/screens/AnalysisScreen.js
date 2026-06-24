@@ -344,6 +344,20 @@ export default function AnalysisScreen({
                 );
               })}
             </View>
+            {(analysis?.has_tailored_cv_no || analysis?.has_tailored_cv_en) ? (
+              <View style={{ flexDirection: 'row', gap: 6, marginBottom: 6 }}>
+                {analysis.has_tailored_cv_no ? (
+                  <View style={{ backgroundColor: '#dcfce7', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                    <Text style={{ fontSize: 11, color: '#15803d', fontWeight: '700' }}>🇳🇴 NO ✓</Text>
+                  </View>
+                ) : null}
+                {analysis.has_tailored_cv_en ? (
+                  <View style={{ backgroundColor: '#dbeafe', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                    <Text style={{ fontSize: 11, color: '#1d4ed8', fontWeight: '700' }}>🇬🇧 EN ✓</Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
 
             {generationBanner ? (
               <View style={{
