@@ -372,7 +372,12 @@ def analyze_job_match(
         if raw.startswith("```"):
             raw = re.sub(r"^```(?:json)?\s*", "", raw)
             raw = re.sub(r"\s*```\s*$", "", raw)
-        data = json.loads(raw)
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            # Claude sometimes appends trailing text after the JSON object.
+            # raw_decode stops at the first complete value and ignores the rest.
+            data, _ = json.JSONDecoder().raw_decode(raw.lstrip())
         normalized = _normalize_result(data)
 
         MATCH_CACHE.set(key, dict(normalized))

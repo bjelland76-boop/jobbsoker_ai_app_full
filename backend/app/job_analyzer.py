@@ -623,7 +623,10 @@ cover_letter:
     if raw.startswith("```"):
         raw = re.sub(r"^```(?:json)?\s*", "", raw)
         raw = re.sub(r"\s*```\s*$", "", raw)
-    data = json.loads(raw)
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        data, _ = json.JSONDecoder().raw_decode(raw.lstrip())
     return {
         "cover_letter": data.get("cover_letter", ""),
         "tailored_cv": data.get("tailored_cv", ""),
