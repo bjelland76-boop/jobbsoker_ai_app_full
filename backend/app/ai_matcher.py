@@ -366,6 +366,7 @@ def analyze_job_match(
         '"advice":"1 short sentence",'
         '"cv_mal":"profesjonell (DEFAULT for de fleste stillinger: salg/IT/helse/bygg/kontor/service/logistikk/HR) | kreativ (KUN for: designer/UX/grafisk/animasjon/reklame/media/innhold) | klassisk (KUN for: advokat/jurist/revisor/forsker/akademiker/offentlig forvaltning) — velg basert på stillingstittelen i JOB-seksjonen"'
         "}"
+        f"\n{lang_rule}"
     )
 
     try:

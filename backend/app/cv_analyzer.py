@@ -27,18 +27,18 @@ def _parse_json(raw: str) -> dict:
     return json.loads(raw)
 
 
-_LANG_INSTRUCTIONS = {
-    "no": ("Du er en ærlig norsk karrierecoach.", "Skriv på norsk."),
-    "en": ("You are an honest career coach.", "Write in English."),
-    "vi": ("Bạn là một huấn luyện viên nghề nghiệp trung thực.", "Viết bằng tiếng Việt."),
+_LANG_RULE = {
+    "no": "CRITICAL: Write ALL JSON text values in Norwegian (Bokmål). Every string in the output must be Norwegian.",
+    "en": "CRITICAL: Write ALL JSON text values in English. Every string in the output must be English.",
+    "vi": "CRITICAL: Write ALL JSON text values in Vietnamese (Tiếng Việt). Every string in the output must be Vietnamese.",
 }
 
 
 def analyze_profile_cv(profile, *, language: str = "no") -> dict:
     """Analyze a profile/CV and suggest suitable job types + concrete advice."""
 
-    lang = language if language in _LANG_INSTRUCTIONS else "no"
-    system_intro, lang_rule = _LANG_INSTRUCTIONS[lang]
+    lang = language if language in _LANG_RULE else "no"
+    lang_rule = _LANG_RULE[lang]
 
     exp = getattr(profile, "experience", "")
     edu = getattr(profile, "education", "")
@@ -47,30 +47,30 @@ def analyze_profile_cv(profile, *, language: str = "no") -> dict:
     langs = getattr(profile, "languages", "")
 
     prompt = f"""
-{system_intro}
+{lang_rule}
 
-Analyser kandidatens CV/profil og foreslå hvilke typer jobber kandidaten realistisk kan søke på.
-Vær konkret og praktisk, og ta utgangspunkt i utdanning, erfaring og ferdigheter.
+Analyze the candidate's CV/profile and suggest realistic job types they can apply for.
+Be concrete and practical, based on education, experience, and skills.
 
-Svar KUN som gyldig JSON med feltene:
-- summary (kort oppsummering av profilen)
-- suggested_roles (liste med 5-12 konkrete stillingstyper)
-- education_fit (hva kandidaten er utdannet til / kvalifisert til å gjøre)
-- strengths (liste)
-- gaps (liste)
-- improvement_tips (liste med konkrete tiltak)
-- search_keywords (liste med søkeord til jobbsøk)
+Return ONLY valid JSON with these fields:
+- summary (short profile summary)
+- suggested_roles (list of 5-12 concrete job types)
+- education_fit (what the candidate is qualified to do)
+- strengths (list)
+- gaps (list)
+- improvement_tips (list of concrete actions)
+- search_keywords (list of job search keywords)
 
-Kandidat:
-Ønsket rolle (hvis oppgitt): {target}
-Erfaring: {exp}
-Utdanning: {edu}
-Ferdigheter: {skills}
-Språk: {langs}
+Candidate:
+Target role (if provided): {target}
+Experience: {exp}
+Education: {edu}
+Skills: {skills}
+Languages: {langs}
 
-Regler:
-- Ikke finn på utdanning/erfaring.
-- Ikke bruk placeholders som [adresse].
+Rules:
+- Do not invent education/experience.
+- Do not use placeholders like [address].
 - {lang_rule}
 """.strip()
 
@@ -79,7 +79,7 @@ Regler:
     res = client.messages.create(
         model=os.getenv("CLAUDE_MODEL") or _CLAUDE_MODEL,
         system=(
-            f"{system_intro} Svar kun med gyldig JSON.\n\n"
+            f"Career coach AI. Return ONLY valid JSON. {lang_rule}\n\n"
             + SHARED_ANTI_HALLUCINATION_RULES
         ),
         messages=[{"role": "user", "content": prompt}],
