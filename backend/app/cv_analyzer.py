@@ -27,8 +27,18 @@ def _parse_json(raw: str) -> dict:
     return json.loads(raw)
 
 
-def analyze_profile_cv(profile) -> dict:
+_LANG_INSTRUCTIONS = {
+    "no": ("Du er en ærlig norsk karrierecoach.", "Skriv på norsk."),
+    "en": ("You are an honest career coach.", "Write in English."),
+    "vi": ("Bạn là một huấn luyện viên nghề nghiệp trung thực.", "Viết bằng tiếng Việt."),
+}
+
+
+def analyze_profile_cv(profile, *, language: str = "no") -> dict:
     """Analyze a profile/CV and suggest suitable job types + concrete advice."""
+
+    lang = language if language in _LANG_INSTRUCTIONS else "no"
+    system_intro, lang_rule = _LANG_INSTRUCTIONS[lang]
 
     exp = getattr(profile, "experience", "")
     edu = getattr(profile, "education", "")
@@ -37,7 +47,7 @@ def analyze_profile_cv(profile) -> dict:
     langs = getattr(profile, "languages", "")
 
     prompt = f"""
-Du er en ærlig norsk karrierecoach.
+{system_intro}
 
 Analyser kandidatens CV/profil og foreslå hvilke typer jobber kandidaten realistisk kan søke på.
 Vær konkret og praktisk, og ta utgangspunkt i utdanning, erfaring og ferdigheter.
@@ -61,7 +71,7 @@ Språk: {langs}
 Regler:
 - Ikke finn på utdanning/erfaring.
 - Ikke bruk placeholders som [adresse].
-- Skriv på norsk.
+- {lang_rule}
 """.strip()
 
     client = _get_client()
@@ -69,7 +79,7 @@ Regler:
     res = client.messages.create(
         model=os.getenv("CLAUDE_MODEL") or _CLAUDE_MODEL,
         system=(
-            "Du er en ærlig norsk karrierecoach og svarer kun med gyldig JSON.\n\n"
+            f"{system_intro} Svar kun med gyldig JSON.\n\n"
             + SHARED_ANTI_HALLUCINATION_RULES
         ),
         messages=[{"role": "user", "content": prompt}],

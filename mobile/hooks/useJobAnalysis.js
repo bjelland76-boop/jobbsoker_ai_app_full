@@ -737,7 +737,7 @@ export default function useJobAnalysis({
       const data = await apiFetch('/analyze-cv', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profile_id: profileId }),
+        body: JSON.stringify({ profile_id: profileId, language: uiLanguage }),
       });
 
       setCvAnalysis(data);

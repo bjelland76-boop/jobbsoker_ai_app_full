@@ -363,6 +363,7 @@ class AnalyzeUrlIn(BaseModel):
 
 class AnalyzeCvIn(BaseModel):
     profile_id: int
+    language: str = "no"
 
 
 class SendAnalysisIn(BaseModel):
@@ -1322,7 +1323,7 @@ def analyze_cv(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
 
     try:
-        return analyze_profile_cv(profile)
+        return analyze_profile_cv(profile, language=data.language)
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
