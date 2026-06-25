@@ -239,6 +239,7 @@
     "now": "Now",
     "add_experience": "+ Add experience",
     "education_title": "Education",
+    "add_education": "+ Add education",
     "no_education": "None added",
     "school_placeholder": "Choose school",
     "degree_placeholder": "Degree / field of study",
@@ -252,6 +253,7 @@
     "languages_section": "Languages",
     "no_languages": "Not filled in",
     "language_placeholder": "Language (e.g. English)",
+    "add_language": "+ Add language",
     "level_beginner": "Beginner",
     "level_basic": "Basic",
     "level_good": "Good",
@@ -276,7 +278,14 @@
     "logout_btn": "Log out",
     "delete_account_btn": "Delete account",
     "analytics_label": "Anonymous statistics",
-    "analytics_help": "Contribute to aggregated statistics (anonymous)."
+    "analytics_help": "Contribute to aggregated statistics (anonymous).",
+    "autosave_pending": "Waiting to save...",
+    "autosave_saved": "Saved ✓",
+    "autosave_error": "Could not save",
+    "autosave_retry": "Try again",
+    "school_search_hint": "Type at least 2 letters for suggestions.",
+    "school_loading": "Loading schools...",
+    "school_no_results": "No results."
   },
   "interview": {
     "title": "Interview practice",

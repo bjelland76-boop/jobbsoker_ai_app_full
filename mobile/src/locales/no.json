@@ -239,6 +239,7 @@
     "now": "Nå",
     "add_experience": "+ Legg til erfaring",
     "education_title": "Utdanning",
+    "add_education": "+ Legg til utdanning",
     "no_education": "Ingen lagt til",
     "school_placeholder": "Velg skole",
     "degree_placeholder": "Grad / studieretning",
@@ -252,6 +253,7 @@
     "languages_section": "Språk",
     "no_languages": "Ikke utfylt",
     "language_placeholder": "Språk (f.eks. Norsk)",
+    "add_language": "+ Legg til språk",
     "level_beginner": "Nybegynner",
     "level_basic": "Grunnleggende",
     "level_good": "Godt",
@@ -276,7 +278,14 @@
     "logout_btn": "Logg ut",
     "delete_account_btn": "Slett konto",
     "analytics_label": "Anonym statistikk",
-    "analytics_help": "Bidra til aggregert statistikk (anonym)."
+    "analytics_help": "Bidra til aggregert statistikk (anonym).",
+    "autosave_pending": "Venter på lagring...",
+    "autosave_saved": "Lagret ✓",
+    "autosave_error": "Kunne ikke lagre",
+    "autosave_retry": "Prøv igjen",
+    "school_search_hint": "Skriv minst 2 bokstaver for forslag.",
+    "school_loading": "Laster skoler...",
+    "school_no_results": "Ingen treff."
   },
   "interview": {
     "title": "Intervju-øving",

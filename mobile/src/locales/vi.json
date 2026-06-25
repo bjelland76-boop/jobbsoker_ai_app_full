@@ -239,6 +239,7 @@
     "now": "Hiện tại",
     "add_experience": "+ Thêm kinh nghiệm",
     "education_title": "Học vấn",
+    "add_education": "+ Thêm học vấn",
     "no_education": "Chưa thêm",
     "school_placeholder": "Chọn trường",
     "degree_placeholder": "Bằng / chuyên ngành",
@@ -252,6 +253,7 @@
     "languages_section": "Ngôn ngữ",
     "no_languages": "Chưa điền",
     "language_placeholder": "Ngôn ngữ (ví dụ: Tiếng Việt)",
+    "add_language": "+ Thêm ngôn ngữ",
     "level_beginner": "Sơ cấp",
     "level_basic": "Cơ bản",
     "level_good": "Tốt",
@@ -276,7 +278,14 @@
     "logout_btn": "Đăng xuất",
     "delete_account_btn": "Xóa tài khoản",
     "analytics_label": "Thống kê ẩn danh",
-    "analytics_help": "Đóng góp vào thống kê tổng hợp (ẩn danh)."
+    "analytics_help": "Đóng góp vào thống kê tổng hợp (ẩn danh).",
+    "autosave_pending": "Đang chờ lưu...",
+    "autosave_saved": "Đã lưu ✓",
+    "autosave_error": "Không thể lưu",
+    "autosave_retry": "Thử lại",
+    "school_search_hint": "Nhập ít nhất 2 ký tự để gợi ý.",
+    "school_loading": "Đang tải trường...",
+    "school_no_results": "Không có kết quả."
   },
   "interview": {
     "title": "Luyện phỏng vấn",

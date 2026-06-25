@@ -640,16 +640,16 @@ export default function ProfileScreen() {
                             })}
                           </View>
                           {schoolFilter.trim().length < 2 ? (
-                            <Text style={[styles.helpText, styles.aerligHelpText, { marginLeft: 12, marginBottom: 8 }]}>Skriv minst 2 bokstaver for forslag.</Text>
+                            <Text style={[styles.helpText, styles.aerligHelpText, { marginLeft: 12, marginBottom: 8 }]}>{t('profile.school_search_hint')}</Text>
                           ) : null}
                           {schoolResultsLoading ? (
-                            <Text style={[styles.helpText, styles.aerligHelpText, { marginLeft: 12, marginBottom: 8 }]}>Laster skoler...</Text>
+                            <Text style={[styles.helpText, styles.aerligHelpText, { marginLeft: 12, marginBottom: 8 }]}>{t('profile.school_loading')}</Text>
                           ) : null}
                           {!schoolResultsLoading && schoolFilter.trim().length >= 2 && (
                             (schoolResults.length === 0 &&
                               schoolOptions.filter((s) => s.toLowerCase().includes(schoolFilter.toLowerCase())).length === 0)
                           ) ? (
-                            <Text style={[styles.helpText, styles.aerligHelpText, { marginLeft: 12, marginBottom: 8 }]}>Ingen treff.</Text>
+                            <Text style={[styles.helpText, styles.aerligHelpText, { marginLeft: 12, marginBottom: 8 }]}>{t('profile.school_no_results')}</Text>
                           ) : null}
                           {(schoolFilter.trim().length >= 2
                             ? (schoolResults.length > 0
@@ -685,7 +685,7 @@ export default function ProfileScreen() {
                         <TextInput
                           style={[styles.input, styles.aerligInput, styles.aerligInputCompact, styles.inlineInput]}
                           value={entry.from}
-                          placeholder="Fra (år/mnd)"
+                          placeholder={t('profile.from_placeholder')}
                           onChangeText={(value) => {
                             const items = [...educationEntries];
                             items[index].from = value;
@@ -695,7 +695,7 @@ export default function ProfileScreen() {
                         <TextInput
                           style={[styles.input, styles.aerligInput, styles.aerligInputCompact, styles.inlineInput, { marginRight: 0 }]}
                           value={entry.to}
-                          placeholder="Til (år/mnd)"
+                          placeholder={t('profile.to_placeholder')}
                           editable={entry.status !== 'pagaende'}
                           onChangeText={(value) => {
                             const items = [...educationEntries];
@@ -741,7 +741,7 @@ export default function ProfileScreen() {
                   setSchoolFilter('');
                 }}
               >
-                <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>+ Legg til utdanning</Text>
+                <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>{t('profile.add_education')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -752,10 +752,10 @@ export default function ProfileScreen() {
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: _skillsList.length > 0 ? 8 : 0 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Text style={[styles.profileCardIcon, { marginBottom: 0 }]}>⚡</Text>
-              <Text style={[styles.profileCardLabel, { marginBottom: 0 }]}>Ferdigheter</Text>
+              <Text style={[styles.profileCardLabel, { marginBottom: 0 }]}>{t('profile.skills_section')}</Text>
             </View>
             <TouchableOpacity onPress={() => setExpandSkillsCard((v) => !v)}>
-              <Text style={{ fontSize: 12, color: '#E8501A', fontWeight: '500' }}>{expandSkillsCard ? 'Lukk' : 'Rediger'}</Text>
+              <Text style={{ fontSize: 12, color: '#E8501A', fontWeight: '500' }}>{expandSkillsCard ? t('common.done') : t('common.edit')}</Text>
             </TouchableOpacity>
           </View>
           {_skillsList.length > 0 && (
@@ -791,7 +791,7 @@ export default function ProfileScreen() {
                   style={[styles.input, styles.aerligInput, { flex: 1, marginBottom: 0 }]}
                   value={skillInput}
                   onChangeText={setSkillInput}
-                  placeholder="Ny ferdighet"
+                  placeholder={t('profile.skill_placeholder')}
                   autoCapitalize="sentences"
                 />
                 <TouchableOpacity
@@ -804,7 +804,7 @@ export default function ProfileScreen() {
                     setSkillInput('');
                   }}
                 >
-                  <Text style={styles.aerligSecondaryButtonText}>Legg til</Text>
+                  <Text style={styles.aerligSecondaryButtonText}>{t('common.add')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -906,7 +906,7 @@ export default function ProfileScreen() {
                   setEditingLanguageIndex(next.length - 1);
                 }}
               >
-                <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>+ Legg til språk</Text>
+                <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>{t('profile.add_language')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -1255,22 +1255,22 @@ export default function ProfileScreen() {
         {/* Autosave status */}
         <View style={styles.autoSaveBar}>
           {autoSaveStatus === 'pending' && (
-            <Text style={styles.autoSaveText}>Venter på lagring...</Text>
+            <Text style={styles.autoSaveText}>{t('profile.autosave_pending')}</Text>
           )}
           {autoSaveStatus === 'saving' && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <ActivityIndicator size="small" color={THEME.colors.primary} />
-              <Text style={styles.autoSaveText}>Lagrer...</Text>
+              <Text style={styles.autoSaveText}>{t('common.saving')}</Text>
             </View>
           )}
           {autoSaveStatus === 'saved' && (
-            <Text style={[styles.autoSaveText, { color: '#16a34a' }]}>Lagret ✓</Text>
+            <Text style={[styles.autoSaveText, { color: '#16a34a' }]}>{t('profile.autosave_saved')}</Text>
           )}
           {autoSaveStatus === 'error' && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <Text style={[styles.autoSaveText, { color: '#dc2626' }]}>Kunne ikke lagre</Text>
+              <Text style={[styles.autoSaveText, { color: '#dc2626' }]}>{t('profile.autosave_error')}</Text>
               <TouchableOpacity onPress={saveProfileAuto}>
-                <Text style={[styles.autoSaveText, { color: THEME.colors.primary, fontWeight: '600' }]}>Prøv igjen</Text>
+                <Text style={[styles.autoSaveText, { color: THEME.colors.primary, fontWeight: '600' }]}>{t('profile.autosave_retry')}</Text>
               </TouchableOpacity>
             </View>
           )}
