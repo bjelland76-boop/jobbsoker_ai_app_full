@@ -124,8 +124,8 @@ export default function HomeScreen({
     : 0;
 
   const profileStatus = !profileId
-    ? 'Ikke lagret'
-    : (profilePercent >= 85 ? 'Sterk' : (profilePercent >= 60 ? 'OK' : 'Trenger mer'));
+    ? t('home.profile_not_saved')
+    : (profilePercent >= 85 ? t('home.profile_strong') : (profilePercent >= 60 ? t('home.profile_ok') : t('home.profile_needs_more')));
 
   const matchMeterStyle = latestMatch == null ? styles.aerligMeterWarn
     : latestMatch >= 70 ? styles.aerligMeterGood
@@ -136,9 +136,9 @@ export default function HomeScreen({
     : latestMatch >= 40 ? '#D97706'
     : '#DC2626';
   const matchMeterStatus = latestMatch == null ? ''
-    : latestMatch >= 70 ? 'Sterk match — søk denne jobben!'
-    : latestMatch >= 40 ? 'God match — søknaden kan fungere'
-    : 'Svak match — vurder å styrke profilen';
+    : latestMatch >= 70 ? t('home.match_strong')
+    : latestMatch >= 40 ? t('home.match_ok')
+    : t('home.match_weak');
 
   return (
     <View style={styles.aerligHomeWrap}>
@@ -165,14 +165,14 @@ export default function HomeScreen({
         </View>
 
         <Text style={styles.aerligHeroGreeting}>
-          {t('hi')}{firstName ? `, ${firstName}` : ''}.
+          {t('common.hi')}{firstName ? `, ${firstName}` : ''}.
         </Text>
         <Text style={styles.aerligHeroSubtitle}>
-          Oversikt over analyser og søknader — med ærlige råd.
+          {t('home.subtitle')}
         </Text>
 
         <TouchableOpacity style={styles.aerligPrimaryButton} onPress={() => setActiveTab('new')}>
-          <Text style={styles.aerligPrimaryButtonText}>Analyser jobb</Text>
+          <Text style={styles.aerligPrimaryButtonText}>{t('home.analyze_job')}</Text>
         </TouchableOpacity>
 
         <View style={styles.aerligQuickRow}>
@@ -181,14 +181,14 @@ export default function HomeScreen({
             style={[styles.aerligQuickButton, { marginRight: 10 }]}
             onPress={() => setActiveTab('cv')}
           >
-            <Text style={styles.aerligQuickButtonText}>Analyser CV</Text>
+            <Text style={styles.aerligQuickButtonText}>{t('home.analyze_cv')}</Text>
           </Pressable>
           <Pressable
             {...ripple}
             style={styles.aerligQuickButton}
             onPress={() => setActiveTab('interview')}
           >
-            <Text style={styles.aerligQuickButtonText}>Intervju-øving</Text>
+            <Text style={styles.aerligQuickButtonText}>{t('home.interview_practice')}</Text>
           </Pressable>
         </View>
       </View>
@@ -205,18 +205,18 @@ export default function HomeScreen({
             }
           }}
         >
-          <Text style={styles.aerligCardEyebrow}>Siste analyse</Text>
+          <Text style={styles.aerligCardEyebrow}>{t('home.latest_analysis')}</Text>
           <Text style={styles.aerligCardTitle} numberOfLines={1}>
             {latestJob?.title || 'Siste analyse'}
           </Text>
           <Text style={styles.aerligCardMeta} numberOfLines={1}>
-            {latestJob?.company || 'Ukjent bedrift'}
+            {latestJob?.company || t('common.unknown_company')}
           </Text>
 
           {(latestMatch != null) ? (
             <>
               <View style={styles.aerligMeterRow}>
-                <Text style={styles.aerligMeterLabel}>Matchmeter</Text>
+                <Text style={styles.aerligMeterLabel}>{t('home.matchmeter')}</Text>
                 <Text style={[styles.aerligMeterValue, { color: matchMeterColor }]}>{latestMatch}%</Text>
               </View>
               <View style={styles.aerligMeterOuter}>
@@ -231,29 +231,29 @@ export default function HomeScreen({
           {(typeof latestShouldApply === 'boolean') ? (
             <View style={[styles.aerligPill, latestShouldApply ? styles.aerligPillYes : styles.aerligPillNo]}>
               <Text style={[styles.aerligPillText, latestShouldApply ? styles.aerligPillTextYes : styles.aerligPillTextNo]}>
-                Anbefaling: {latestShouldApply ? 'SØK' : 'VENT'}
+                {t('home.recommendation')}: {latestShouldApply ? t('home.recommend_apply') : t('home.recommend_wait')}
               </Text>
             </View>
           ) : null}
 
           {honestText ? (
             <>
-              <Text style={styles.aerligCardSectionTitle}>Ærlig vurdering</Text>
+              <Text style={styles.aerligCardSectionTitle}>{t('home.honest_assessment')}</Text>
               <Text style={styles.aerligCardBody} numberOfLines={4}>{honestText}</Text>
             </>
           ) : null}
 
-          <Text style={styles.aerligCardLink}>Åpne analyse ›</Text>
+          <Text style={styles.aerligCardLink}>{t('home.open_analysis')}</Text>
         </Pressable>
       ) : (
         <View style={[styles.aerligCard, styles.aerligEmptyCard, { alignItems: 'center', paddingVertical: 28 }]}>
           <Text style={{ fontSize: 36, marginBottom: 12 }}>🔍</Text>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: '#1a1a1a', marginBottom: 6, textAlign: 'center' }}>Ingen analyser ennå</Text>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: '#1a1a1a', marginBottom: 6, textAlign: 'center' }}>{t('home.no_analysis_title')}</Text>
           <Text style={{ fontSize: 14, color: '#888888', textAlign: 'center', lineHeight: 20, marginBottom: 16 }}>
-            Lim inn en FINN.no-lenke over for å{'\n'}analysere din første jobb
+            {t('home.no_analysis_body')}
           </Text>
           <TouchableOpacity style={[styles.aerligPrimaryButton, { paddingHorizontal: 24 }]} onPress={() => setActiveTab('new')}>
-            <Text style={styles.aerligPrimaryButtonText}>Analyser jobb</Text>
+            <Text style={styles.aerligPrimaryButtonText}>{t('home.analyze_job')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -264,9 +264,9 @@ export default function HomeScreen({
           style={styles.aerligMiniCard}
           onPress={() => setActiveTab('analysis')}
         >
-          <Text style={styles.aerligMiniLabel}>Analyserte jobber</Text>
+          <Text style={styles.aerligMiniLabel}>{t('home.analyzed_jobs')}</Text>
           <Text style={styles.aerligMiniValue}>{analysedJobsCount}</Text>
-          <Text style={styles.aerligMiniHint}>Se historikk ›</Text>
+          <Text style={styles.aerligMiniHint}>{t('home.see_history')}</Text>
         </Pressable>
 
         <Pressable
@@ -274,17 +274,17 @@ export default function HomeScreen({
           style={styles.aerligMiniCard}
           onPress={() => setActiveTab('applications')}
         >
-          <Text style={styles.aerligMiniLabel}>Sendte søknader</Text>
+          <Text style={styles.aerligMiniLabel}>{t('home.sent_applications')}</Text>
           {(sentApplicationsCount == null || sentApplicationsCount === 0) ? (
             <>
               <Text style={{ fontSize: 22, marginTop: 4, marginBottom: 2 }}>📭</Text>
-              <Text style={{ fontSize: 11, color: '#888', lineHeight: 15 }}>Ingen søknader{'\n'}sendt enda</Text>
-              <Text style={[styles.aerligMiniHint, { color: '#E8501A' }]}>Oppdater status ›</Text>
+              <Text style={{ fontSize: 11, color: '#888', lineHeight: 15 }}>{t('home.no_applications_sent')}</Text>
+              <Text style={[styles.aerligMiniHint, { color: '#E8501A' }]}>{t('home.update_status')}</Text>
             </>
           ) : (
             <>
               <Text style={styles.aerligMiniValue}>{String(sentApplicationsCount)}</Text>
-              <Text style={styles.aerligMiniHint}>Oppdater status ›</Text>
+              <Text style={styles.aerligMiniHint}>{t('home.update_status')}</Text>
             </>
           )}
         </Pressable>
@@ -294,9 +294,9 @@ export default function HomeScreen({
           style={[styles.aerligMiniCard, styles.aerligMiniCardFull]}
           onPress={() => setActiveTab('profile')}
         >
-          <Text style={styles.aerligMiniLabel}>Profilstatus</Text>
+          <Text style={styles.aerligMiniLabel}>{t('home.profile_status')}</Text>
           <Text style={styles.aerligProfileValue}>{profilePercent}%</Text>
-          <Text style={styles.aerligProfileHint}>{profileStatus} • Åpne profil</Text>
+          <Text style={styles.aerligProfileHint}>{profileStatus} {t('home.open_profile')}</Text>
           <View style={styles.aerligProfileMeter}>
             <View style={[styles.aerligProfileMeterFill, { width: `${Math.max(0, Math.min(100, profilePercent))}%` }]} />
           </View>
@@ -306,7 +306,7 @@ export default function HomeScreen({
       <View style={styles.aerligTipCard}>
         <View style={styles.aerligTipLabel}>
           <Text style={{ fontSize: 16 }}>💡</Text>
-          <Text style={styles.aerligTipLabelText}>KARRIERETIPS</Text>
+          <Text style={styles.aerligTipLabelText}>{t('home.career_tip')}</Text>
         </View>
         <Text style={styles.aerligTipText}>{tipText}</Text>
       </View>

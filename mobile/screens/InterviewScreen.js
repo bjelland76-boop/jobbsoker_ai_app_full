@@ -120,7 +120,7 @@ export default function InterviewScreen({
           setInterviewDraft((prev) => (prev ? `${prev} ${text}` : text));
         }
       } catch (e) {
-        setInterviewError('Transkribering feilet. Prøv igjen eller skriv svaret.');
+        setInterviewError(t('interview.transcription_failed'));
       } finally {
         setTranscribing(false);
       }
@@ -128,7 +128,7 @@ export default function InterviewScreen({
       try {
         const { granted } = await Audio.requestPermissionsAsync();
         if (!granted) {
-          setInterviewError('Mikrofonillatelse er nødvendig for taleopptak.');
+          setInterviewError(t('interview.mic_permission'));
           return;
         }
         await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
@@ -140,7 +140,7 @@ export default function InterviewScreen({
         setInterviewError('');
         logEvent?.('interview_voice_used');
       } catch (e) {
-        setInterviewError('Kunne ikke starte opptak. Sjekk at appen har mikrofonillatelse.');
+        setInterviewError(t('interview.recording_failed'));
       }
     }
   }
@@ -148,11 +148,7 @@ export default function InterviewScreen({
   async function startInterview() {
     if (interviewLoading) return;
     if (profileTooEmpty) {
-      setInterviewError(
-        uiLanguage === 'en'
-          ? 'Add work experience or education to your profile to get a personalised interview.'
-          : 'Fyll ut profilen din (erfaring eller utdanning) for å få et personlig intervju.'
-      );
+      setInterviewError(t('interview.profile_too_empty'));
       return;
     }
     setInterviewLoading(true);
@@ -182,7 +178,7 @@ export default function InterviewScreen({
       setInterviewStarted(true);
       logEvent?.('interview_started');
     } catch (e) {
-      setInterviewError('Kunne ikke kontakte coach akkurat nå. Du kan likevel øve med et standardspørsmål.');
+      setInterviewError(t('interview.start_error'));
       setInterviewMessages([{
         role: 'assistant',
         question: fallbackQuestion,
@@ -250,7 +246,7 @@ export default function InterviewScreen({
         setTimeout(() => scrollRef.current?.scrollToEnd?.({ animated: true }), 200);
       }
     } catch (e) {
-      setInterviewError('Kunne ikke kontakte coach akkurat nå. Prøv igjen om litt.');
+      setInterviewError(t('interview.coach_error'));
     } finally {
       setInterviewLoading(false);
     }
@@ -265,10 +261,10 @@ export default function InterviewScreen({
   }
 
   const micLabel = transcribing
-    ? '⏳ Transkriberer...'
+    ? t('interview.transcribing')
     : isRecording
-      ? '⏹ Stopp opptak'
-      : '🎤 Snakk svar';
+      ? t('interview.recording')
+      : t('interview.speak_answer');
   const micDisabled = interviewLoading || transcribing || isFinal;
 
   return (
@@ -288,16 +284,16 @@ export default function InterviewScreen({
             style={styles.aerligBackButton}
             onPress={() => setActiveTab('home')}
           >
-            <Text style={styles.aerligBackButtonText}>‹ Tilbake</Text>
+            <Text style={styles.aerligBackButtonText}>{t('common.back')}</Text>
           </Pressable>
 
           {/* Header card */}
           <View style={styles.aerligPageCard}>
-            <Text style={styles.aerligPageTitle}>{t('interviewTitle')}</Text>
+            <Text style={styles.aerligPageTitle}>{t('interview.title')}</Text>
             <Text style={styles.aerligPageSubtitle}>
               {jobTitle && company
                 ? `${jobTitle} · ${company}`
-                : jobTitle || company || t('interviewSubtitle')}
+                : jobTitle || company || t('interview.subtitle')}
             </Text>
 
             {/* Progress indicator */}
@@ -305,7 +301,7 @@ export default function InterviewScreen({
               <View style={{ marginTop: 14 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
                   <Text style={[styles.aerligCardSectionTitle, { fontSize: 12, marginBottom: 0 }]}>
-                    Spørsmål {currentQuestionNumber} av {TOTAL_QUESTIONS}
+                    {t('interview.question_of', { current: currentQuestionNumber, total: TOTAL_QUESTIONS })}
                   </Text>
                   <Text style={[styles.helpText, styles.aerligHelpText, { marginBottom: 0, marginTop: 0 }]}>
                     {Math.round(progressFraction * 100)}%
@@ -336,7 +332,7 @@ export default function InterviewScreen({
                 paddingHorizontal: 10,
               }}>
                 <Text style={{ color: '#ca8a04', fontWeight: '700', fontSize: 13 }}>
-                  ✓ Intervju fullført
+                  {t('interview.completed')}
                 </Text>
               </View>
             ) : null}
@@ -352,9 +348,9 @@ export default function InterviewScreen({
                   gap: 12,
                 }}>
                   {[
-                    'Du får spørsmål én om gangen tilpasset stillingen',
-                    'Svar ærlig — appen gir deg konkret tilbakemelding',
-                    'Øv så mange ganger du vil før den virkelige samtalen',
+                    t('interview.point_1'),
+                    t('interview.point_2'),
+                    t('interview.point_3'),
                   ].map((point) => (
                     <View key={point} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
                       <Text style={{ fontSize: 14, color: '#E8501A', fontWeight: '700', lineHeight: 20 }}>✓</Text>
@@ -368,7 +364,7 @@ export default function InterviewScreen({
                   disabled={interviewLoading}
                 >
                   <Text style={styles.aerligPrimaryButtonText}>
-                    {interviewLoading ? 'Forbereder intervju...' : 'Start intervju'}
+                    {interviewLoading ? t('interview.preparing') : t('interview.start')}
                   </Text>
                 </TouchableOpacity>
               </>
@@ -376,7 +372,7 @@ export default function InterviewScreen({
 
             {interviewStarted && interviewLoading ? (
               <Text style={[styles.helpText, styles.aerligHelpText, { marginTop: 10, marginBottom: 0 }]}>
-                Intervjuer tenker...
+                {t('interview.thinking')}
               </Text>
             ) : null}
 
@@ -388,7 +384,7 @@ export default function InterviewScreen({
                 {profileTooEmpty ? (
                   <TouchableOpacity onPress={() => setActiveTab('profile')} style={{ marginTop: 8 }}>
                     <Text style={{ color: '#E8501A', fontSize: 14, fontWeight: '600' }}>
-                      {uiLanguage === 'en' ? '→ Go to Profile' : '→ Gå til Profil'}
+                      {t('interview.go_to_profile')}
                     </Text>
                   </TouchableOpacity>
                 ) : null}
@@ -517,14 +513,14 @@ export default function InterviewScreen({
                 <View style={[styles.aerligChatTag, styles.aerligChatTagUser]}>
                   <Text style={[styles.aerligChatTagText, styles.aerligChatTagTextUser]}>Du</Text>
                 </View>
-                <Text style={styles.aerligChatMetaRight}>{t('yourNotes')}</Text>
+                <Text style={styles.aerligChatMetaRight}>{t('interview.your_notes')}</Text>
               </View>
 
               <TextInput
                 style={[styles.input, styles.aerligInput, styles.textArea, styles.aerligChatInput]}
                 value={interviewDraft}
                 onChangeText={setInterviewDraft}
-                placeholder={t('yourNotes')}
+                placeholder={t('interview.your_notes')}
                 multiline
                 editable={!interviewLoading && !transcribing}
                 onFocus={() => {
@@ -555,7 +551,7 @@ export default function InterviewScreen({
                 onPress={sendAnswer}
                 disabled={interviewLoading}
               >
-                <Text style={styles.aerligPrimaryButtonText}>Send svar</Text>
+                <Text style={styles.aerligPrimaryButtonText}>{t('interview.send_answer')}</Text>
               </Pressable>
             </View>
           ) : null}
@@ -566,7 +562,7 @@ export default function InterviewScreen({
               style={styles.aerligPrimaryButton}
               onPress={restartInterview}
             >
-              <Text style={styles.aerligPrimaryButtonText}>Start nytt intervju</Text>
+              <Text style={styles.aerligPrimaryButtonText}>{t('interview.restart')}</Text>
             </TouchableOpacity>
           ) : null}
 
@@ -575,7 +571,7 @@ export default function InterviewScreen({
             style={[styles.aerligSecondaryButton, { marginTop: 0 }]}
             onPress={() => setActiveTab('home')}
           >
-            <Text style={styles.aerligSecondaryButtonText}>Tilbake</Text>
+            <Text style={styles.aerligSecondaryButtonText}>{t('common.back')}</Text>
           </Pressable>
         </View>
       </ScrollView>

@@ -6,7 +6,7 @@ import { useApp } from '../context/AppContext';
 import { styles } from '../styles/styles';
 
 export default function CvAnalysisScreen({ cvAnalysis, cvLoading, analyzeCv }) {
-  const { setActiveTab } = useApp();
+  const { setActiveTab, t } = useApp();
 
   return (
     <View style={styles.aerligHomeWrap}>
@@ -15,15 +15,15 @@ export default function CvAnalysisScreen({ cvAnalysis, cvLoading, analyzeCv }) {
         style={styles.aerligBackButton}
         onPress={() => setActiveTab('home')}
       >
-        <Text style={styles.aerligBackButtonText}>‹ Tilbake</Text>
+        <Text style={styles.aerligBackButtonText}>{t('common.back')}</Text>
       </Pressable>
 
       <View style={styles.aerligPageCard}>
-        <Text style={styles.aerligPageTitle}>Analyser CV / profil</Text>
-        <Text style={styles.aerligPageSubtitle}>Få forslag til relevante jobber og råd basert på utdanning og erfaring.</Text>
+        <Text style={styles.aerligPageTitle}>{t('cv_analysis.title')}</Text>
+        <Text style={styles.aerligPageSubtitle}>{t('cv_analysis.subtitle')}</Text>
 
         <TouchableOpacity style={styles.aerligPrimaryButton} onPress={analyzeCv}>
-          <Text style={styles.aerligPrimaryButtonText}>{cvLoading ? 'Analyserer...' : 'Analyser profilen min'}</Text>
+          <Text style={styles.aerligPrimaryButtonText}>{cvLoading ? t('cv_analysis.analyzing') : t('cv_analysis.analyze_btn')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -31,26 +31,26 @@ export default function CvAnalysisScreen({ cvAnalysis, cvLoading, analyzeCv }) {
         <View style={[styles.aerligCard, styles.aerligAccentNavy]}>
           {!cvAnalysis.summary && !cvAnalysis.suggested_roles?.length && !cvAnalysis.strengths?.length ? (
             <Text style={styles.aerligCardBody}>
-              Profilen din mangler nok informasjon for en god analyse. Fyll ut CV/erfaring i profilen din først.
+              {t('cv_analysis.no_info')}
             </Text>
           ) : null}
           {cvAnalysis.summary ? (
             <>
-              <Text style={styles.aerligCardSectionTitle}>Oppsummering</Text>
+              <Text style={styles.aerligCardSectionTitle}>{t('cv_analysis.summary')}</Text>
               <Text style={styles.aerligCardBody}>{cvAnalysis.summary}</Text>
             </>
           ) : null}
 
           {cvAnalysis.education_fit ? (
             <>
-              <Text style={styles.aerligCardSectionTitle}>Hva du er kvalifisert til</Text>
+              <Text style={styles.aerligCardSectionTitle}>{t('cv_analysis.education_fit')}</Text>
               <Text style={styles.aerligCardBody}>{cvAnalysis.education_fit}</Text>
             </>
           ) : null}
 
           {cvAnalysis.suggested_roles?.length > 0 ? (
             <>
-              <Text style={styles.aerligCardSectionTitle}>Jobbtyper du kan søke på</Text>
+              <Text style={styles.aerligCardSectionTitle}>{t('cv_analysis.suggested_roles')}</Text>
               {cvAnalysis.suggested_roles.map((item, idx) => (
                 <Text key={idx} style={styles.aerligCardBody}>• {item}</Text>
               ))}
@@ -59,7 +59,7 @@ export default function CvAnalysisScreen({ cvAnalysis, cvLoading, analyzeCv }) {
 
           {cvAnalysis.strengths?.length > 0 ? (
             <>
-              <Text style={styles.aerligCardSectionTitle}>Styrker</Text>
+              <Text style={styles.aerligCardSectionTitle}>{t('cv_analysis.strengths')}</Text>
               {cvAnalysis.strengths.map((item, idx) => (
                 <Text key={idx} style={styles.aerligCardBody}>• {item}</Text>
               ))}
@@ -68,7 +68,7 @@ export default function CvAnalysisScreen({ cvAnalysis, cvLoading, analyzeCv }) {
 
           {cvAnalysis.gaps?.length > 0 ? (
             <>
-              <Text style={styles.aerligCardSectionTitle}>Mulige hull / svakheter</Text>
+              <Text style={styles.aerligCardSectionTitle}>{t('cv_analysis.gaps')}</Text>
               {cvAnalysis.gaps.map((item, idx) => (
                 <Text key={idx} style={styles.aerligCardBody}>• {item}</Text>
               ))}
@@ -77,7 +77,7 @@ export default function CvAnalysisScreen({ cvAnalysis, cvLoading, analyzeCv }) {
 
           {cvAnalysis.improvement_tips?.length > 0 ? (
             <>
-              <Text style={styles.aerligCardSectionTitle}>Konkrete råd</Text>
+              <Text style={styles.aerligCardSectionTitle}>{t('cv_analysis.improvement_tips')}</Text>
               {cvAnalysis.improvement_tips.map((item, idx) => (
                 <Text key={idx} style={styles.aerligCardBody}>• {item}</Text>
               ))}
@@ -86,7 +86,7 @@ export default function CvAnalysisScreen({ cvAnalysis, cvLoading, analyzeCv }) {
 
           {cvAnalysis.search_keywords?.length > 0 ? (
             <>
-              <Text style={styles.aerligCardSectionTitle}>Søkeord</Text>
+              <Text style={styles.aerligCardSectionTitle}>{t('cv_analysis.search_keywords')}</Text>
               <Text style={styles.aerligCardBody}>{cvAnalysis.search_keywords.join(', ')}</Text>
             </>
           ) : null}

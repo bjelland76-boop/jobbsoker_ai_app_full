@@ -11,7 +11,7 @@ export default function SettingsScreen({
   settingsLoading, settingsSaving,
   saveSettings,
 }) {
-  const { setActiveTab } = useApp();
+  const { setActiveTab, t } = useApp();
 
   return (
     <View style={styles.pageCard}>
@@ -20,15 +20,15 @@ export default function SettingsScreen({
         style={styles.aerligBackButton}
         onPress={() => setActiveTab('home')}
       >
-        <Text style={styles.aerligBackButtonText}>‹ Tilbake</Text>
+        <Text style={styles.aerligBackButtonText}>{t('common.back')}</Text>
       </Pressable>
-      <Text style={styles.pageTitle}>E-postinnstillinger</Text>
-      <Text style={styles.pageSubtitle}>Brukes når du sender søknad/CV på e-post fra en analyse.</Text>
+      <Text style={styles.pageTitle}>{t('settings.title')}</Text>
+      <Text style={styles.pageSubtitle}>{t('settings.subtitle')}</Text>
 
-      <Text style={styles.inputLabel}>Varslings-e-post</Text>
+      <Text style={styles.inputLabel}>{t('settings.email_label')}</Text>
       <TextInput
         style={styles.input}
-        placeholder="din@epost.no"
+        placeholder={t('settings.email_placeholder')}
         value={notificationEmail}
         onChangeText={setNotificationEmail}
         autoCapitalize="none"
@@ -36,23 +36,23 @@ export default function SettingsScreen({
       />
 
       <View style={styles.profileField}>
-        <Text style={styles.inputLabel}>Auto-send (valgfritt)</Text>
-        <Text style={styles.helpText}>Denne innstillingen er i praksis ikke brukt i URL-baserte analyser, men kan brukes i fremtidige utvidelser.</Text>
+        <Text style={styles.inputLabel}>{t('settings.auto_send_label')}</Text>
+        <Text style={styles.helpText}>{t('settings.auto_send_help')}</Text>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={styles.messageText}>{autoEmail ? 'På' : 'Av'}</Text>
+          <Text style={styles.messageText}>{autoEmail ? t('common.on') : t('common.off')}</Text>
           <Switch value={autoEmail} onValueChange={setAutoEmail} />
         </View>
       </View>
 
       <TouchableOpacity style={styles.primaryButton} onPress={saveSettings}>
-        <Text style={styles.primaryButtonText}>{settingsSaving ? 'Lagrer...' : 'Lagre'}</Text>
+        <Text style={styles.primaryButtonText}>{settingsSaving ? t('settings.saving') : t('settings.save')}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={[styles.secondaryButton, { marginTop: 8 }]}
         onPress={() => setActiveTab('profile')}
       >
-        <Text style={styles.secondaryButtonText}>{settingsLoading ? 'Laster...' : 'Tilbake til Profil'}</Text>
+        <Text style={styles.secondaryButtonText}>{settingsLoading ? t('settings.loading') : t('settings.back_to_profile')}</Text>
       </TouchableOpacity>
     </View>
   );

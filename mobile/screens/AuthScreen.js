@@ -13,9 +13,18 @@ export default function AuthScreen() {
     authLoading,
     doAuth,
     errText,
+    t,
+    uiLanguage,
+    setAndPersistUiLanguage,
   } = useApp();
 
   const [resendLoading, setResendLoading] = useState(false);
+
+  const LANGS = [
+    { code: 'no', flag: '🇳🇴' },
+    { code: 'en', flag: '🇬🇧' },
+    { code: 'vi', flag: '🇻🇳' },
+  ];
 
   return (
     <View style={{
@@ -25,6 +34,28 @@ export default function AuthScreen() {
       paddingHorizontal: 20,
       paddingVertical: 40,
     }}>
+      {/* Language selector — top right */}
+      <View style={{
+        position: 'absolute', top: 16, right: 16,
+        flexDirection: 'row', gap: 4,
+      }}>
+        {LANGS.map(({ code, flag }) => (
+          <TouchableOpacity
+            key={code}
+            onPress={() => setAndPersistUiLanguage(code)}
+            style={{
+              paddingHorizontal: 8, paddingVertical: 4,
+              borderRadius: 6,
+              backgroundColor: uiLanguage === code ? '#FEF0EB' : 'transparent',
+              borderBottomWidth: uiLanguage === code ? 2 : 0,
+              borderBottomColor: '#E8501A',
+            }}
+          >
+            <Text style={{ fontSize: 18 }}>{flag}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <View style={{
         width: '100%',
         maxWidth: 380,
@@ -54,12 +85,12 @@ export default function AuthScreen() {
 
         {/* Tagline */}
         <Text style={{ fontSize: 14, color: '#888', marginTop: 4, marginBottom: 28, lineHeight: 20 }}>
-          Din ærlige jobbcoach — søknader og intervjutrening som faktisk funker
+          {t('auth.tagline')}
         </Text>
 
-        {/* E-post label + input */}
+        {/* Email label + input */}
         <Text style={{ fontSize: 12, fontWeight: '500', color: '#555', marginBottom: 6 }}>
-          E-post
+          {t('auth.email_label')}
         </Text>
         <TextInput
           style={{
@@ -73,7 +104,7 @@ export default function AuthScreen() {
             color: '#1a1a1a',
             backgroundColor: '#FAFAFA',
           }}
-          placeholder="navn@epost.no"
+          placeholder={t('auth.email_placeholder')}
           value={authEmail}
           onChangeText={(v) => {
             setAuthEmail(v);
@@ -90,7 +121,7 @@ export default function AuthScreen() {
         {codeSent ? (
           <>
             <Text style={{ fontSize: 12, fontWeight: '500', color: '#555', marginTop: 14, marginBottom: 6 }}>
-              Engangskode
+              {t('auth.code_label')}
             </Text>
             <TextInput
               style={{
@@ -104,7 +135,7 @@ export default function AuthScreen() {
                 color: '#1a1a1a',
                 backgroundColor: '#FAFAFA',
               }}
-              placeholder="6-sifret kode"
+              placeholder={t('auth.code_placeholder')}
               value={authCode}
               onChangeText={setAuthCode}
               autoCapitalize="none"
@@ -127,7 +158,7 @@ export default function AuthScreen() {
           disabled={!!authLoading}
         >
           <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500' }}>
-            {authLoading ? 'Sender...' : (codeSent ? 'Logg inn' : 'Send engangskode')}
+            {authLoading ? t('auth.sending') : (codeSent ? t('auth.login') : t('auth.send_code'))}
           </Text>
         </TouchableOpacity>
 
@@ -147,26 +178,26 @@ export default function AuthScreen() {
                 });
                 setAuthCode('');
                 setResendCooldown(30);
-                Alert.alert('Kode sendt', 'Vi har sendt en ny engangskode på e-post.');
+                Alert.alert(t('auth.code_sent_title'), t('auth.code_sent_body'));
               } catch (e) {
                 if (e.status === 429) {
-                  Alert.alert('For mange forsøk', 'Vent noen minutter og prøv igjen.');
+                  Alert.alert(t('common.too_many_attempts_title'), t('common.too_many_attempts_body'));
                 } else {
-                  Alert.alert('Feil', errText(e));
+                  Alert.alert(t('common.error'), errText(e));
                 }
               }
               setResendLoading(false);
             }}
           >
             <Text style={{ fontSize: 13, color: '#E8501A' }}>
-              {resendCooldown ? `Send ny kode (${resendCooldown}s)` : 'Send ny kode'}
+              {resendCooldown ? t('auth.resend_code_wait', { seconds: resendCooldown }) : t('auth.resend_code')}
             </Text>
           </TouchableOpacity>
         ) : null}
 
         {/* Footer */}
         <Text style={{ fontSize: 12, color: '#aaa', textAlign: 'center', marginTop: 20 }}>
-          Ingen passord. Ingen stress.
+          {t('auth.no_password')}
         </Text>
       </View>
     </View>

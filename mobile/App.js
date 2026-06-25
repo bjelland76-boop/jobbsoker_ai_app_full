@@ -363,8 +363,8 @@ function AppContent() {
     },
     {
       key: 'interview',
-      title: t('interviewPractice'),
-      subtitle: t('interviewPracticeSubtitle'),
+      title: t('interview.practice_title'),
+      subtitle: t('interview.practice_subtitle'),
       tint: THEME.colors.primarySoft,
       icon: '🎤',
       onPress: () => setActiveTab('interview'),
@@ -579,7 +579,7 @@ function AppContent() {
       <SafeAreaView style={styles.container}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.pageCard}>
-            <Text style={styles.pageTitle}>{t('loading')}</Text>
+            <Text style={styles.pageTitle}>{t('common.loading')}</Text>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -670,11 +670,11 @@ function AppContent() {
       <View style={styles.bottomBar}>
         <TouchableOpacity style={styles.bottomButton} onPress={() => setActiveTab('home')}>
           <Text style={[styles.bottomIcon, activeTab === 'home' && styles.bottomIconActive]}>🏠</Text>
-          <Text style={[styles.bottomLabel, activeTab === 'home' && styles.bottomLabelActive]}>{t('tabHome')}</Text>
+          <Text style={[styles.bottomLabel, activeTab === 'home' && styles.bottomLabelActive]}>{t('tabs.home')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.bottomButton} onPress={() => setActiveTab('profile')}>
           <Text style={[styles.bottomIcon, activeTab === 'profile' && styles.bottomIconActive]}>👤</Text>
-          <Text style={[styles.bottomLabel, activeTab === 'profile' && styles.bottomLabelActive]}>{t('tabProfile')}</Text>
+          <Text style={[styles.bottomLabel, activeTab === 'profile' && styles.bottomLabelActive]}>{t('tabs.profile')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

@@ -12,7 +12,7 @@ import { THEME } from '../styles/theme';
 import { schoolOptions } from '../constants/options';
 
 export default function ProfileScreen() {
-  const { t, logout, deleteAccount, setActiveTab } = useApp();
+  const { t, logout, deleteAccount, setActiveTab, uiLanguage, setAndPersistUiLanguage } = useApp();
   const {
     profileId,
     name, setName,
@@ -90,8 +90,8 @@ export default function ProfileScreen() {
   return (
     <View style={[styles.aerligHomeWrap, { backgroundColor: '#F7F5F0' }]}>
       <View style={styles.aerligPageCard}>
-        <Text style={styles.aerligPageTitle}>Profil</Text>
-        <Text style={styles.aerligPageSubtitle}>Personopplysninger, erfaring og referanser.</Text>
+        <Text style={styles.aerligPageTitle}>{t('profile.title')}</Text>
+        <Text style={styles.aerligPageSubtitle}>{t('profile.subtitle')}</Text>
 
         {/* CV Import */}
         <TouchableOpacity
@@ -102,10 +102,10 @@ export default function ProfileScreen() {
           {cvImportLoading ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <ActivityIndicator size="small" color={THEME.colors.primary} />
-              <Text style={styles.aerligSecondaryButtonText}>Leser CV-en din...</Text>
+              <Text style={styles.aerligSecondaryButtonText}>{t('profile.reading_cv')}</Text>
             </View>
           ) : (
-            <Text style={styles.aerligSecondaryButtonText}>Importer CV</Text>
+            <Text style={styles.aerligSecondaryButtonText}>{t('profile.import_cv')}</Text>
           )}
         </TouchableOpacity>
 
@@ -117,22 +117,22 @@ export default function ProfileScreen() {
         >
           <View style={styles.cvModalOverlay}>
             <View style={styles.cvModalCard}>
-              <Text style={styles.cvModalTitle}>Importer CV</Text>
-              <Text style={styles.cvModalSubtitle}>Velg kilde</Text>
+              <Text style={styles.cvModalTitle}>{t('profile.import_cv_title')}</Text>
+              <Text style={styles.cvModalSubtitle}>{t('profile.import_cv_subtitle')}</Text>
               <TouchableOpacity style={styles.aerligSecondaryButton} onPress={importCvFromFile}>
-                <Text style={styles.aerligSecondaryButtonText}>Velg fil (PDF eller .docx)</Text>
+                <Text style={styles.aerligSecondaryButtonText}>{t('profile.choose_file')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.aerligSecondaryButton, { marginTop: 10 }]} onPress={importCvFromCamera}>
-                <Text style={styles.aerligSecondaryButtonText}>Ta bilde av CV (kamera)</Text>
+                <Text style={styles.aerligSecondaryButtonText}>{t('profile.take_photo')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.aerligSecondaryButton, { marginTop: 10 }]} onPress={importCvFromGallery}>
-                <Text style={styles.aerligSecondaryButtonText}>Velg bilde fra galleri</Text>
+                <Text style={styles.aerligSecondaryButtonText}>{t('profile.choose_gallery')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.aerligDangerButton, { marginTop: 16 }]}
                 onPress={() => setCvImportModalVisible(false)}
               >
-                <Text style={styles.aerligDangerButtonText}>Avbryt</Text>
+                <Text style={styles.aerligDangerButtonText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -148,13 +148,13 @@ export default function ProfileScreen() {
             <View style={styles.cvModalOverlay}>
               <View style={[styles.cvModalCard, { maxHeight: '80%' }]}>
                 <ScrollView>
-                  <Text style={styles.cvModalTitle}>Hva vi fant i CV-en</Text>
+                  <Text style={styles.cvModalTitle}>{t('profile.found_in_cv')}</Text>
 
                   {[
-                    ['Navn', cvImportPreview.name],
-                    ['E-post', cvImportPreview.email],
-                    ['Telefon', cvImportPreview.phone],
-                    ['Adresse', cvImportPreview.address],
+                    [t('profile.name_label'), cvImportPreview.name],
+                    [t('profile.email_label'), cvImportPreview.email],
+                    [t('profile.phone_label'), cvImportPreview.phone],
+                    [t('profile.address_label'), cvImportPreview.address],
                   ].filter(([, v]) => v).map(([label, value]) => (
                     <View key={label} style={{ marginBottom: 8 }}>
                       <Text style={[styles.inputLabel, styles.aerligLabel]}>{label}</Text>
@@ -164,7 +164,7 @@ export default function ProfileScreen() {
 
                   {Array.isArray(cvImportPreview.experience) && cvImportPreview.experience.length > 0 && (
                     <View style={{ marginBottom: 8 }}>
-                      <Text style={[styles.inputLabel, styles.aerligLabel]}>Erfaring ({cvImportPreview.experience.length} oppføringer)</Text>
+                      <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('profile.experience_count', { count: cvImportPreview.experience.length })}</Text>
                       {cvImportPreview.experience.map((e, i) => (
                         <View key={i} style={{ backgroundColor: '#F9FAFB', borderRadius: 8, padding: 8, marginTop: 4 }}>
                           <Text style={{ fontWeight: '600', fontSize: 13, color: '#111827' }}>{e.title || '—'}</Text>
@@ -176,7 +176,7 @@ export default function ProfileScreen() {
 
                   {Array.isArray(cvImportPreview.education) && cvImportPreview.education.length > 0 && (
                     <View style={{ marginBottom: 8 }}>
-                      <Text style={[styles.inputLabel, styles.aerligLabel]}>Utdanning ({cvImportPreview.education.length} oppføringer)</Text>
+                      <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('profile.education_count', { count: cvImportPreview.education.length })}</Text>
                       {cvImportPreview.education.map((e, i) => (
                         <View key={i} style={{ backgroundColor: '#F9FAFB', borderRadius: 8, padding: 8, marginTop: 4 }}>
                           <Text style={{ fontWeight: '600', fontSize: 13, color: '#111827' }}>{e.degree || '—'}</Text>
@@ -188,14 +188,14 @@ export default function ProfileScreen() {
 
                   {Array.isArray(cvImportPreview.skills) && cvImportPreview.skills.length > 0 && (
                     <View style={{ marginBottom: 8 }}>
-                      <Text style={[styles.inputLabel, styles.aerligLabel]}>Ferdigheter</Text>
+                      <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('profile.skills_label')}</Text>
                       <Text style={{ color: '#374151', fontSize: 14, lineHeight: 20 }}>{cvImportPreview.skills.join(', ')}</Text>
                     </View>
                   )}
 
                   {Array.isArray(cvImportPreview.languages) && cvImportPreview.languages.length > 0 && (
                     <View style={{ marginBottom: 8 }}>
-                      <Text style={[styles.inputLabel, styles.aerligLabel]}>Språk</Text>
+                      <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('profile.languages_label')}</Text>
                       <Text style={{ color: '#374151', fontSize: 14, lineHeight: 20 }}>{cvImportPreview.languages.join(', ')}</Text>
                     </View>
                   )}
@@ -208,13 +208,13 @@ export default function ProfileScreen() {
                   style={[styles.aerligPrimaryButton, { marginTop: 16 }]}
                   onPress={() => applyCvImport(cvImportPreview)}
                 >
-                  <Text style={styles.aerligPrimaryButtonText}>Importer</Text>
+                  <Text style={styles.aerligPrimaryButtonText}>{t('profile.import_btn')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.aerligDangerButton, { marginTop: 10 }]}
                   onPress={() => setCvImportPreview(null)}
                 >
-                  <Text style={styles.aerligDangerButtonText}>Avbryt</Text>
+                  <Text style={styles.aerligDangerButtonText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -228,7 +228,7 @@ export default function ProfileScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.profileSummaryName}>{name || 'Navn'}</Text>
-            <Text style={styles.profileSummaryStrengthLabel}>Profilstyrke: {_strength}%</Text>
+            <Text style={styles.profileSummaryStrengthLabel}>{t('profile.profile_strength', { percent: _strength })}</Text>
             <View style={styles.profileStrengthTrack}>
               <View style={[styles.profileStrengthFill, { width: `${_strength}%` }]} />
             </View>
@@ -239,12 +239,12 @@ export default function ProfileScreen() {
         <View style={styles.profileCardRow}>
           <View style={styles.profileSummaryCard}>
             <Text style={styles.profileCardIcon}>📱</Text>
-            <Text style={styles.profileCardLabel}>Telefon</Text>
+            <Text style={styles.profileCardLabel}>{t('profile.phone_label')}</Text>
             <Text style={styles.profileCardValue} numberOfLines={1}>{phone || '—'}</Text>
           </View>
           <View style={styles.profileSummaryCard}>
             <Text style={styles.profileCardIcon}>📍</Text>
-            <Text style={styles.profileCardLabel}>Sted</Text>
+            <Text style={styles.profileCardLabel}>{t('profile.location_label')}</Text>
             <Text style={styles.profileCardValue} numberOfLines={1}>{_city}</Text>
           </View>
         </View>
@@ -259,8 +259,8 @@ export default function ProfileScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Text style={[styles.profileCardIcon, { marginBottom: 0 }]}>👤</Text>
               <View>
-                <Text style={styles.profileCardLabel}>Personopplysninger</Text>
-                <Text style={styles.profileCardValue} numberOfLines={1}>{name || 'Ikke utfylt'}</Text>
+                <Text style={styles.profileCardLabel}>{t('profile.personal_info')}</Text>
+                <Text style={styles.profileCardValue} numberOfLines={1}>{name || t('profile.not_filled')}</Text>
               </View>
             </View>
             <Text style={{ color: '#6B7280', fontSize: 14 }}>{expandPersonCard ? '▲' : '▼'}</Text>
@@ -270,21 +270,21 @@ export default function ProfileScreen() {
             <View style={{ marginTop: 12 }}>
               <View style={{ height: 1, backgroundColor: '#E8E6E0', marginBottom: 12 }} />
 
-              <Text style={[styles.inputLabel, styles.aerligLabel]}>Navn</Text>
-              <TextInput style={[styles.input, styles.aerligInput]} value={name} onChangeText={setName} placeholder="Navn" />
+              <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('profile.name_label')}</Text>
+              <TextInput style={[styles.input, styles.aerligInput]} value={name} onChangeText={setName} placeholder={t('profile.name_label')} />
 
-              <Text style={[styles.inputLabel, styles.aerligLabel]}>E-post</Text>
-              <TextInput style={[styles.input, styles.aerligInput]} value={profileEmail} onChangeText={setProfileEmail} placeholder="E-post" autoCapitalize="none" keyboardType="email-address" />
+              <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('profile.email_label')}</Text>
+              <TextInput style={[styles.input, styles.aerligInput]} value={profileEmail} onChangeText={setProfileEmail} placeholder={t('profile.email_label')} autoCapitalize="none" keyboardType="email-address" />
 
-              <Text style={[styles.inputLabel, styles.aerligLabel]}>Telefon</Text>
-              <TextInput style={[styles.input, styles.aerligInput]} value={phone} onChangeText={setPhone} placeholder="Telefon" keyboardType="phone-pad" />
+              <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('profile.phone_label')}</Text>
+              <TextInput style={[styles.input, styles.aerligInput]} value={phone} onChangeText={setPhone} placeholder={t('profile.phone_label')} keyboardType="phone-pad" />
 
-              <Text style={[styles.inputLabel, styles.aerligLabel]}>Adresse</Text>
+              <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('profile.address_label')}</Text>
               <TextInput
                 style={[styles.input, styles.aerligInput]}
                 value={address}
                 onChangeText={setAddress}
-                placeholder="Gateadresse"
+                placeholder={t('profile.street_placeholder')}
                 autoCapitalize="words"
               />
 
@@ -293,19 +293,19 @@ export default function ProfileScreen() {
                   style={[styles.input, styles.aerligInput, styles.inlineInput]}
                   value={postalCode}
                   onChangeText={setPostalCode}
-                  placeholder="Postnr"
+                  placeholder={t('profile.zip_placeholder')}
                   keyboardType="numeric"
                 />
                 <TextInput
                   style={[styles.input, styles.aerligInput, styles.inlineInput, { marginRight: 0 }]}
                   value={postalPlace}
                   onChangeText={setPostalPlace}
-                  placeholder="Poststed"
+                  placeholder={t('profile.city_placeholder')}
                   autoCapitalize="words"
                 />
               </View>
 
-              <Text style={[styles.inputLabel, styles.aerligLabel]}>Profilbilde (valgfritt)</Text>
+              <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('profile.photo_label')}</Text>
               {profilePhotoData ? (
                 <View style={{ alignItems: 'center', marginBottom: 10 }}>
                   <Image
@@ -319,20 +319,20 @@ export default function ProfileScreen() {
                       if (profileId) saveProfile({ silent: true, override: { photo_data: '' } });
                     }}
                   >
-                    <Text style={styles.aerligSecondaryButtonText}>Fjern bilde</Text>
+                    <Text style={styles.aerligSecondaryButtonText}>{t('profile.remove_photo')}</Text>
                   </TouchableOpacity>
                 </View>
               ) : null}
               <TouchableOpacity style={[styles.aerligSecondaryButton, { marginTop: 0, paddingVertical: 12 }]} onPress={pickProfilePhoto}>
-                <Text style={styles.aerligSecondaryButtonText}>{profilePhotoData ? 'Bytt bilde' : 'Velg bilde'}</Text>
+                <Text style={styles.aerligSecondaryButtonText}>{profilePhotoData ? t('profile.change_photo') : t('profile.add_photo')}</Text>
               </TouchableOpacity>
-              <Text style={[styles.helpText, styles.aerligHelpText]}>Du kan velge om bildet skal være med i hver PDF når du lager søknad.</Text>
+              <Text style={[styles.helpText, styles.aerligHelpText]}>{t('profile.photo_help')}</Text>
               {profilePhotoData ? (
                 <View style={{ marginTop: 8 }}>
-                  <Text style={[styles.inputLabel, styles.aerligLabel]}>Bilde i PDF som standard</Text>
-                  <Text style={[styles.helpText, styles.aerligHelpText]}>Dette blir standardvalget hver gang du lager ny søknad/PDF (kan overstyres per søknad).</Text>
+                  <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('profile.photo_in_pdf_label')}</Text>
+                  <Text style={[styles.helpText, styles.aerligHelpText]}>{t('profile.photo_in_pdf_help')}</Text>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={[styles.messageText, styles.aerligMessageText]}>{includePhotoDefault ? 'På' : 'Av'}</Text>
+                    <Text style={[styles.messageText, styles.aerligMessageText]}>{includePhotoDefault ? t('common.on') : t('common.off')}</Text>
                     <Switch
                       value={includePhotoDefault}
                       onValueChange={(v) => {
@@ -349,7 +349,7 @@ export default function ProfileScreen() {
                 style={[styles.aerligPrimaryButton, { marginTop: 16 }]}
                 onPress={() => { setExpandPersonCard(false); saveProfile(); }}
               >
-                <Text style={styles.aerligPrimaryButtonText}>Lagre</Text>
+                <Text style={styles.aerligPrimaryButtonText}>{t('profile.save_btn')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -369,9 +369,9 @@ export default function ProfileScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Text style={[styles.profileCardIcon, { marginBottom: 0 }]}>💼</Text>
               <View>
-                <Text style={styles.profileCardLabel}>Erfaring</Text>
+                <Text style={styles.profileCardLabel}>{t('profile.experience_title')}</Text>
                 <Text style={styles.profileCardValue}>
-                  {experienceEntries.length > 0 ? `${experienceEntries.length} stilling${experienceEntries.length === 1 ? '' : 'er'}` : 'Ingen lagt til'}
+                  {experienceEntries.length > 0 ? `${experienceEntries.length}` : t('profile.no_experience')}
                 </Text>
               </View>
             </View>
@@ -385,11 +385,11 @@ export default function ProfileScreen() {
                 <View key={index} style={[styles.aerligCard, styles.aerligListRow]}>
                   <View style={[styles.aerligEntryHeader, styles.aerligListRowHeader]}>
                     <View style={{ flex: 1, paddingRight: 10 }}>
-                      <Text style={styles.aerligEntryTitle} numberOfLines={1}>{entry.title || 'Stillingstittel'}</Text>
-                      <Text style={styles.aerligEntrySub} numberOfLines={1}>{entry.company || 'Arbeidsgiver'}</Text>
+                      <Text style={styles.aerligEntryTitle} numberOfLines={1}>{entry.title || t('profile.job_title_placeholder')}</Text>
+                      <Text style={styles.aerligEntrySub} numberOfLines={1}>{entry.company || t('profile.employer_placeholder')}</Text>
                     </View>
                     <Text style={styles.aerligEntryYears} numberOfLines={1}>
-                      {`${(entry.from || '—').trim() || '—'}–${entry.current ? 'nå' : (((entry.to || '—').trim()) || '—')}`}
+                      {`${(entry.from || '—').trim() || '—'}–${entry.current ? t('profile.now') : (((entry.to || '—').trim()) || '—')}`}
                     </Text>
                   </View>
 
@@ -399,7 +399,7 @@ export default function ProfileScreen() {
                       onPress={() => setEditingExperienceIndex((cur) => (cur === index ? -1 : index))}
                     >
                       <Text style={[styles.filterChipText, styles.aerligFilterChipText]}>
-                        {editingExperienceIndex === index ? 'Ferdig' : 'Rediger'}
+                        {editingExperienceIndex === index ? t('common.done') : t('common.edit')}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -413,7 +413,7 @@ export default function ProfileScreen() {
                         });
                       }}
                     >
-                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, styles.aerligRowActionTextDanger]}>Fjern</Text>
+                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, styles.aerligRowActionTextDanger]}>{t('common.remove')}</Text>
                     </TouchableOpacity>
                   </View>
 
@@ -423,7 +423,7 @@ export default function ProfileScreen() {
                         <TextInput
                           style={[styles.input, styles.aerligInput, styles.aerligInputCompact, { flex: 1, marginRight: 8 }]}
                           value={entry.title}
-                          placeholder="Stillingstittel"
+                          placeholder={t('profile.job_title_placeholder')}
                           onChangeText={(value) => {
                             const items = [...experienceEntries];
                             items[index].title = value;
@@ -433,7 +433,7 @@ export default function ProfileScreen() {
                         <TextInput
                           style={[styles.input, styles.aerligInput, styles.aerligInputCompact, { flex: 1, marginRight: 0 }]}
                           value={entry.company}
-                          placeholder="Arbeidsgiver"
+                          placeholder={t('profile.employer_placeholder')}
                           onChangeText={(value) => {
                             const items = [...experienceEntries];
                             items[index].company = value;
@@ -455,14 +455,14 @@ export default function ProfileScreen() {
                         >
                           <Text style={[styles.checkboxText, styles.aerligCheckboxText, entry.current && styles.aerligCheckboxTextOn]}>{entry.current ? '✓' : ''}</Text>
                         </TouchableOpacity>
-                        <Text style={styles.aerligInlineNote}>Jobber her fremdeles</Text>
+                        <Text style={styles.aerligInlineNote}>{t('profile.currently_working')}</Text>
                       </View>
 
                       <View style={styles.aerligEntryEditRow}>
                         <TextInput
                           style={[styles.input, styles.aerligInput, styles.aerligInputCompact, styles.inlineInput]}
                           value={entry.from || ''}
-                          placeholder="Fra (år/mnd)"
+                          placeholder={t('profile.from_placeholder')}
                           onChangeText={(value) => {
                             const items = [...experienceEntries];
                             items[index].from = value;
@@ -471,8 +471,8 @@ export default function ProfileScreen() {
                         />
                         <TextInput
                           style={[styles.input, styles.aerligInput, styles.aerligInputCompact, styles.inlineInput, { marginRight: 0 }, entry.current && { opacity: 0.6 }]}
-                          value={entry.current ? 'Nå' : (entry.to || '')}
-                          placeholder={entry.current ? 'Nå' : 'Til (år/mnd)'}
+                          value={entry.current ? t('profile.now') : (entry.to || '')}
+                          placeholder={entry.current ? t('profile.now') : t('profile.to_placeholder')}
                           editable={!entry.current}
                           onChangeText={(value) => {
                             const items = [...experienceEntries];
@@ -494,7 +494,7 @@ export default function ProfileScreen() {
                   setEditingExperienceIndex(next.length - 1);
                 }}
               >
-                <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>+ Legg til erfaring</Text>
+                <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>{t('profile.add_experience')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -518,9 +518,9 @@ export default function ProfileScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Text style={[styles.profileCardIcon, { marginBottom: 0 }]}>🎓</Text>
               <View>
-                <Text style={styles.profileCardLabel}>Utdanning</Text>
+                <Text style={styles.profileCardLabel}>{t('profile.education_title')}</Text>
                 <Text style={styles.profileCardValue}>
-                  {educationEntries.length > 0 ? `${educationEntries.length} grad${educationEntries.length === 1 ? '' : 'er'}` : 'Ingen lagt til'}
+                  {educationEntries.length > 0 ? `${educationEntries.length}` : t('profile.no_education')}
                 </Text>
               </View>
             </View>
@@ -560,7 +560,7 @@ export default function ProfileScreen() {
                       }}
                     >
                       <Text style={[styles.filterChipText, styles.aerligFilterChipText]}>
-                        {editingEducationIndex === index ? 'Ferdig' : 'Rediger'}
+                        {editingEducationIndex === index ? t('common.done') : t('common.edit')}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -580,7 +580,7 @@ export default function ProfileScreen() {
                         if (showSchoolListIndex === index) setSchoolFilter('');
                       }}
                     >
-                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, styles.aerligRowActionTextDanger]}>Fjern</Text>
+                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, styles.aerligRowActionTextDanger]}>{t('common.remove')}</Text>
                     </TouchableOpacity>
                   </View>
 
@@ -596,13 +596,13 @@ export default function ProfileScreen() {
                           }}
                         >
                           <Text style={entry.school ? styles.aerligInputText : styles.aerligPlaceholderText}>
-                            {entry.school || 'Velg skole'}
+                            {entry.school || t('profile.school_placeholder')}
                           </Text>
                         </TouchableOpacity>
                         <TextInput
                           style={[styles.input, styles.aerligInput, styles.aerligInputCompact, { flex: 1, marginRight: 0 }]}
                           value={entry.degree}
-                          placeholder="Grad / studieretning"
+                          placeholder={t('profile.degree_placeholder')}
                           onChangeText={(value) => {
                             const items = [...educationEntries];
                             items[index].degree = value;
@@ -615,17 +615,17 @@ export default function ProfileScreen() {
                         <View style={[styles.dropdownList, styles.aerligDropdownList]}>
                           <TextInput
                             style={[styles.input, styles.aerligInput, { margin: 8 }]}
-                            placeholder="Søk: videregående, universitet eller nettskole..."
+                            placeholder={t('profile.school_search_placeholder')}
                             value={schoolFilter}
                             onChangeText={setSchoolFilter}
                             autoCapitalize="words"
                           />
                           <View style={[styles.filterChipRow, styles.aerligFilterChipRow]}>
                             {[
-                              { key: 'all', label: 'Alle' },
-                              { key: 'vgs', label: 'VGS' },
-                              { key: 'universitet', label: 'Uni/høyskole' },
-                              { key: 'nettskole', label: 'Nettskole' },
+                              { key: 'all', label: t('profile.school_filter_all') },
+                              { key: 'vgs', label: t('profile.school_filter_vgs') },
+                              { key: 'universitet', label: t('profile.school_filter_uni') },
+                              { key: 'nettskole', label: t('profile.school_filter_online') },
                             ].map((item) => {
                               const active = schoolKindFilter === item.key;
                               return (
@@ -821,9 +821,9 @@ export default function ProfileScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Text style={[styles.profileCardIcon, { marginBottom: 0 }]}>🗣️</Text>
               <View>
-                <Text style={styles.profileCardLabel}>Språk</Text>
+                <Text style={styles.profileCardLabel}>{t('profile.languages_section')}</Text>
                 <Text style={styles.profileCardValue}>
-                  {languagesList.length > 0 ? `${languagesList.length} språk` : 'Ikke utfylt'}
+                  {languagesList.length > 0 ? `${languagesList.length}` : t('profile.no_languages')}
                 </Text>
               </View>
             </View>
@@ -847,7 +847,7 @@ export default function ProfileScreen() {
                       onPress={() => setEditingLanguageIndex((cur) => (cur === index ? -1 : index))}
                     >
                       <Text style={[styles.filterChipText, styles.aerligFilterChipText]}>
-                        {editingLanguageIndex === index ? 'Ferdig' : 'Rediger'}
+                        {editingLanguageIndex === index ? t('common.done') : t('common.edit')}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -857,7 +857,7 @@ export default function ProfileScreen() {
                         setEditingLanguageIndex((cur) => cur === index ? -1 : cur > index ? cur - 1 : cur);
                       }}
                     >
-                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, styles.aerligRowActionTextDanger]}>Fjern</Text>
+                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, styles.aerligRowActionTextDanger]}>{t('common.remove')}</Text>
                     </TouchableOpacity>
                   </View>
                   {editingLanguageIndex === index && (
@@ -865,7 +865,7 @@ export default function ProfileScreen() {
                       <TextInput
                         style={[styles.input, styles.aerligInput, styles.aerligInputCompact]}
                         value={lang.name}
-                        placeholder="Språk (f.eks. Norsk)"
+                        placeholder={t('profile.language_placeholder')}
                         autoCapitalize="words"
                         onChangeText={(v) => {
                           const items = [...languagesList];
@@ -874,7 +874,13 @@ export default function ProfileScreen() {
                         }}
                       />
                       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                        {['Nybegynner', 'Grunnleggende', 'Godt', 'Flytende', 'Morsmål'].map((lvl) => (
+                        {[
+                          t('profile.level_beginner'),
+                          t('profile.level_basic'),
+                          t('profile.level_good'),
+                          t('profile.level_fluent'),
+                          t('profile.level_native'),
+                        ].map((lvl) => (
                           <TouchableOpacity
                             key={lvl}
                             style={[styles.filterChip, styles.aerligFilterChip, lang.level === lvl && styles.aerligFilterChipActive]}
@@ -1173,8 +1179,8 @@ export default function ProfileScreen() {
         )}
 
         <View style={styles.profileField}>
-          <Text style={[styles.inputLabel, styles.aerligLabel]}>Anonym statistikk</Text>
-          <Text style={[styles.helpText, styles.aerligHelpText]}>Hjelper oss å se om appen faktisk øker sjansen for intervju og jobb. Vi bruker kun status (søkt/intervju/fikk jobb), ikke navn eller kontaktinfo.</Text>
+          <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('profile.analytics_label')}</Text>
+          <Text style={[styles.helpText, styles.aerligHelpText]}>{t('profile.analytics_help')}</Text>
           <TouchableOpacity
             style={{ marginBottom: 10 }}
             onPress={async () => {
@@ -1185,10 +1191,10 @@ export default function ProfileScreen() {
               }
             }}
           >
-            <Text style={styles.aerligLinkText}>{t('privacyLink')}</Text>
+            <Text style={styles.aerligLinkText}>{t('profile.privacy_link')}</Text>
           </TouchableOpacity>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={[styles.messageText, styles.aerligMessageText]}>{consentAnalytics ? 'På' : 'Av'}</Text>
+            <Text style={[styles.messageText, styles.aerligMessageText]}>{consentAnalytics ? t('common.on') : t('common.off')}</Text>
             <Switch
               value={consentAnalytics}
               onValueChange={async (v) => {
@@ -1203,6 +1209,39 @@ export default function ProfileScreen() {
                 }
               }}
             />
+          </View>
+        </View>
+
+        {/* Language selector */}
+        <View style={[styles.profileField, { marginTop: 8 }]}>
+          <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('profile.language_selector_label')}</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+            {[
+              { code: 'no', flag: '🇳🇴', label: 'Norsk' },
+              { code: 'en', flag: '🇬🇧', label: 'English' },
+              { code: 'vi', flag: '🇻🇳', label: 'Tiếng Việt' },
+            ].map(({ code, flag, label }) => {
+              const active = uiLanguage === code;
+              return (
+                <TouchableOpacity
+                  key={code}
+                  onPress={() => setAndPersistUiLanguage(code)}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 4,
+                    paddingHorizontal: 10, paddingVertical: 6,
+                    borderRadius: 8,
+                    backgroundColor: active ? '#FEF0EB' : '#F3F4F6',
+                    borderBottomWidth: active ? 2 : 0,
+                    borderBottomColor: '#E8501A',
+                  }}
+                >
+                  <Text style={{ fontSize: 16 }}>{flag}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: active ? '700' : '400', color: active ? '#E8501A' : '#374151' }}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -1242,7 +1281,7 @@ export default function ProfileScreen() {
             style={[styles.aerligPrimaryButton, { width: '100%' }]}
             onPress={saveProfile}
           >
-            <Text style={styles.aerligPrimaryButtonText}>{savingProfile ? 'Lagrer...' : 'Lagre nå'}</Text>
+            <Text style={styles.aerligPrimaryButtonText}>{savingProfile ? t('common.saving') : t('profile.save_btn')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -1259,14 +1298,14 @@ export default function ProfileScreen() {
             }}
             onPress={logout}
           >
-            <Text style={{ color: '#E8501A', fontSize: 15, fontWeight: '600', letterSpacing: 0.2 }}>Logg ut</Text>
+            <Text style={{ color: '#E8501A', fontSize: 15, fontWeight: '600', letterSpacing: 0.2 }}>{t('profile.logout_btn')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={{ alignItems: 'center', paddingVertical: 12 }}
             onPress={deleteAccount}
           >
-            <Text style={{ color: '#999999', fontSize: 13 }}>Slett konto og data</Text>
+            <Text style={{ color: '#999999', fontSize: 13 }}>{t('profile.delete_account_btn')}</Text>
           </TouchableOpacity>
         </View>
       </View>

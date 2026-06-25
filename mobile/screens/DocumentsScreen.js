@@ -9,7 +9,7 @@ export default function DocumentsScreen({
   applicationPackage, documents, documentsLoading,
   openDocument, loadDocuments,
 }) {
-  const { setActiveTab } = useApp();
+  const { setActiveTab, t } = useApp();
 
   return (
     <View style={styles.pageCard}>
@@ -18,34 +18,34 @@ export default function DocumentsScreen({
         style={styles.aerligBackButton}
         onPress={() => setActiveTab('home')}
       >
-        <Text style={styles.aerligBackButtonText}>‹ Tilbake</Text>
+        <Text style={styles.aerligBackButtonText}>{t('common.back')}</Text>
       </Pressable>
-      <Text style={styles.pageTitle}>Dokumenter</Text>
-      <Text style={styles.pageSubtitle}>Her finner du genererte PDF-er (søknad + CV i samme fil).</Text>
+      <Text style={styles.pageTitle}>{t('documents.title')}</Text>
+      <Text style={styles.pageSubtitle}>{t('documents.subtitle')}</Text>
 
       {applicationPackage ? (
         <View style={styles.analysisCard}>
-          <Text style={styles.analysisHeading}>Siste genererte pakke</Text>
+          <Text style={styles.analysisHeading}>{t('documents.latest_package')}</Text>
 
           {(typeof applicationPackage?.pdfUrl === 'string' && applicationPackage.pdfUrl.trim()) ? (
             <TouchableOpacity
               style={[styles.secondaryButton, { marginTop: 0 }]}
               onPress={() => openDocument(applicationPackage.pdfUrl)}
             >
-              <Text style={styles.secondaryButtonText}>Åpne PDF</Text>
+              <Text style={styles.secondaryButtonText}>{t('documents.open_pdf')}</Text>
             </TouchableOpacity>
           ) : null}
 
           {(typeof applicationPackage?.coverLetter === 'string' && applicationPackage.coverLetter.trim()) ? (
             <>
-              <Text style={styles.analysisSubheading}>Søknad</Text>
+              <Text style={styles.analysisSubheading}>{t('documents.cover_letter')}</Text>
               <Text style={styles.analysisList}>{applicationPackage.coverLetter}</Text>
             </>
           ) : null}
 
           {(typeof applicationPackage?.cv === 'string' && applicationPackage.cv.trim()) ? (
             <>
-              <Text style={styles.analysisSubheading}>CV</Text>
+              <Text style={styles.analysisSubheading}>{t('documents.cv')}</Text>
               <Text style={styles.analysisList}>{applicationPackage.cv}</Text>
             </>
           ) : null}
@@ -54,29 +54,29 @@ export default function DocumentsScreen({
             (!applicationPackage?.coverLetter || !String(applicationPackage.coverLetter).trim())
             && (!applicationPackage?.cv || !String(applicationPackage.cv).trim())
           ) ? (
-            <Text style={styles.helpText}>Ingen tekst å vise.</Text>
+            <Text style={styles.helpText}>{t('documents.no_text')}</Text>
           ) : null}
         </View>
       ) : null}
 
       <TouchableOpacity style={styles.secondaryButton} onPress={loadDocuments}>
-        <Text style={styles.secondaryButtonText}>{documentsLoading ? 'Laster...' : 'Oppdater'}</Text>
+        <Text style={styles.secondaryButtonText}>{documentsLoading ? t('documents.loading') : t('documents.update')}</Text>
       </TouchableOpacity>
 
       {!documentsLoading && documents.length === 0 ? (
-        <Text style={[styles.helpText, { marginTop: 12 }]}>Ingen dokumenter ennå. Bruk "Send søknad" på Analyse-siden for å generere PDF.</Text>
+        <Text style={[styles.helpText, { marginTop: 12 }]}>{t('documents.no_documents')}</Text>
       ) : null}
 
       {documents.map((doc) => (
         <View key={doc.id} style={styles.messageCard}>
-          <Text style={styles.messageTitle}>{doc?.job?.title || 'Søknad'}</Text>
-          <Text style={styles.messageText}>{doc?.job?.company || 'Ukjent bedrift'}</Text>
+          <Text style={styles.messageTitle}>{doc?.job?.title || t('documents.unknown_application')}</Text>
+          <Text style={styles.messageText}>{doc?.job?.company || t('common.unknown_company')}</Text>
 
           <TouchableOpacity
             style={[styles.secondaryButton, { marginTop: 10, paddingVertical: 12 }]}
             onPress={() => openDocument(doc.cover_pdf_url)}
           >
-            <Text style={styles.secondaryButtonText}>Åpne PDF (Søknad + CV)</Text>
+            <Text style={styles.secondaryButtonText}>{t('documents.open_pdf_full')}</Text>
           </TouchableOpacity>
         </View>
       ))}
@@ -85,7 +85,7 @@ export default function DocumentsScreen({
         style={[styles.secondaryButton, { marginTop: 8 }]}
         onPress={() => setActiveTab('profile')}
       >
-        <Text style={styles.secondaryButtonText}>Tilbake til Profil</Text>
+        <Text style={styles.secondaryButtonText}>{t('documents.back_to_profile')}</Text>
       </TouchableOpacity>
     </View>
   );

@@ -26,7 +26,7 @@ export default function AnalysisScreen({
   // profile state
   profilePhotoData,
 }) {
-  const { setActiveTab } = useApp();
+  const { setActiveTab, t } = useApp();
 
   const ripple = Platform.OS === 'android'
     ? { android_ripple: { color: 'rgba(26, 26, 46, 0.10)' } }
@@ -44,9 +44,9 @@ export default function AnalysisScreen({
   const analysisMeterColor = matchScore >= 70 ? '#16A34A'
     : matchScore >= 40 ? '#D97706'
     : '#DC2626';
-  const analysisMeterStatus = matchScore >= 70 ? 'Sterk match — søk denne jobben!'
-    : matchScore >= 40 ? 'God match — søknaden kan fungere'
-    : 'Svak match — vurder å styrke profilen';
+  const analysisMeterStatus = matchScore >= 70 ? t('home.match_strong')
+    : matchScore >= 40 ? t('home.match_ok')
+    : t('home.match_weak');
 
   const strengths = Array.isArray(analysis?.strengths) ? analysis.strengths : [];
 
@@ -57,42 +57,42 @@ export default function AnalysisScreen({
         style={styles.aerligBackButton}
         onPress={() => setActiveTab('home')}
       >
-        <Text style={styles.aerligBackButtonText}>‹ Tilbake</Text>
+        <Text style={styles.aerligBackButtonText}>{t('common.back')}</Text>
       </Pressable>
       <View style={styles.aerligPageCard}>
-        <Text style={styles.aerligPageTitle}>Analyser jobbannonse</Text>
-        <Text style={styles.aerligPageSubtitle}>Lim inn en jobbannonse for rask match og forbedringstips.</Text>
+        <Text style={styles.aerligPageTitle}>{t('analysis.title')}</Text>
+        <Text style={styles.aerligPageSubtitle}>{t('analysis.subtitle')}</Text>
 
         <TextInput
           style={[styles.input, styles.aerligInput]}
-          placeholder="Lim inn jobbannonse-URL"
+          placeholder={t('analysis.url_placeholder')}
           value={jobUrl}
           onChangeText={setJobUrl}
           autoCapitalize="none"
         />
 
         <TouchableOpacity style={styles.aerligPrimaryButton} onPress={analyzeJob}>
-          <Text style={styles.aerligPrimaryButtonText}>{loading ? 'Analyserer...' : 'Analyser jobb'}</Text>
+          <Text style={styles.aerligPrimaryButtonText}>{loading ? t('analysis.analyzing') : t('analysis.analyze_btn')}</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.aerligCard}>
-        <Text style={styles.aerligCardEyebrow}>Tidligere analyser</Text>
+        <Text style={styles.aerligCardEyebrow}>{t('analysis.previous_analyses')}</Text>
 
         <TouchableOpacity style={styles.aerligSecondaryButton} onPress={loadJobAnalyses}>
-          <Text style={styles.aerligSecondaryButtonText}>{jobAnalysesLoading ? 'Laster...' : 'Oppdater liste'}</Text>
+          <Text style={styles.aerligSecondaryButtonText}>{jobAnalysesLoading ? t('analysis.loading') : t('analysis.update_list')}</Text>
         </TouchableOpacity>
 
         {jobAnalysesLoading ? (
-          <Text style={[styles.helpText, styles.aerligHelpText, { marginTop: 8 }]}>Laster analyser...</Text>
+          <Text style={[styles.helpText, styles.aerligHelpText, { marginTop: 8 }]}>{t('analysis.loading_analyses')}</Text>
         ) : null}
 
         {!jobAnalysesLoading && jobAnalyses.length === 0 ? (
           <View style={[styles.aerligCard, { alignItems: 'center', paddingVertical: 28, marginTop: 8 }]}>
             <Text style={{ fontSize: 36, marginBottom: 12 }}>🔍</Text>
-            <Text style={{ fontSize: 16, fontWeight: '600', color: '#1a1a1a', marginBottom: 6, textAlign: 'center' }}>Ingen analyser ennå</Text>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#1a1a1a', marginBottom: 6, textAlign: 'center' }}>{t('analysis.no_analyses_title')}</Text>
             <Text style={{ fontSize: 14, color: '#888888', textAlign: 'center', lineHeight: 20 }}>
-              Lim inn en FINN.no-lenke over for å{'\n'}analysere din første jobb
+              {t('analysis.no_analyses_body')}
             </Text>
           </View>
         ) : null}
@@ -113,7 +113,7 @@ export default function AnalysisScreen({
               <View style={{ flex: 1, marginRight: 8 }}>
                 <Text style={[styles.aerligCardTitle, { fontSize: 15 }]} numberOfLines={2}>{item.job.title}</Text>
                 <Text style={[styles.aerligCardMeta, { marginTop: 2 }]}>
-                  {item.job.company || 'Ukjent bedrift'} · {Math.round(item.match_score || item.job.match_score || 0)}%
+                  {item.job.company || t('common.unknown_company')} · {Math.round(item.match_score || item.job.match_score || 0)}%
                 </Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
@@ -149,7 +149,7 @@ export default function AnalysisScreen({
                 }}
                 onPress={() => openSavedAnalysis(item.job.id, item?.job?.url)}
               >
-                <Text style={[styles.aerligSecondaryButtonText, { fontSize: 13 }]}>Åpne analyse</Text>
+                <Text style={[styles.aerligSecondaryButtonText, { fontSize: 13 }]}>{t('analysis.open_analysis')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -161,7 +161,7 @@ export default function AnalysisScreen({
                 }}
                 onPress={() => moveAnalysisToApplications(item.job.id)}
               >
-                <Text style={[styles.aerligSecondaryButtonText, { fontSize: 13 }]}>+ Søknader</Text>
+                <Text style={[styles.aerligSecondaryButtonText, { fontSize: 13 }]}>{t('analysis.add_applications')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -170,12 +170,12 @@ export default function AnalysisScreen({
 
       {profileUpdatedSinceAnalysis && analysis && jobUrl ? (
         <View style={[styles.aerligCard, { borderWidth: 1.5, borderColor: '#E8501A', backgroundColor: '#FFF8F4' }]}>
-          <Text style={{ fontSize: 14, fontWeight: '700', color: '#E8501A', marginBottom: 4 }}>Profilen er oppdatert</Text>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: '#E8501A', marginBottom: 4 }}>{t('analysis.profile_updated_title')}</Text>
           <Text style={{ fontSize: 13, color: '#334155', lineHeight: 19, marginBottom: 12 }}>
-            Du har endret profilen din siden siste analyse. Kjør analysen på nytt for å se om matchen er bedre nå.
+            {t('analysis.profile_updated_body')}
           </Text>
           <TouchableOpacity style={styles.aerligPrimaryButton} onPress={analyzeJob}>
-            <Text style={styles.aerligPrimaryButtonText}>{loading ? 'Analyserer...' : 'Analyser på nytt'}</Text>
+            <Text style={styles.aerligPrimaryButtonText}>{loading ? t('analysis.analyzing') : t('analysis.reanalyze')}</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -183,12 +183,12 @@ export default function AnalysisScreen({
       {analysis ? (
         <>
           <View style={[styles.aerligCard, styles.aerligAccentNavy]}>
-            <Text style={styles.aerligCardEyebrow}>Analyse</Text>
+            <Text style={styles.aerligCardEyebrow}>{t('analysis.section_analysis')}</Text>
 
             {hasMatchScore ? (
               <>
                 <View style={styles.aerligMeterRow}>
-                  <Text style={styles.aerligMeterLabel}>Matchmeter</Text>
+                  <Text style={styles.aerligMeterLabel}>{t('analysis.matchmeter')}</Text>
                   <Text style={[styles.aerligMeterValue, { color: analysisMeterColor }]}>{matchScore}%</Text>
                 </View>
                 <View style={styles.aerligMeterOuter}>
@@ -207,8 +207,8 @@ export default function AnalysisScreen({
             {(typeof analysis?.should_apply === 'boolean') ? (
               <>
                 <View style={styles.aerligMeterRow}>
-                  <Text style={styles.aerligMeterLabel}>Ærlighetsmåler</Text>
-                  <Text style={styles.aerligMeterValue}>{analysis.should_apply ? 'SØK' : 'VENT'}</Text>
+                  <Text style={styles.aerligMeterLabel}>{t('analysis.honesty_meter')}</Text>
+                  <Text style={styles.aerligMeterValue}>{analysis.should_apply ? t('analysis.apply') : t('analysis.wait')}</Text>
                 </View>
                 <View style={styles.aerligMeterOuter}>
                   <View
@@ -224,7 +224,7 @@ export default function AnalysisScreen({
 
             {analysis.recommended_application_style ? (
               <View style={{ marginTop: 10 }}>
-                <Text style={styles.aerligCardSectionTitle}>Anbefalt søknadslengde</Text>
+                <Text style={styles.aerligCardSectionTitle}>{t('analysis.recommended_length')}</Text>
                 <Text style={styles.aerligCardBody}>
                   {analysis.recommended_application_style === 'kort'
                     ? 'Kort (1 avsnitt)'
@@ -239,7 +239,7 @@ export default function AnalysisScreen({
                   style={[styles.aerligSecondaryButton, { marginTop: 10, paddingVertical: 12 }]}
                   onPress={() => setApplicationStyle(analysis.recommended_application_style)}
                 >
-                  <Text style={styles.aerligSecondaryButtonText}>Bruk anbefalt</Text>
+                  <Text style={styles.aerligSecondaryButtonText}>{t('analysis.use_recommended')}</Text>
                 </TouchableOpacity>
               </View>
             ) : null}
@@ -247,14 +247,14 @@ export default function AnalysisScreen({
 
           {analysis.honest_assessment ? (
             <View style={[styles.aerligCard, styles.aerligAccentOrange]}>
-              <Text style={styles.aerligCardEyebrow}>Ærlig vurdering</Text>
+              <Text style={styles.aerligCardEyebrow}>{t('analysis.honest_assessment')}</Text>
               <Text style={styles.aerligCardBody}>{analysis.honest_assessment}</Text>
             </View>
           ) : null}
 
           {strengths.length > 0 ? (
             <View style={[styles.aerligCard, styles.aerligAccentGreen]}>
-              <Text style={styles.aerligCardEyebrow}>Sterke sider</Text>
+              <Text style={styles.aerligCardEyebrow}>{t('analysis.strengths')}</Text>
               {strengths.map((s, idx) => (
                 <Text key={idx} style={styles.aerligCardBody}>• {s}</Text>
               ))}
@@ -263,7 +263,7 @@ export default function AnalysisScreen({
 
           {analysis.missing_requirements?.length > 0 ? (
             <View style={[styles.aerligCard, styles.aerligAccentOrange]}>
-              <Text style={styles.aerligCardEyebrow}>Svake sider</Text>
+              <Text style={styles.aerligCardEyebrow}>{t('analysis.weaknesses')}</Text>
               {analysis.missing_requirements.map((item, index) => (
                 <Text key={index} style={styles.aerligCardBody}>• {item}</Text>
               ))}
@@ -271,14 +271,14 @@ export default function AnalysisScreen({
                 style={[styles.aerligSecondaryButton, { marginTop: 12 }]}
                 onPress={() => setActiveTab('profile')}
               >
-                <Text style={styles.aerligSecondaryButtonText}>Oppdater profilen din →</Text>
+                <Text style={styles.aerligSecondaryButtonText}>{t('analysis.update_profile')}</Text>
               </TouchableOpacity>
             </View>
           ) : null}
 
           {analysis.improvement_tips?.length > 0 ? (
             <View style={[styles.aerligCard, styles.aerligAccentGreen]}>
-              <Text style={styles.aerligCardEyebrow}>Forbedringstips</Text>
+              <Text style={styles.aerligCardEyebrow}>{t('analysis.improvement_tips')}</Text>
               {analysis.improvement_tips.map((item, index) => (
                 <Text key={index} style={styles.aerligCardBody}>• {item}</Text>
               ))}
@@ -286,9 +286,9 @@ export default function AnalysisScreen({
           ) : null}
 
           <View style={styles.aerligCard}>
-            <Text style={styles.aerligCardEyebrow}>Søknad / PDF</Text>
+            <Text style={styles.aerligCardEyebrow}>{t('analysis.section_application')}</Text>
 
-            <Text style={[styles.inputLabel, styles.aerligLabel, { marginTop: 6 }]}>Velg søknadslengde</Text>
+            <Text style={[styles.inputLabel, styles.aerligLabel, { marginTop: 6 }]}>{t('analysis.select_length')}</Text>
             <View style={[styles.filterChipRow, styles.aerligFilterChipRow]}>
               {[
                 { key: 'kort', label: 'Kort (1 avsnitt)' },
@@ -308,10 +308,10 @@ export default function AnalysisScreen({
               })}
             </View>
 
-            <Text style={[styles.inputLabel, styles.aerligLabel, { marginTop: 6 }]}>Send til e-post</Text>
+            <Text style={[styles.inputLabel, styles.aerligLabel, { marginTop: 6 }]}>{t('analysis.send_to_email')}</Text>
             <TextInput
               style={[styles.input, styles.aerligInput]}
-              placeholder="Din e-postadresse"
+              placeholder={t('analysis.send_to_email')}
               value={applicationEmail}
               onChangeText={setApplicationEmail}
               autoCapitalize="none"
@@ -320,16 +320,16 @@ export default function AnalysisScreen({
 
             {profilePhotoData ? (
               <View style={styles.profileField}>
-                <Text style={[styles.inputLabel, styles.aerligLabel]}>Bilde i PDF</Text>
-                <Text style={[styles.helpText, styles.aerligHelpText]}>Du kan velge om profilbildet skal være med i denne søknaden/PDF-en (standard kan settes i Profil).</Text>
+                <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('analysis.photo_in_pdf')}</Text>
+                <Text style={[styles.helpText, styles.aerligHelpText]}>{t('analysis.photo_in_pdf_help')}</Text>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={[styles.messageText, styles.aerligMessageText]}>{includePhotoInPdf ? 'På' : 'Av'}</Text>
+                  <Text style={[styles.messageText, styles.aerligMessageText]}>{includePhotoInPdf ? t('common.on') : t('common.off')}</Text>
                   <Switch value={includePhotoInPdf} onValueChange={setIncludePhotoInPdf} />
                 </View>
               </View>
             ) : null}
 
-            <Text style={[styles.inputLabel, styles.aerligLabel, { marginTop: 6 }]}>Språk / Language</Text>
+            <Text style={[styles.inputLabel, styles.aerligLabel, { marginTop: 6 }]}>{t('analysis.language_label')}</Text>
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
               {[{ key: 'no', label: '🇳🇴 Norsk' }, { key: 'en', label: '🇬🇧 English' }].map(({ key, label }) => {
                 const active = cvLanguage === key;
@@ -383,7 +383,7 @@ export default function AnalysisScreen({
               onPress={sendApplication}
               disabled={isGenerating}
             >
-              <Text style={styles.aerligSecondaryButtonText}>{sending ? 'Sender...' : 'Send søknad (e-post)'}</Text>
+              <Text style={styles.aerligSecondaryButtonText}>{sending ? t('analysis.sending') : t('analysis.send_application')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -391,7 +391,7 @@ export default function AnalysisScreen({
               onPress={generatePdf}
               disabled={isGenerating}
             >
-              <Text style={styles.aerligSecondaryButtonText}>{generatingPdf ? 'Genererer...' : 'Generer PDF (uten e-post)'}</Text>
+              <Text style={styles.aerligSecondaryButtonText}>{generatingPdf ? t('analysis.generating') : t('analysis.generate_pdf')}</Text>
             </TouchableOpacity>
 
             {streamingProgress ? (
@@ -410,7 +410,7 @@ export default function AnalysisScreen({
 
                 <View style={{ marginBottom: 12 }}>
                   <Text style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>
-                    Mal: <Text style={{ fontWeight: '700', color: '#0f172a' }}>{cvTemplate.charAt(0).toUpperCase() + cvTemplate.slice(1)}</Text>
+                    {t('analysis.template_label')}: <Text style={{ fontWeight: '700', color: '#0f172a' }}>{cvTemplate.charAt(0).toUpperCase() + cvTemplate.slice(1)}</Text>
                   </Text>
                   <View style={{ flexDirection: 'row', gap: 6 }}>
                     {['kreativ', 'profesjonell', 'klassisk'].map((tpl) => {
@@ -444,20 +444,20 @@ export default function AnalysisScreen({
                     style={[styles.aerligSecondaryButton, { marginTop: 0 }]}
                     onPress={() => openDocument(applicationPackage.pdfUrl)}
                   >
-                    <Text style={styles.aerligSecondaryButtonText}>Åpne PDF</Text>
+                    <Text style={styles.aerligSecondaryButtonText}>{t('analysis.open_pdf')}</Text>
                   </TouchableOpacity>
                 ) : null}
 
                 {(typeof applicationPackage?.coverLetter === 'string' && applicationPackage.coverLetter.trim()) ? (
                   <>
-                    <Text style={styles.aerligCardSectionTitle}>Søknad</Text>
+                    <Text style={styles.aerligCardSectionTitle}>{t('analysis.section_cover_letter')}</Text>
                     <Text style={styles.aerligCardBody}>{applicationPackage.coverLetter}</Text>
                   </>
                 ) : null}
 
                 {(typeof applicationPackage?.cv === 'string' && applicationPackage.cv.trim()) ? (
                   <>
-                    <Text style={styles.aerligCardSectionTitle}>CV</Text>
+                    <Text style={styles.aerligCardSectionTitle}>{t('analysis.section_cv')}</Text>
                     <Text style={styles.aerligCardBody}>{applicationPackage.cv}</Text>
                   </>
                 ) : null}
@@ -466,7 +466,7 @@ export default function AnalysisScreen({
                   (!applicationPackage?.coverLetter || !String(applicationPackage.coverLetter).trim())
                   && (!applicationPackage?.cv || !String(applicationPackage.cv).trim())
                 ) ? (
-                  <Text style={[styles.helpText, styles.aerligHelpText, { marginTop: 6 }]}>Ingen tekst å vise.</Text>
+                  <Text style={[styles.helpText, styles.aerligHelpText, { marginTop: 6 }]}>{t('analysis.no_text')}</Text>
                 ) : null}
               </View>
             ) : null}

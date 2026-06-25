@@ -2,6 +2,9 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, Platform, NativeModules } from 'react-native';
 
+import i18n, { loadSavedLanguage, changeLanguage as i18nChange } from '../src/i18n';
+
+// Keep legacy I18N import for backward compat with any remaining direct usages
 import { I18N } from '../i18n/no';
 
 // ---------------------------------------------------------------------------
@@ -141,8 +144,9 @@ export function AppProvider({ children }) {
     async function initAuth() {
       try {
         const lang = await AsyncStorage.getItem('uiLanguage');
-        if (lang === 'en' || lang === 'vi') setUiLanguage(lang);
-        else if (lang) setUiLanguage('no');
+        const resolved = (lang === 'en' || lang === 'vi') ? lang : 'no';
+        setUiLanguage(resolved);
+        loadSavedLanguage(resolved);
 
         const t = await AsyncStorage.getItem('authToken');
         if (t) {
@@ -192,7 +196,7 @@ export function AppProvider({ children }) {
   }
 
   async function doAuth() {
-    if (!authEmail) { Alert.alert('Feil', 'Skriv inn e-post'); return; }
+    if (!authEmail) { Alert.alert(i18n.t('common.error'), i18n.t('auth.error_no_email')); return; }
     setAuthLoading(true);
     try {
       if (!codeSent) {
@@ -204,10 +208,10 @@ export function AppProvider({ children }) {
         setCodeSent(true);
         setAuthCode('');
         setResendCooldown(30);
-        Alert.alert('Kode sendt', 'Sjekk e-posten din for en engangskode.');
+        Alert.alert(i18n.t('auth.code_sent_title'), i18n.t('auth.code_sent_body'));
       } else {
         if (!authCode || String(authCode).trim().length < 4) {
-          Alert.alert('Feil', 'Skriv inn engangskoden');
+          Alert.alert(i18n.t('common.error'), i18n.t('auth.error_no_code'));
           setAuthLoading(false);
           return;
         }
@@ -227,8 +231,8 @@ export function AppProvider({ children }) {
         setActiveTab('home');
       }
     } catch (e) {
-      if (e.status === 429) Alert.alert('For mange forsøk', 'Vent noen minutter og prøv igjen.');
-      else Alert.alert('Feil', errText(e));
+      if (e.status === 429) Alert.alert(i18n.t('common.too_many_attempts_title'), i18n.t('common.too_many_attempts_body'));
+      else Alert.alert(i18n.t('common.error'), errText(e));
     }
     setAuthLoading(false);
   }
@@ -281,11 +285,11 @@ export function AppProvider({ children }) {
   async function setAndPersistUiLanguage(nextLang) {
     const v = ['en', 'vi'].includes(nextLang) ? nextLang : 'no';
     setUiLanguage(v);
+    i18nChange(v);
     try { await AsyncStorage.setItem('uiLanguage', v); } catch (e) { /* ignore */ }
   }
 
-  const strings = I18N[uiLanguage] || I18N.no;
-  const t = (key) => strings[key] ?? I18N.no[key] ?? String(key);
+  const t = (key) => i18n.t(key);
 
   // ---------------------------------------------------------------------------
   // Provider value
