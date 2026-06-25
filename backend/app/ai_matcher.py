@@ -276,6 +276,13 @@ def _cache_key(
     return hashlib.sha256(payload).hexdigest()
 
 
+_LANG_OUTPUT_RULE = {
+    "no": "Write all text values in Norwegian (Bokmål).",
+    "en": "Write all text values in English.",
+    "vi": "Write all text values in Vietnamese (Tiếng Việt).",
+}
+
+
 def analyze_job_match(
     job_text: str,
     cv_text: str,
@@ -284,6 +291,7 @@ def analyze_job_match(
     extract_relevant: bool = True,
     use_cache: bool = True,
     model: Optional[str] = None,
+    language: str = "no",
 ) -> MatchResult:
     """Low-token semantic match between JOB and CV.
 
@@ -313,14 +321,16 @@ def analyze_job_match(
     job_key = _normalize_for_cache(job_comp)
     cv_key = _normalize_for_cache(cv_comp)
 
-    key = _cache_key(model=model_id, job=job_key, cv=cv_key, max_len=max_len_i, extract_relevant=extract_relevant)
+    lang = language if language in _LANG_OUTPUT_RULE else "no"
+    key = _cache_key(model=model_id, job=job_key, cv=cv_key, max_len=max_len_i, extract_relevant=extract_relevant) + f"|lang={lang}"
     if use_cache:
         cached = MATCH_CACHE.get(key)
         if isinstance(cached, dict):
             return _normalize_result(cached)
 
+    lang_rule = _LANG_OUTPUT_RULE[lang]
     system_prompt = (
-        "Recruiter AI. Return ONLY JSON. Be concise.\n\n" + SHARED_ANTI_HALLUCINATION_RULES
+        f"Recruiter AI. Return ONLY JSON. Be concise. {lang_rule}\n\n" + SHARED_ANTI_HALLUCINATION_RULES
     )
 
     # Very compact schema instruction to minimize tokens.

@@ -322,6 +322,7 @@ export default function useJobAnalysis({
           profile_id: profileId,
           url: jobUrl,
           application_style: applicationStyle,
+          language: uiLanguage,
         }),
       });
 

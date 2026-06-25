@@ -843,7 +843,7 @@ def analyze_job_url(
     job_text = fetch_job_text(url)
     cv_text = _build_cv_text_for_match(profile)
 
-    match = analyze_job_match(job_text, cv_text)
+    match = analyze_job_match(job_text, cv_text, language=language)
     match = _filter_completed_edu_from_match(match, _completed_edu_degree_names(profile))
     job_title, company = _guess_job_title_company(job_text)
 

@@ -359,6 +359,7 @@ class AnalyzeUrlIn(BaseModel):
     profile_id: int
     url: str
     application_style: str = "vanlig"  # kort | vanlig | profesjonell
+    language: str = "no"
 
 
 class AnalyzeCvIn(BaseModel):
@@ -2207,6 +2208,7 @@ def analyze_url(
             data.url,
             application_style=data.application_style,
             generate_documents=False,
+            language=data.language,
         )
         job_desc = (result.pop("__job_text", "") or "").strip()
 
