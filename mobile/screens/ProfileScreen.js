@@ -922,9 +922,9 @@ export default function ProfileScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Text style={[styles.profileCardIcon, { marginBottom: 0 }]}>📅</Text>
               <View>
-                <Text style={styles.profileCardLabel}>Hull i CV</Text>
+                <Text style={styles.profileCardLabel}>{t('profile.gaps_section')}</Text>
                 <Text style={styles.profileCardValue}>
-                  {cvGapsList.length > 0 ? `${cvGapsList.length} periode${cvGapsList.length === 1 ? '' : 'r'}` : 'Ingen registrert'}
+                  {cvGapsList.length > 0 ? `${cvGapsList.length} periode${cvGapsList.length === 1 ? '' : 'r'}` : t('profile.no_gaps')}
                 </Text>
               </View>
             </View>
@@ -953,7 +953,7 @@ export default function ProfileScreen() {
                       onPress={() => setEditingGapIndex((cur) => (cur === index ? -1 : index))}
                     >
                       <Text style={[styles.filterChipText, styles.aerligFilterChipText]}>
-                        {editingGapIndex === index ? 'Ferdig' : 'Rediger'}
+                        {editingGapIndex === index ? t('common.done') : t('common.edit')}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -963,7 +963,7 @@ export default function ProfileScreen() {
                         setEditingGapIndex((cur) => cur === index ? -1 : cur > index ? cur - 1 : cur);
                       }}
                     >
-                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, styles.aerligRowActionTextDanger]}>Fjern</Text>
+                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, styles.aerligRowActionTextDanger]}>{t('common.remove')}</Text>
                     </TouchableOpacity>
                   </View>
                   {editingGapIndex === index && (
@@ -971,21 +971,21 @@ export default function ProfileScreen() {
                       <TextInput
                         style={[styles.input, styles.aerligInput, styles.aerligInputCompact, styles.inlineInput]}
                         value={gap.from}
-                        placeholder="Fra (år)"
+                        placeholder={t('profile.gap_from_placeholder')}
                         keyboardType="numeric"
                         onChangeText={(v) => { const items = [...cvGapsList]; items[index] = { ...items[index], from: v }; setCvGapsList(items); }}
                       />
                       <TextInput
                         style={[styles.input, styles.aerligInput, styles.aerligInputCompact, styles.inlineInput]}
                         value={gap.to}
-                        placeholder="Til (år)"
+                        placeholder={t('profile.gap_to_placeholder')}
                         keyboardType="numeric"
                         onChangeText={(v) => { const items = [...cvGapsList]; items[index] = { ...items[index], to: v }; setCvGapsList(items); }}
                       />
                       <TextInput
                         style={[styles.input, styles.aerligInput, styles.aerligInputCompact, styles.inlineInput, { marginRight: 0, flex: 2 }]}
                         value={gap.description}
-                        placeholder="Forklaring"
+                        placeholder={t('profile.gap_explanation_placeholder')}
                         onChangeText={(v) => { const items = [...cvGapsList]; items[index] = { ...items[index], description: v }; setCvGapsList(items); }}
                       />
                     </View>
@@ -1000,7 +1000,7 @@ export default function ProfileScreen() {
                   setEditingGapIndex(next.length - 1);
                 }}
               >
-                <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>+ Legg til periode</Text>
+                <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>{t('common.add')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -1016,9 +1016,9 @@ export default function ProfileScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Text style={[styles.profileCardIcon, { marginBottom: 0 }]}>👥</Text>
               <View>
-                <Text style={styles.profileCardLabel}>Referanser</Text>
+                <Text style={styles.profileCardLabel}>{t('profile.references_section')}</Text>
                 <Text style={styles.profileCardValue}>
-                  {referenceEntries.length > 0 ? `${referenceEntries.length} referanse${referenceEntries.length === 1 ? '' : 'r'}` : 'Ikke utfylt'}
+                  {referenceEntries.length > 0 ? `${referenceEntries.length} referanse${referenceEntries.length === 1 ? '' : 'r'}` : t('profile.no_references')}
                 </Text>
               </View>
             </View>
@@ -1045,7 +1045,7 @@ export default function ProfileScreen() {
                       onPress={() => setEditingReferenceIndex((cur) => (cur === index ? -1 : index))}
                     >
                       <Text style={[styles.filterChipText, styles.aerligFilterChipText]}>
-                        {editingReferenceIndex === index ? 'Ferdig' : 'Rediger'}
+                        {editingReferenceIndex === index ? t('common.done') : t('common.edit')}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -1055,7 +1055,7 @@ export default function ProfileScreen() {
                         setEditingReferenceIndex((cur) => cur === index ? -1 : cur > index ? cur - 1 : cur);
                       }}
                     >
-                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, styles.aerligRowActionTextDanger]}>Fjern</Text>
+                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, styles.aerligRowActionTextDanger]}>{t('common.remove')}</Text>
                     </TouchableOpacity>
                   </View>
                   {editingReferenceIndex === index && (
@@ -1063,19 +1063,19 @@ export default function ProfileScreen() {
                       <TextInput
                         style={[styles.input, styles.aerligInput, styles.aerligInputCompact]}
                         value={ref.name}
-                        placeholder="Navn"
+                        placeholder={t('profile.ref_name_placeholder')}
                         onChangeText={(v) => { const items = [...referenceEntries]; items[index] = { ...items[index], name: v }; setReferenceEntries(items); }}
                       />
                       <TextInput
                         style={[styles.input, styles.aerligInput, styles.aerligInputCompact]}
                         value={ref.relation || ''}
-                        placeholder="Stilling / tittel (f.eks. Leder i X)"
+                        placeholder={t('profile.ref_title_placeholder')}
                         onChangeText={(v) => { const items = [...referenceEntries]; items[index] = { ...items[index], relation: v }; setReferenceEntries(items); }}
                       />
                       <TextInput
                         style={[styles.input, styles.aerligInput, styles.aerligInputCompact]}
                         value={ref.contact || ''}
-                        placeholder="Telefon eller e-post"
+                        placeholder={t('profile.ref_contact_placeholder')}
                         autoCapitalize="none"
                         onChangeText={(v) => { const items = [...referenceEntries]; items[index] = { ...items[index], contact: v }; setReferenceEntries(items); }}
                       />
@@ -1091,7 +1091,7 @@ export default function ProfileScreen() {
                   setEditingReferenceIndex(next.length - 1);
                 }}
               >
-                <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>+ Legg til referanse</Text>
+                <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>{t('common.add')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -1107,9 +1107,9 @@ export default function ProfileScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Text style={[styles.profileCardIcon, { marginBottom: 0 }]}>📄</Text>
               <View>
-                <Text style={styles.profileCardLabel}>Dokumenter</Text>
+                <Text style={styles.profileCardLabel}>{t('profile.documents_section')}</Text>
                 <Text style={styles.profileCardValue}>
-                  {profileDocsList.length > 0 ? `${profileDocsList.length} dokument${profileDocsList.length === 1 ? '' : 'er'}` : 'Ingen opplastet'}
+                  {profileDocsList.length > 0 ? `${profileDocsList.length} dokument${profileDocsList.length === 1 ? '' : 'er'}` : t('profile.no_documents')}
                 </Text>
               </View>
             </View>
@@ -1135,7 +1135,7 @@ export default function ProfileScreen() {
                       style={[styles.filterChip, styles.aerligFilterChip, styles.aerligRowActionChip, styles.aerligRowActionChipDanger]}
                       onPress={() => deleteProfileDocument(doc.id)}
                     >
-                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, styles.aerligRowActionTextDanger]}>Fjern</Text>
+                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, styles.aerligRowActionTextDanger]}>{t('common.remove')}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -1146,7 +1146,7 @@ export default function ProfileScreen() {
                 disabled={docsUploading}
               >
                 <Text style={[styles.smallButtonText, styles.aerligSmallButtonText]}>
-                  {docsUploading ? 'Laster opp...' : '+ Last opp dokument'}
+                  {docsUploading ? t('profile.uploading') : t('profile.upload_btn')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1157,7 +1157,7 @@ export default function ProfileScreen() {
           <Modal visible transparent animationType="fade" onRequestClose={() => { setShowDocTypeModal(false); setPendingDocFile(null); }}>
             <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
               <View style={{ backgroundColor: '#FFFFFF', borderRadius: 12, padding: 24, width: '100%', maxWidth: 360 }}>
-                <Text style={{ fontSize: 17, fontWeight: '600', color: '#111827', marginBottom: 16 }}>Velg dokumenttype</Text>
+                <Text style={{ fontSize: 17, fontWeight: '600', color: '#111827', marginBottom: 16 }}>{t('profile.import_cv_subtitle')}</Text>
                 {DOC_TYPES.map((type) => (
                   <TouchableOpacity
                     key={type}
@@ -1171,7 +1171,7 @@ export default function ProfileScreen() {
                   style={styles.aerligSecondaryButton}
                   onPress={() => { setShowDocTypeModal(false); setPendingDocFile(null); }}
                 >
-                  <Text style={styles.aerligSecondaryButtonText}>Avbryt</Text>
+                  <Text style={styles.aerligSecondaryButtonText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1246,10 +1246,10 @@ export default function ProfileScreen() {
         </View>
 
         <TouchableOpacity style={styles.aerligSecondaryButton} onPress={() => setActiveTab('documents')}>
-          <Text style={styles.aerligSecondaryButtonText}>Dokumenter</Text>
+          <Text style={styles.aerligSecondaryButtonText}>{t('profile.documents_section')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.aerligSecondaryButton} onPress={() => setActiveTab('settings')}>
-          <Text style={styles.aerligSecondaryButtonText}>E-postinnstillinger</Text>
+          <Text style={styles.aerligSecondaryButtonText}>{t('settings.title')}</Text>
         </TouchableOpacity>
 
         {/* Autosave status */}
