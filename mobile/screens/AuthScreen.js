@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, Alert,
+  View, Text, TextInput, TouchableOpacity, Alert, Modal, Pressable,
 } from 'react-native';
 import { useApp, apiFetch } from '../context/AppContext';
 
@@ -19,12 +19,15 @@ export default function AuthScreen() {
   } = useApp();
 
   const [resendLoading, setResendLoading] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
 
   const LANGS = [
-    { code: 'no', flag: '🇳🇴' },
-    { code: 'en', flag: '🇬🇧' },
-    { code: 'vi', flag: '🇻🇳' },
+    { code: 'no', flag: '🇳🇴', name: 'Norsk' },
+    { code: 'en', flag: '🇬🇧', name: 'English' },
+    { code: 'vi', flag: '🇻🇳', name: 'Tiếng Việt' },
+    { code: 'pl', flag: '🇵🇱', name: 'Polski' },
   ];
+  const activeLang = LANGS.find(l => l.code === uiLanguage) || LANGS[0];
 
   return (
     <View style={{
@@ -34,26 +37,56 @@ export default function AuthScreen() {
       paddingHorizontal: 20,
       paddingVertical: 40,
     }}>
-      {/* Language selector — top right */}
-      <View style={{
-        position: 'absolute', top: 16, right: 16,
-        flexDirection: 'row', gap: 4,
-      }}>
-        {LANGS.map(({ code, flag }) => (
-          <TouchableOpacity
-            key={code}
-            onPress={() => setAndPersistUiLanguage(code)}
-            style={{
-              paddingHorizontal: 8, paddingVertical: 4,
-              borderRadius: 6,
-              backgroundColor: uiLanguage === code ? '#FEF0EB' : 'transparent',
-              borderBottomWidth: uiLanguage === code ? 2 : 0,
-              borderBottomColor: '#E8501A',
-            }}
-          >
-            <Text style={{ fontSize: 18 }}>{flag}</Text>
-          </TouchableOpacity>
-        ))}
+      {/* Language dropdown — top right */}
+      <View style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}>
+        <TouchableOpacity
+          onPress={() => setLangOpen(o => !o)}
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 6,
+            backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb',
+            borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7,
+            shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+          }}
+        >
+          <Text style={{ fontSize: 16 }}>{activeLang.flag}</Text>
+          <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>{activeLang.name}</Text>
+          <Text style={{ fontSize: 10, color: '#9CA3AF', marginLeft: 2 }}>{langOpen ? '▲' : '▼'}</Text>
+        </TouchableOpacity>
+
+        {langOpen && (
+          <>
+            <Modal transparent animationType="none" onRequestClose={() => setLangOpen(false)}>
+              <Pressable style={{ flex: 1 }} onPress={() => setLangOpen(false)} />
+            </Modal>
+            <View style={{
+              position: 'absolute', top: 40, right: 0,
+              backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: '#e5e7eb',
+              minWidth: 150, zIndex: 100,
+              shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8, elevation: 8,
+              overflow: 'hidden',
+            }}>
+              {LANGS.map(({ code, flag, name }, i) => (
+                <TouchableOpacity
+                  key={code}
+                  onPress={() => { setAndPersistUiLanguage(code); setLangOpen(false); }}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 8,
+                    paddingHorizontal: 12, paddingVertical: 11,
+                    backgroundColor: uiLanguage === code ? '#FEF0EB' : '#fff',
+                    borderBottomWidth: i < LANGS.length - 1 ? 1 : 0,
+                    borderBottomColor: '#F3F4F6',
+                  }}
+                >
+                  <Text style={{ fontSize: 16 }}>{flag}</Text>
+                  <Text style={{
+                    fontSize: 13, fontWeight: uiLanguage === code ? '700' : '400',
+                    color: uiLanguage === code ? '#E8501A' : '#374151',
+                  }}>{name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
       </View>
 
       <View style={{

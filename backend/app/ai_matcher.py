@@ -280,6 +280,7 @@ _LANG_OUTPUT_RULE = {
     "no": "Write all text values in Norwegian (Bokmål).",
     "en": "Write all text values in English.",
     "vi": "Write all text values in Vietnamese (Tiếng Việt).",
+    "pl": "Write all text values in Polish (Polski).",
 }
 
 

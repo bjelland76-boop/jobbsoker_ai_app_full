@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, Pressable,
   Switch, Modal, ScrollView, ActivityIndicator, Image, Linking, Alert,
@@ -71,6 +71,16 @@ export default function ProfileScreen() {
     importCvFromGallery,
     applyCvImport,
   } = useProfileContext();
+
+  const [langOpen, setLangOpen] = useState(false);
+
+  const LANGS = [
+    { code: 'no', flag: '🇳🇴', name: 'Norsk' },
+    { code: 'en', flag: '🇬🇧', name: 'English' },
+    { code: 'vi', flag: '🇻🇳', name: 'Tiếng Việt' },
+    { code: 'pl', flag: '🇵🇱', name: 'Polski' },
+  ];
+  const activeLang = LANGS.find(l => l.code === uiLanguage) || LANGS[0];
 
   const _initials = (name || '').trim().split(/\s+/).slice(0, 2).map((w) => (w[0] || '').toUpperCase()).join('');
   const _skillsList = skills ? skills.split(',').map((s) => s.trim()).filter(Boolean) : [];
@@ -1212,36 +1222,58 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Language selector */}
+        {/* Language selector — dropdown */}
         <View style={[styles.profileField, { marginTop: 8 }]}>
           <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('profile.language_selector_label')}</Text>
-          <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
-            {[
-              { code: 'no', flag: '🇳🇴', label: 'Norsk' },
-              { code: 'en', flag: '🇬🇧', label: 'English' },
-              { code: 'vi', flag: '🇻🇳', label: 'Tiếng Việt' },
-            ].map(({ code, flag, label }) => {
-              const active = uiLanguage === code;
-              return (
-                <TouchableOpacity
-                  key={code}
-                  onPress={() => setAndPersistUiLanguage(code)}
-                  style={{
-                    flexDirection: 'row', alignItems: 'center', gap: 4,
-                    paddingHorizontal: 10, paddingVertical: 6,
-                    borderRadius: 8,
-                    backgroundColor: active ? '#FEF0EB' : '#F3F4F6',
-                    borderBottomWidth: active ? 2 : 0,
-                    borderBottomColor: '#E8501A',
-                  }}
-                >
-                  <Text style={{ fontSize: 16 }}>{flag}</Text>
-                  <Text style={{ fontSize: 13, fontWeight: active ? '700' : '400', color: active ? '#E8501A' : '#374151' }}>
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+          <View style={{ marginTop: 6 }}>
+            <TouchableOpacity
+              onPress={() => setLangOpen(o => !o)}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 8,
+                backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb',
+                borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
+                alignSelf: 'flex-start', minWidth: 160,
+              }}
+            >
+              <Text style={{ fontSize: 16 }}>{activeLang.flag}</Text>
+              <Text style={{ fontSize: 14, color: '#374151', fontWeight: '500', flex: 1 }}>{activeLang.name}</Text>
+              <Text style={{ fontSize: 10, color: '#9CA3AF' }}>{langOpen ? '▲' : '▼'}</Text>
+            </TouchableOpacity>
+
+            {langOpen && (
+              <>
+                <Modal transparent animationType="none" onRequestClose={() => setLangOpen(false)}>
+                  <Pressable style={{ flex: 1 }} onPress={() => setLangOpen(false)} />
+                </Modal>
+                <View style={{
+                  backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: '#e5e7eb',
+                  marginTop: 4, overflow: 'hidden',
+                  shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6, elevation: 4,
+                  zIndex: 50,
+                }}>
+                  {LANGS.map(({ code, flag, name }, i) => (
+                    <TouchableOpacity
+                      key={code}
+                      onPress={() => { setAndPersistUiLanguage(code); setLangOpen(false); }}
+                      style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 10,
+                        paddingHorizontal: 14, paddingVertical: 12,
+                        backgroundColor: uiLanguage === code ? '#FEF0EB' : '#fff',
+                        borderBottomWidth: i < LANGS.length - 1 ? 1 : 0,
+                        borderBottomColor: '#F3F4F6',
+                      }}
+                    >
+                      <Text style={{ fontSize: 18 }}>{flag}</Text>
+                      <Text style={{
+                        fontSize: 14,
+                        fontWeight: uiLanguage === code ? '700' : '400',
+                        color: uiLanguage === code ? '#E8501A' : '#374151',
+                      }}>{name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            )}
           </View>
         </View>
 

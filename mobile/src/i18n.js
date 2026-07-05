@@ -5,8 +5,9 @@ import * as Localization from 'expo-localization';
 import no from './locales/no.json';
 import en from './locales/en.json';
 import vi from './locales/vi.json';
+import pl from './locales/pl.json';
 
-const SUPPORTED = ['no', 'en', 'vi'];
+const SUPPORTED = ['no', 'en', 'vi', 'pl'];
 
 function detectDeviceLanguage() {
   try {
@@ -28,6 +29,7 @@ try {
         no: { translation: no },
         en: { translation: en },
         vi: { translation: vi },
+        pl: { translation: pl },
       },
       lng: detectDeviceLanguage(),
       fallbackLng: 'no',
@@ -36,7 +38,7 @@ try {
 } catch (e) {
   // Fallback: init without react-i18next if something goes wrong
   i18n.init({
-    resources: { no: { translation: no }, en: { translation: en }, vi: { translation: vi } },
+    resources: { no: { translation: no }, en: { translation: en }, vi: { translation: vi }, pl: { translation: pl } },
     lng: 'no',
     fallbackLng: 'no',
     interpolation: { escapeValue: false },

@@ -283,7 +283,7 @@ export function AppProvider({ children }) {
   }
 
   async function setAndPersistUiLanguage(nextLang) {
-    const v = ['en', 'vi'].includes(nextLang) ? nextLang : 'no';
+    const v = ['en', 'vi', 'pl'].includes(nextLang) ? nextLang : 'no';
     setUiLanguage(v);
     i18nChange(v);
     try { await AsyncStorage.setItem('uiLanguage', v); } catch (e) { /* ignore */ }
