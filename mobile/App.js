@@ -113,6 +113,7 @@ function AppContent() {
     experienceEntries,
     isProfileTooEmpty,
     flushAutoSave,
+    dismissOnboarding,
   } = profileHook;
 
   const {
@@ -277,7 +278,7 @@ function AppContent() {
     return () => {
       mascotLoop.stop();
     };
-  }, [activeTab, mascotAnim]);
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (activeTab !== 'home') return;
