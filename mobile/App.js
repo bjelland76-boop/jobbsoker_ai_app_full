@@ -9,7 +9,6 @@ import {
   TextInput,
   TouchableOpacity,
   Pressable,
-  Animated,
   Alert,
 } from 'react-native';
 
@@ -208,10 +207,6 @@ function AppContent() {
   const [interviewError, setInterviewError] = useState('');
   const [interviewStarted, setInterviewStarted] = useState(false);
 
-  const mascotAnim = useRef(new Animated.Value(0)).current;
-
-  // Pre-fill application email from profile when not manually set
-
   async function refreshCareerTip({ force = false } = {}) {
     const tips = CAREER_TIPS.no;
     const now = Date.now();
@@ -251,33 +246,7 @@ function AppContent() {
 
   useEffect(() => {
     if (activeTab !== 'home') return;
-
-    mascotAnim.setValue(0);
-
-    // Rotate the career tip occasionally (persisted). This runs when you enter Home.
     refreshCareerTip();
-
-    const mascotLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(mascotAnim, {
-          toValue: 1,
-          duration: 1800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(mascotAnim, {
-          toValue: 0,
-          duration: 1800,
-          useNativeDriver: true,
-        }),
-      ]),
-      { resetBeforeIteration: true }
-    );
-
-    mascotLoop.start();
-
-    return () => {
-      mascotLoop.stop();
-    };
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

@@ -1,5 +1,9 @@
 {
   "appId": "com.aerlig.app",
   "appName": "Ærlig",
-  "webDir": "dist"
+  "webDir": "dist",
+  "backgroundColor": "#F7F5F0",
+  "android": {
+    "backgroundColor": "#F7F5F0"
+  }
 }
