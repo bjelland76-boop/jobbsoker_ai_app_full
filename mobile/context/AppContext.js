@@ -144,7 +144,7 @@ export function AppProvider({ children }) {
     async function initAuth() {
       try {
         const lang = await AsyncStorage.getItem('uiLanguage');
-        const resolved = ['en', 'vi', 'pl'].includes(lang) ? lang : 'no';
+        const resolved = ['en', 'vi', 'pl', 'lt', 'ar'].includes(lang) ? lang : 'no';
         setUiLanguage(resolved);
         loadSavedLanguage(resolved);
 
@@ -283,7 +283,7 @@ export function AppProvider({ children }) {
   }
 
   async function setAndPersistUiLanguage(nextLang) {
-    const v = ['en', 'vi', 'pl'].includes(nextLang) ? nextLang : 'no';
+    const v = ['en', 'vi', 'pl', 'lt', 'ar'].includes(nextLang) ? nextLang : 'no';
     setUiLanguage(v);
     i18nChange(v);
     try { await AsyncStorage.setItem('uiLanguage', v); } catch (e) { /* ignore */ }

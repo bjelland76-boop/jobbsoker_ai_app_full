@@ -281,6 +281,8 @@ _LANG_OUTPUT_RULE = {
     "en": "Write all text values in English.",
     "vi": "Write all text values in Vietnamese (Tiếng Việt).",
     "pl": "Write all text values in Polish (Polski).",
+    "lt": "Write all text values in Lithuanian (Lietuvių).",
+    "ar": "Write all text values in Arabic (العربية).",
 }
 
 
