@@ -140,6 +140,45 @@ export default function HomeScreen({
     : latestMatch >= 40 ? t('home.match_ok')
     : t('home.match_weak');
 
+  const hour = new Date().getHours();
+  const greetingWord = (hour >= 6 && hour < 12) ? t('common.greeting_morning')
+    : (hour >= 12 && hour < 18) ? t('common.hi')
+    : (hour >= 18 && hour < 23) ? t('common.greeting_evening')
+    : t('common.hi');
+  const greetingEmoji = (hour >= 6 && hour < 12) ? '☀️'
+    : (hour >= 12 && hour < 18) ? '👋'
+    : '🌙';
+
+  const appliedJobIds = new Set(
+    (Array.isArray(applications) ? applications : [])
+      .filter((it) => !!it?.applied && it?.job?.id != null)
+      .map((it) => it.job.id),
+  );
+
+  const strongUnusedMatch = (Array.isArray(jobAnalyses) ? jobAnalyses : [])
+    .filter((a) => (
+      typeof a?.match_score === 'number'
+      && a.match_score >= 70
+      && a?.job?.id != null
+      && !appliedJobIds.has(a.job.id)
+    ))
+    .reduce((best, cur) => ((!best || cur.match_score > best.match_score) ? cur : best), null);
+
+  const appsSentCount = sentApplicationsCount || 0;
+
+  const dynamicMessage = strongUnusedMatch
+    ? t('home.message_strong_match', {
+      score: Math.max(0, Math.min(100, Math.round(strongUnusedMatch.match_score))),
+      jobtittel: strongUnusedMatch.job?.title || t('home.latest_analysis'),
+    })
+    : (analysedJobsCount > 0 && appsSentCount === 0)
+      ? t('home.message_analysis_no_application', { count: analysedJobsCount })
+      : (appsSentCount > 0)
+        ? t('home.message_active_applications', { count: appsSentCount })
+        : (analysedJobsCount === 0)
+          ? t('home.message_new_user')
+          : t('home.subtitle');
+
   return (
     <View style={styles.aerligHomeWrap}>
       <View style={styles.aerligHeroCard}>
@@ -165,10 +204,10 @@ export default function HomeScreen({
         </View>
 
         <Text style={styles.aerligHeroGreeting}>
-          {t('common.hi')}{firstName ? `, ${firstName}` : ''}.
+          {greetingWord}{firstName ? `, ${firstName}` : ''}! {greetingEmoji}
         </Text>
         <Text style={styles.aerligHeroSubtitle}>
-          {t('home.subtitle')}
+          {dynamicMessage}
         </Text>
 
         <TouchableOpacity style={styles.aerligPrimaryButton} onPress={() => setActiveTab('new')}>

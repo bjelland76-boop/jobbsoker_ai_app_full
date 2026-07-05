@@ -1,6 +1,8 @@
 {
   "common": {
     "hi": "Cześć",
+    "greeting_morning": "Dzień dobry",
+    "greeting_evening": "Dobry wieczór",
     "loading": "Ładowanie...",
     "back": "‹ Wróć",
     "save": "Zapisz",
@@ -46,6 +48,10 @@
   },
   "home": {
     "subtitle": "Przegląd analiz i podań — ze szczerymi radami.",
+    "message_strong_match": "Masz {{score}}% dopasowania, które czeka — {{jobtittel}} może się do Ciebie odezwać! 🎯",
+    "message_analysis_no_application": "Masz {{count}} analiz — czas wysłać pierwsze podanie? 💪",
+    "message_active_applications": "Wysłałeś/aś {{count}} podań — trzymaj tempo! 💪",
+    "message_new_user": "Gotowy/a na nową pracę? Zacznij od analizy ogłoszenia! 🚀",
     "analyze_job": "Analizuj ofertę",
     "analyze_cv": "Analizuj CV",
     "interview_practice": "Trening rozmów",

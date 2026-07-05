@@ -1,6 +1,8 @@
 {
   "common": {
     "hi": "Xin chào",
+    "greeting_morning": "Chào buổi sáng",
+    "greeting_evening": "Chào buổi tối",
     "loading": "Đang tải...",
     "back": "‹ Quay lại",
     "save": "Lưu",
@@ -46,6 +48,10 @@
   },
   "home": {
     "subtitle": "Tổng quan phân tích và đơn xin việc — với lời khuyên trung thực.",
+    "message_strong_match": "Bạn có một công việc phù hợp {{score}}% đang chờ — {{jobtittel}} có thể sẽ liên hệ với bạn! 🎯",
+    "message_analysis_no_application": "Bạn có {{count}} phân tích — đã đến lúc gửi đơn xin việc đầu tiên? 💪",
+    "message_active_applications": "Bạn đã gửi {{count}} đơn xin việc — hãy giữ vững phong độ! 💪",
+    "message_new_user": "Sẵn sàng tìm công việc tiếp theo chưa? Hãy bắt đầu bằng cách phân tích một tin tuyển dụng! 🚀",
     "analyze_job": "Phân tích việc làm",
     "analyze_cv": "Phân tích CV",
     "interview_practice": "Luyện phỏng vấn",

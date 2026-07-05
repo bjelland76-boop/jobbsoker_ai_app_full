@@ -1,6 +1,8 @@
 {
   "common": {
     "hi": "Hei",
+    "greeting_morning": "God morgen",
+    "greeting_evening": "God kveld",
     "loading": "Laster...",
     "back": "‹ Tilbake",
     "save": "Lagre",
@@ -46,6 +48,10 @@
   },
   "home": {
     "subtitle": "Oversikt over analyser og søknader — med ærlige råd.",
+    "message_strong_match": "Du har en {{score}}% match som venter — {{jobtittel}} vil høre fra deg! 🎯",
+    "message_analysis_no_application": "Du har {{count}} analyser — på tide å sende din første søknad? 💪",
+    "message_active_applications": "Du har sendt {{count}} søknader — hold trykket oppe! 💪",
+    "message_new_user": "Klar for å finne din neste jobb? Start med å analysere en jobbannonse! 🚀",
     "analyze_job": "Analyser jobb",
     "analyze_cv": "Analyser CV",
     "interview_practice": "Intervju-øving",

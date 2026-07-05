@@ -1,6 +1,8 @@
 {
   "common": {
     "hi": "Hi",
+    "greeting_morning": "Good morning",
+    "greeting_evening": "Good evening",
     "loading": "Loading...",
     "back": "‹ Back",
     "save": "Save",
@@ -46,6 +48,10 @@
   },
   "home": {
     "subtitle": "Overview of analyses and applications — with honest advice.",
+    "message_strong_match": "You have a {{score}}% match waiting — {{jobtittel}} could be hearing from you! 🎯",
+    "message_analysis_no_application": "You have {{count}} analyses — time to send your first application? 💪",
+    "message_active_applications": "You've sent {{count}} applications — keep the momentum up! 💪",
+    "message_new_user": "Ready to find your next job? Start by analyzing a job ad! 🚀",
     "analyze_job": "Analyze job",
     "analyze_cv": "Analyze CV",
     "interview_practice": "Interview practice",
