@@ -144,7 +144,7 @@ export function AppProvider({ children }) {
     async function initAuth() {
       try {
         const lang = await AsyncStorage.getItem('uiLanguage');
-        const resolved = (lang === 'en' || lang === 'vi') ? lang : 'no';
+        const resolved = ['en', 'vi', 'pl'].includes(lang) ? lang : 'no';
         setUiLanguage(resolved);
         loadSavedLanguage(resolved);
 
