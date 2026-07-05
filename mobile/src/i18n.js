@@ -9,24 +9,39 @@ import vi from './locales/vi.json';
 const SUPPORTED = ['no', 'en', 'vi'];
 
 function detectDeviceLanguage() {
-  const locale = Localization.getLocales?.()?.[0]?.languageCode ?? 'no';
-  if (locale === 'vi') return 'vi';
-  if (locale === 'en') return 'en';
-  return 'no';
+  try {
+    const locales = Localization.getLocales?.();
+    const code = (locales?.[0]?.languageCode ?? '').toLowerCase();
+    if (code === 'vi') return 'vi';
+    if (code === 'en') return 'en';
+    return 'no';
+  } catch (e) {
+    return 'no';
+  }
 }
 
-i18n
-  .use(initReactI18next)
-  .init({
-    resources: {
-      no: { translation: no },
-      en: { translation: en },
-      vi: { translation: vi },
-    },
-    lng: detectDeviceLanguage(),
+try {
+  i18n
+    .use(initReactI18next)
+    .init({
+      resources: {
+        no: { translation: no },
+        en: { translation: en },
+        vi: { translation: vi },
+      },
+      lng: detectDeviceLanguage(),
+      fallbackLng: 'no',
+      interpolation: { escapeValue: false },
+    });
+} catch (e) {
+  // Fallback: init without react-i18next if something goes wrong
+  i18n.init({
+    resources: { no: { translation: no }, en: { translation: en }, vi: { translation: vi } },
+    lng: 'no',
     fallbackLng: 'no',
     interpolation: { escapeValue: false },
   });
+}
 
 export function loadSavedLanguage(saved) {
   const lang = SUPPORTED.includes(saved) ? saved : 'no';

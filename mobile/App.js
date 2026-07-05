@@ -34,6 +34,47 @@ import { ProfileContext } from './context/ProfileContext';
 const TIP_REFRESH_MS = 4 * 60 * 60 * 1000; // Rotate career tip every 4 hours
 
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  componentDidCatch(error, info) {
+    console.error('[ErrorBoundary] caught:', error, info?.componentStack);
+  }
+
+  render() {
+    if (this.state.error) {
+      const msg = String(this.state.error?.message || this.state.error);
+      return (
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F5F0', padding: 24, justifyContent: 'center' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12, elevation: 6 }}>
+            <Text style={{ fontSize: 17, fontWeight: '700', color: '#dc2626', marginBottom: 10 }}>
+              Noe gikk galt
+            </Text>
+            <Text style={{ fontSize: 13, color: '#334155', marginBottom: 20, lineHeight: 18 }}>
+              {msg}
+            </Text>
+            <TouchableOpacity
+              style={{ backgroundColor: '#E8501A', paddingVertical: 14, borderRadius: 10, alignItems: 'center' }}
+              onPress={() => this.setState({ error: null })}
+            >
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Prøv igjen</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+
 function AppContent() {
   // Ref bridge: lets useProfile.onProfileSaved read latest analysis/jobUrl
   // without a circular hook dependency
@@ -684,8 +725,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        <ErrorBoundary>
+          <AppContent />
+        </ErrorBoundary>
+      </AppProvider>
+    </ErrorBoundary>
   );
 }

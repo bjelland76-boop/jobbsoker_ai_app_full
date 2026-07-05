@@ -289,7 +289,7 @@ export function AppProvider({ children }) {
     try { await AsyncStorage.setItem('uiLanguage', v); } catch (e) { /* ignore */ }
   }
 
-  const t = (key) => i18n.t(key);
+  const t = (key) => { try { return i18n.t(key) || key; } catch (e) { return key; } };
 
   // ---------------------------------------------------------------------------
   // Provider value
