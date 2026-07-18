@@ -21,7 +21,8 @@
     "unknown_company": "Ukjent bedrift",
     "error": "Feil",
     "too_many_attempts_title": "For mange forsøk",
-    "too_many_attempts_body": "Vent noen minutter og prøv igjen."
+    "too_many_attempts_body": "Vent noen minutter og prøv igjen.",
+    "send_feedback": "Send tilbakemelding"
   },
   "tabs": {
     "home": "Hjem",

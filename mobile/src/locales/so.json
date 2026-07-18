@@ -21,7 +21,8 @@
     "unknown_company": "Shirkad aan la aqoon",
     "error": "Khalad",
     "too_many_attempts_title": "Isku day aad u badan",
-    "too_many_attempts_body": "Sug dhowr daqiiqo oo mar kale isku day."
+    "too_many_attempts_body": "Sug dhowr daqiiqo oo mar kale isku day.",
+    "send_feedback": "Dir faallo"
   },
   "tabs": {
     "home": "Guriga",

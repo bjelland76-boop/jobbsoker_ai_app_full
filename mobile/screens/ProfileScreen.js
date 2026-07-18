@@ -11,6 +11,10 @@ import { styles } from '../styles/styles';
 import { THEME } from '../styles/theme';
 import { schoolOptions } from '../constants/options';
 
+const FEEDBACK_EMAIL = 'fogvshop@gmail.com';
+const FEEDBACK_SUBJECT = 'Tilbakemelding — Ærlig Jobbcoach';
+const FEEDBACK_BODY = 'Hei!\n\nHer er min tilbakemelding:\n\n';
+
 export default function ProfileScreen() {
   const { t, logout, deleteAccount, setActiveTab, uiLanguage, setAndPersistUiLanguage } = useApp();
   const {
@@ -1206,6 +1210,32 @@ export default function ProfileScreen() {
           >
             <Text style={styles.aerligLinkText}>{t('profile.privacy_link')}</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{
+              marginBottom: 14,
+              minHeight: 48,
+              paddingVertical: 12,
+              paddingHorizontal: 24,
+              borderRadius: 12,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: '#FFFFFF',
+              borderWidth: 1.5,
+              borderColor: '#E8501A',
+            }}
+            onPress={async () => {
+              const url = `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(FEEDBACK_SUBJECT)}&body=${encodeURIComponent(FEEDBACK_BODY)}`;
+              try {
+                await Linking.openURL(url);
+              } catch (e) {
+                Alert.alert('E-post', FEEDBACK_EMAIL);
+              }
+            }}
+          >
+            <Text style={{ color: '#E8501A', fontSize: 15, fontWeight: '600', letterSpacing: 0.2 }}>{t('common.send_feedback')}</Text>
+          </TouchableOpacity>
+
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={[styles.messageText, styles.aerligMessageText]}>{consentAnalytics ? t('common.on') : t('common.off')}</Text>
             <Switch

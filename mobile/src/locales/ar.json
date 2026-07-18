@@ -21,7 +21,8 @@
     "unknown_company": "شركة غير معروفة",
     "error": "خطأ",
     "too_many_attempts_title": "محاولات كثيرة جداً",
-    "too_many_attempts_body": "انتظر بضع دقائق وحاول مرة أخرى."
+    "too_many_attempts_body": "انتظر بضع دقائق وحاول مرة أخرى.",
+    "send_feedback": "إرسال ملاحظات"
   },
   "tabs": {
     "home": "الرئيسية",

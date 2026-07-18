@@ -21,7 +21,8 @@
     "unknown_company": "Nieznana firma",
     "error": "Błąd",
     "too_many_attempts_title": "Zbyt wiele prób",
-    "too_many_attempts_body": "Poczekaj kilka minut i spróbuj ponownie."
+    "too_many_attempts_body": "Poczekaj kilka minut i spróbuj ponownie.",
+    "send_feedback": "Wyślij opinię"
   },
   "tabs": {
     "home": "Główna",

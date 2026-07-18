@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   Pressable,
   Alert,
+  Linking,
 } from 'react-native';
 
 import { THEME } from './styles/theme';
@@ -31,6 +32,10 @@ import ProfileScreen from './screens/ProfileScreen';
 import { ProfileContext } from './context/ProfileContext';
 
 const TIP_REFRESH_MS = 4 * 60 * 60 * 1000; // Rotate career tip every 4 hours
+
+const FEEDBACK_EMAIL = 'fogvshop@gmail.com';
+const FEEDBACK_SUBJECT = 'Tilbakemelding — Ærlig Jobbcoach';
+const FEEDBACK_BODY = 'Hei!\n\nHer er min tilbakemelding:\n\n';
 
 
 class ErrorBoundary extends React.Component {
@@ -492,6 +497,32 @@ function AppContent() {
               )}
             </TouchableOpacity>
           ))}
+
+          <TouchableOpacity
+            style={{
+              marginTop: 8,
+              minHeight: 48,
+              paddingVertical: 12,
+              paddingHorizontal: 24,
+              borderRadius: 12,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: '#FFFFFF',
+              borderWidth: 1.5,
+              borderColor: '#E8501A',
+            }}
+            onPress={async () => {
+              const url = `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(FEEDBACK_SUBJECT)}&body=${encodeURIComponent(FEEDBACK_BODY)}`;
+              try {
+                await Linking.openURL(url);
+              } catch (e) {
+                Alert.alert('E-post', FEEDBACK_EMAIL);
+              }
+            }}
+          >
+            <Text style={{ color: '#E8501A', fontSize: 15, fontWeight: '600', letterSpacing: 0.2 }}>{t('common.send_feedback')}</Text>
+          </TouchableOpacity>
+
           <View style={{ height: 8 }} />
         </ScrollView>
       </View>

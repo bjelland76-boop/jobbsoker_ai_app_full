@@ -21,7 +21,8 @@
     "unknown_company": "Công ty không rõ",
     "error": "Lỗi",
     "too_many_attempts_title": "Quá nhiều lần thử",
-    "too_many_attempts_body": "Chờ vài phút rồi thử lại."
+    "too_many_attempts_body": "Chờ vài phút rồi thử lại.",
+    "send_feedback": "Gửi phản hồi"
   },
   "tabs": {
     "home": "Trang chủ",

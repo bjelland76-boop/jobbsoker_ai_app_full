@@ -21,7 +21,8 @@
     "unknown_company": "Nežinoma įmonė",
     "error": "Klaida",
     "too_many_attempts_title": "Per daug bandymų",
-    "too_many_attempts_body": "Palaukite kelias minutes ir bandykite dar kartą."
+    "too_many_attempts_body": "Palaukite kelias minutes ir bandykite dar kartą.",
+    "send_feedback": "Siųsti atsiliepimą"
   },
   "tabs": {
     "home": "Pradžia",
