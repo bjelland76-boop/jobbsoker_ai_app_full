@@ -283,6 +283,7 @@ _LANG_OUTPUT_RULE = {
     "pl": "Write all text values in Polish (Polski).",
     "lt": "Write all text values in Lithuanian (Lietuvių).",
     "ar": "Write all text values in Arabic (العربية).",
+    "so": "Write all text values in Somali (Af-Soomaali).",
 }
 
 

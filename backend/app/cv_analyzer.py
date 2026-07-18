@@ -34,6 +34,7 @@ _LANG_RULE = {
     "pl": "CRITICAL: Write ALL JSON text values in Polish (Polski). Every string in the output must be Polish.",
     "lt": "CRITICAL: Write ALL JSON text values in Lithuanian (Lietuvių). Every string in the output must be Lithuanian.",
     "ar": "CRITICAL: Write ALL JSON text values in Arabic (العربية). Every string in the output must be Arabic.",
+    "so": "CRITICAL: Write ALL JSON text values in Somali (Af-Soomaali). Every string in the output must be Somali.",
 }
 
 

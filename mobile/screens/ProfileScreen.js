@@ -81,6 +81,7 @@ export default function ProfileScreen() {
     { code: 'pl', flag: '🇵🇱', name: 'Polski' },
     { code: 'lt', flag: '🇱🇹', name: 'Lietuvių' },
     { code: 'ar', flag: '🇸🇦', name: 'العربية' },
+    { code: 'so', flag: '🇸🇴', name: 'Soomaali' },
   ];
   const activeLang = LANGS.find(l => l.code === uiLanguage) || LANGS[0];
 

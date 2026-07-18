@@ -208,10 +208,10 @@ function AppContent() {
   const [interviewStarted, setInterviewStarted] = useState(false);
 
   async function refreshCareerTip({ force = false } = {}) {
-    const tips = CAREER_TIPS.no;
+    const tips = CAREER_TIPS[uiLanguage] ?? CAREER_TIPS.no;
     const now = Date.now();
-    const kAt = 'careerTip:lastAt:no';
-    const kText = 'careerTip:lastText:no';
+    const kAt = `careerTip:lastAt:${uiLanguage}`;
+    const kText = `careerTip:lastText:${uiLanguage}`;
 
     try {
       const lastAt = parseInt((await AsyncStorage.getItem(kAt)) || '0', 10) || 0;

@@ -9,8 +9,9 @@ import vi from './locales/vi.json';
 import pl from './locales/pl.json';
 import lt from './locales/lt.json';
 import ar from './locales/ar.json';
+import so from './locales/so.json';
 
-const SUPPORTED = ['no', 'en', 'vi', 'pl', 'lt', 'ar'];
+const SUPPORTED = ['no', 'en', 'vi', 'pl', 'lt', 'ar', 'so'];
 export const RTL_LANGUAGES = ['ar'];
 
 export function isRtlLanguage(lang) {
@@ -35,6 +36,7 @@ const resources = {
   pl: { translation: pl },
   lt: { translation: lt },
   ar: { translation: ar },
+  so: { translation: so },
 };
 
 try {
