@@ -26,7 +26,7 @@ export default function AnalysisScreen({
   // profile state
   profilePhotoData,
 }) {
-  const { setActiveTab, t } = useApp();
+  const { setActiveTab, t, uiLanguage } = useApp();
 
   const ripple = Platform.OS === 'android'
     ? { android_ripple: { color: 'rgba(26, 26, 46, 0.10)' } }
@@ -182,6 +182,24 @@ export default function AnalysisScreen({
 
       {analysis ? (
         <>
+          {uiLanguage === 'so' && !loading ? (
+            <View style={{
+              backgroundColor: '#FEF9C3',
+              borderRadius: 10,
+              paddingVertical: 8,
+              paddingHorizontal: 12,
+              marginBottom: 12,
+              flexDirection: 'row',
+              alignItems: 'flex-start',
+              gap: 6,
+            }}>
+              <Text style={{ fontSize: 12 }}>⚠️</Text>
+              <Text style={{ flex: 1, fontSize: 12, color: '#57534E', lineHeight: 16 }}>
+                {t('analysis.analysis_language_notice')}
+              </Text>
+            </View>
+          ) : null}
+
           <View style={[styles.aerligCard, styles.aerligAccentNavy]}>
             <Text style={styles.aerligCardEyebrow}>{t('analysis.section_analysis')}</Text>
 
