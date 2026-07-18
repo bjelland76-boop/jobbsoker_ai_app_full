@@ -11,7 +11,7 @@ import lt from './locales/lt.json';
 import ar from './locales/ar.json';
 import so from './locales/so.json';
 
-const SUPPORTED = ['no', 'en', 'vi', 'pl', 'lt', 'ar', 'so'];
+export const SUPPORTED = ['no', 'en', 'vi', 'pl', 'lt', 'ar', 'so'];
 export const RTL_LANGUAGES = ['ar'];
 
 export function isRtlLanguage(lang) {

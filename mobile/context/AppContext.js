@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, Platform, NativeModules } from 'react-native';
 
-import i18n, { loadSavedLanguage, changeLanguage as i18nChange } from '../src/i18n';
+import i18n, { loadSavedLanguage, changeLanguage as i18nChange, SUPPORTED } from '../src/i18n';
 
 // Keep legacy I18N import for backward compat with any remaining direct usages
 import { I18N } from '../i18n/no';
@@ -144,7 +144,7 @@ export function AppProvider({ children }) {
     async function initAuth() {
       try {
         const lang = await AsyncStorage.getItem('uiLanguage');
-        const resolved = ['en', 'vi', 'pl', 'lt', 'ar'].includes(lang) ? lang : 'no';
+        const resolved = SUPPORTED.includes(lang) ? lang : 'no';
         setUiLanguage(resolved);
         loadSavedLanguage(resolved);
 
@@ -283,7 +283,7 @@ export function AppProvider({ children }) {
   }
 
   async function setAndPersistUiLanguage(nextLang) {
-    const v = ['en', 'vi', 'pl', 'lt', 'ar'].includes(nextLang) ? nextLang : 'no';
+    const v = SUPPORTED.includes(nextLang) ? nextLang : 'no';
     setUiLanguage(v);
     i18nChange(v);
     try { await AsyncStorage.setItem('uiLanguage', v); } catch (e) { /* ignore */ }
