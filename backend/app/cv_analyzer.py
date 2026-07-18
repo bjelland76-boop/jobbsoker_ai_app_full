@@ -34,8 +34,46 @@ _LANG_RULE = {
     "pl": "CRITICAL: Write ALL JSON text values in Polish (Polski). Every string in the output must be Polish.",
     "lt": "CRITICAL: Write ALL JSON text values in Lithuanian (Lietuvių). Every string in the output must be Lithuanian.",
     "ar": "CRITICAL: Write ALL JSON text values in Arabic (العربية). Every string in the output must be Arabic.",
-    "so": "CRITICAL: Write ALL JSON text values in Somali (Af-Soomaali). Every string in the output must be Somali.",
+    "so": (
+        "CRITICAL: You MUST write ALL JSON text values in Somali (Af-Soomaali), even though the "
+        "candidate's CV/profile data below is written in Norwegian. Do NOT use Norwegian anywhere "
+        "in your output. Every string value must be Somali."
+    ),
 }
+
+_LANG_NAMES = {
+    "no": "Norwegian (Bokmål)",
+    "en": "English",
+    "vi": "Vietnamese (Tiếng Việt)",
+    "pl": "Polish (Polski)",
+    "lt": "Lithuanian (Lietuvių)",
+    "ar": "Arabic (العربية)",
+    "so": "Somali (Af-Soomaali)",
+}
+
+# Languages where the model tends to code-switch back to Norwegian because the
+# CV source text is Norwegian and the target language is under-represented in
+# training data. These get a stronger, more explicit reminder.
+_LOW_RESOURCE_LANGS = {"so"}
+
+
+def _reinforced_language_instruction(lang: str) -> str:
+    """Extra language directive placed right before the JSON schema in the user
+    prompt (in addition to the system prompt). A reminder placed immediately
+    before the output instructions is far less likely to be diluted by a long,
+    Norwegian-heavy CV block earlier in the prompt."""
+    if lang in ("no", "en"):
+        return ""
+    name = _LANG_NAMES.get(lang, lang)
+    if lang in _LOW_RESOURCE_LANGS:
+        return (
+            f"CRITICAL LANGUAGE REQUIREMENT: You MUST write ALL output text values in {name}, "
+            "EVEN THOUGH the candidate data below is written in Norwegian. "
+            f"Do NOT use Norwegian in any JSON text values. Every string value in your JSON response must be in {name}.\n\n"
+        )
+    return (
+        f"IMPORTANT: Write all JSON text values in {name}, not in Norwegian, even though the source texts are in Norwegian.\n\n"
+    )
 
 
 def analyze_profile_cv(profile, *, language: str = "no") -> dict:
@@ -56,7 +94,7 @@ def analyze_profile_cv(profile, *, language: str = "no") -> dict:
 Analyze the candidate's CV/profile and suggest realistic job types they can apply for.
 Be concrete and practical, based on education, experience, and skills.
 
-Return ONLY valid JSON with these fields:
+{_reinforced_language_instruction(lang)}Return ONLY valid JSON with these fields:
 - summary (short profile summary)
 - suggested_roles (list of 5-12 concrete job types)
 - education_fit (what the candidate is qualified to do)

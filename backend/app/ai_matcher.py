@@ -283,8 +283,45 @@ _LANG_OUTPUT_RULE = {
     "pl": "Write all text values in Polish (Polski).",
     "lt": "Write all text values in Lithuanian (Lietuvių).",
     "ar": "Write all text values in Arabic (العربية).",
-    "so": "Write all text values in Somali (Af-Soomaali).",
+    "so": (
+        "CRITICAL: You MUST write ALL text values in Somali (Af-Soomaali), even though "
+        "the job posting and CV are written in Norwegian. Do NOT use Norwegian anywhere in your output."
+    ),
 }
+
+_LANG_NAMES = {
+    "no": "Norwegian (Bokmål)",
+    "en": "English",
+    "vi": "Vietnamese (Tiếng Việt)",
+    "pl": "Polish (Polski)",
+    "lt": "Lithuanian (Lietuvių)",
+    "ar": "Arabic (العربية)",
+    "so": "Somali (Af-Soomaali)",
+}
+
+# Languages where the model tends to code-switch back to Norwegian because the
+# job/CV source text is Norwegian and the target language is under-represented
+# in training data. These get a stronger, more explicit reminder.
+_LOW_RESOURCE_LANGS = {"so"}
+
+
+def _reinforced_language_instruction(lang: str) -> str:
+    """Extra language directive placed right before the JSON schema in the user
+    prompt (in addition to the system prompt). A reminder placed immediately
+    before the output instructions is far less likely to be diluted by a long,
+    Norwegian-heavy JOB/CV block earlier in the prompt."""
+    if lang in ("no", "en"):
+        return ""
+    name = _LANG_NAMES.get(lang, lang)
+    if lang in _LOW_RESOURCE_LANGS:
+        return (
+            f"CRITICAL LANGUAGE REQUIREMENT: You MUST write ALL output text values in {name}, "
+            "EVEN THOUGH the job posting and CV below are written in Norwegian. "
+            f"Do NOT use Norwegian in any JSON text values. Every string value in your JSON response must be in {name}.\n"
+        )
+    return (
+        f"IMPORTANT: Write all JSON text values in {name}, not in Norwegian, even though the source texts are in Norwegian.\n"
+    )
 
 
 def analyze_job_match(
@@ -357,6 +394,7 @@ def analyze_job_match(
         "If the candidate's level is insufficient for a required language, reduce score, add to 'missing', and mention it in 'main_risk' "
         "with a short explanation (e.g. 'Job requires fluent Norwegian; candidate shows Grunnleggende'). "
         "If no language level is listed in CV but the language appears in experience/education, assume adequate proficiency.\n"
+        f"{_reinforced_language_instruction(lang)}"
         "Return JSON: {"
         '"score":0-100,'
         '"interview_probability":0-100,'
