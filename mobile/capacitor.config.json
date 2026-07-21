@@ -4,6 +4,8 @@
   "webDir": "dist",
   "backgroundColor": "#F7F5F0",
   "android": {
-    "backgroundColor": "#F7F5F0"
+    "backgroundColor": "#F7F5F0",
+    "allowMixedContent": true,
+    "overScrollMode": "never"
   }
 }

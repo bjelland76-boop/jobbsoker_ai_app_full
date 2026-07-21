@@ -177,6 +177,22 @@ function AppContent() {
     if (analysis && jobUrl) setProfileUpdatedSinceAnalysis(true);
   };
 
+  // Add viewport-fit=cover so safe-area CSS env() values are available in the
+  // WebView build — Expo's web export template doesn't include it and gets
+  // regenerated on every `expo export`, so it can't be edited directly.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    try {
+      let meta = document.querySelector('meta[name="viewport"]');
+      if (!meta) {
+        meta = document.createElement('meta');
+        meta.name = 'viewport';
+        document.head.appendChild(meta);
+      }
+      meta.setAttribute('content', 'width=device-width, initial-scale=1.0, viewport-fit=cover');
+    } catch (e) { /* ignore */ }
+  }, []);
+
   // Reset interview state on logout (profile/analysis reset in their own hooks)
   useEffect(() => {
     if (authTokenState !== null) return;
