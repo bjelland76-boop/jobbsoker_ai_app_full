@@ -1,177 +1,493 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Personvernerklæring – Ærlig jobbcoach</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      font-size: 16px;
-      line-height: 1.7;
-      color: #1a1a1a;
-      background: #F7F5F0;
-      padding: 24px 16px 60px;
-    }
-    .card {
-      background: #fff;
-      border-radius: 16px;
-      padding: 32px 28px;
-      max-width: 720px;
-      margin: 0 auto;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
-    }
-    .logo {
-      font-size: 26px;
-      font-weight: 700;
-      color: #1a1a1a;
-      margin-bottom: 4px;
-    }
-    .logo span { color: #E8501A; }
-    .updated {
-      font-size: 13px;
-      color: #888;
-      margin-bottom: 32px;
-    }
-    h1 {
-      font-size: 22px;
-      font-weight: 700;
-      color: #1a1a1a;
-      margin-bottom: 8px;
-    }
-    h2 {
-      font-size: 17px;
-      font-weight: 600;
-      color: #1a1a1a;
-      margin-top: 32px;
-      margin-bottom: 10px;
-      padding-bottom: 6px;
-      border-bottom: 2px solid #F7F5F0;
-    }
-    p { margin-bottom: 12px; color: #333; }
-    ul {
-      margin: 8px 0 12px 20px;
-      color: #333;
-    }
-    ul li { margin-bottom: 6px; }
-    a { color: #E8501A; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .highlight {
-      background: rgba(232,80,26,0.07);
-      border-left: 3px solid #E8501A;
-      border-radius: 6px;
-      padding: 14px 16px;
-      margin: 16px 0;
-      color: #333;
-      font-size: 15px;
-    }
-    .contact-box {
-      background: #F7F5F0;
-      border-radius: 10px;
-      padding: 18px 20px;
-      margin-top: 12px;
-    }
-    .contact-box p { margin-bottom: 4px; }
-    footer {
-      text-align: center;
-      font-size: 13px;
-      color: #aaa;
-      margin-top: 32px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ærlig — Din digitale karriere-lommebok</title>
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --accent: #E8501A;
+    --accent-dark: #C93F10;
+    --text: #1F1B17;
+    --text-muted: #6B6459;
+    --card-bg: #FFFFFF;
+    --border: #E8E3D9;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { text-decoration: none; color: inherit; }
+
+  .container {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* NAV */
+  header {
+    padding: 24px 0;
+  }
+  .nav-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .logo .dot { color: var(--accent); }
+
+  /* HERO */
+  .hero {
+    padding: 64px 0 72px;
+    text-align: center;
+  }
+  .badge {
+    display: inline-block;
+    background: #FBEBE3;
+    color: var(--accent-dark);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 999px;
+    margin-bottom: 24px;
+    border: 1px solid #F3D3C0;
+  }
+  .hero h1 {
+    font-size: clamp(32px, 5vw, 52px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin-bottom: 20px;
+  }
+  .hero h1 .dot { color: var(--accent); }
+  .hero p.tagline {
+    font-size: clamp(16px, 2.2vw, 20px);
+    color: var(--text-muted);
+    max-width: 640px;
+    margin: 0 auto 36px;
+  }
+  .hero-actions {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 15px 30px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    border: none;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(232, 80, 26, 0.28);
+  }
+  .btn-primary:hover {
+    background: var(--accent-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 22px rgba(232, 80, 26, 0.35);
+  }
+  .btn-secondary {
+    background: #fff;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover {
+    border-color: var(--accent);
+    color: var(--accent-dark);
+    transform: translateY(-1px);
+  }
+
+  /* SECTIONS */
+  section {
+    padding: 64px 0;
+  }
+  .section-header {
+    text-align: center;
+    max-width: 560px;
+    margin: 0 auto 48px;
+  }
+  .section-header .eyebrow {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 10px;
+    display: block;
+  }
+  .section-header h2 {
+    font-size: clamp(26px, 3.5vw, 36px);
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin-bottom: 12px;
+  }
+  .section-header p {
+    color: var(--text-muted);
+    font-size: 16px;
+  }
+
+  /* FEATURES GRID */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+  .feature-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 22px;
+    box-shadow: 0 2px 8px rgba(31, 27, 23, 0.04);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .feature-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(31, 27, 23, 0.08);
+  }
+  .feature-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: #FBEBE3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    margin-bottom: 18px;
+  }
+  .feature-card h3 {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .feature-card p {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  /* PRICING */
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    align-items: stretch;
+  }
+  .price-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 32px 26px;
+    box-shadow: 0 2px 8px rgba(31, 27, 23, 0.04);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .price-card.featured {
+    border: 2px solid var(--accent);
+    box-shadow: 0 12px 28px rgba(232, 80, 26, 0.18);
+    transform: scale(1.03);
+  }
+  .price-tag {
+    position: absolute;
+    top: -13px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 14px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .price-card h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .price-card .price {
+    font-size: 36px;
+    font-weight: 800;
+    margin: 10px 0 4px;
+  }
+  .price-card .price span {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+  .price-card .desc {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+  .price-card ul {
+    list-style: none;
+    margin-bottom: 24px;
+    flex-grow: 1;
+  }
+  .price-card ul li {
+    font-size: 14px;
+    color: var(--text);
+    padding: 7px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .price-card ul li::before {
+    content: "✓";
+    color: var(--accent);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* LANGUAGES */
+  .lang-section {
+    text-align: center;
+  }
+  .lang-chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .lang-chip {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 10px 20px;
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 6px rgba(31, 27, 23, 0.04);
+  }
+  .lang-chip .flag { font-size: 18px; }
+
+  /* CTA BAND */
+  .cta-band {
+    background: var(--accent);
+    border-radius: 24px;
+    padding: 56px 32px;
+    text-align: center;
+    color: #fff;
+    margin: 0 24px;
+  }
+  .cta-band h2 {
+    font-size: clamp(24px, 3.5vw, 32px);
+    font-weight: 800;
+    margin-bottom: 12px;
+  }
+  .cta-band p {
+    opacity: 0.9;
+    margin-bottom: 28px;
+    font-size: 16px;
+  }
+  .cta-band .btn-primary {
+    background: #fff;
+    color: var(--accent-dark);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+  }
+  .cta-band .btn-primary:hover {
+    background: #FBEBE3;
+    color: var(--accent-dark);
+  }
+
+  /* FOOTER */
+  footer {
+    padding: 48px 0 40px;
+    text-align: center;
+  }
+  footer .footer-line {
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 10px;
+  }
+  footer .footer-contact {
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+  footer .footer-contact a {
+    color: var(--accent-dark);
+    font-weight: 600;
+  }
+  footer .footer-logo {
+    margin-top: 24px;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 860px) {
+    .features-grid { grid-template-columns: repeat(2, 1fr); }
+    .pricing-grid { grid-template-columns: 1fr; }
+    .price-card.featured { transform: none; order: -1; }
+  }
+  @media (max-width: 520px) {
+    .features-grid { grid-template-columns: 1fr; }
+    .hero { padding: 48px 0 56px; }
+    section { padding: 48px 0; }
+    .cta-band { margin: 0 12px; padding: 40px 20px; }
+  }
+</style>
 </head>
 <body>
-  <div class="card">
-    <div class="logo">Ærlig<span>.</span></div>
-    <div class="updated">Sist oppdatert: juni 2026</div>
 
-    <h1>Personvernerklæring</h1>
-    <p>
-      Ærlig jobbcoach («Ærlig», «vi», «oss») er en app som hjelper deg med jobbsøknader
-      og intervjutrening. Vi tar personvernet ditt på alvor og behandler dataene dine
-      i samsvar med norsk personvernlovgivning og EUs personvernforordning (GDPR).
-    </p>
-
-    <h2>1. Hvilke data vi samler inn</h2>
-    <p>Vi samler kun inn det som er nødvendig for at appen skal fungere:</p>
-    <ul>
-      <li><strong>E-postadresse</strong> — brukes til innlogging via engangskode. Ingen passord lagres.</li>
-      <li><strong>Profilinformasjon</strong> — navn, arbeidserfaring, utdanning og ferdigheter du selv legger inn for å generere søknader.</li>
-      <li><strong>CV-innhold</strong> — tekst du laster opp eller fyller inn manuelt.</li>
-      <li><strong>Jobbsøknader og analyser</strong> — lenker til jobbannonser, AI-genererte analyser og statusoppdateringer du registrerer.</li>
-      <li><strong>Intervjusvar</strong> — tekstsvar du skriver under intervjutrening. Disse brukes bare til å gi deg tilbakemelding.</li>
-      <li><strong>Anonymisert statistikk</strong> — valgfritt. Hvis du samtykker, deles aggregert og ikke-sporbar statistikk om søknadsutfall.</li>
-    </ul>
-    <p>Vi samler <strong>ikke</strong> inn lokasjonsdata, kontakter, kameraopptak eller annen informasjon fra enheten din.</p>
-
-    <h2>2. Hvordan vi bruker dataene</h2>
-    <ul>
-      <li>For å la deg logge inn og bruke appen</li>
-      <li>For å generere tilpassede jobbsøknader og CV-er basert på din profil</li>
-      <li>For å gi deg AI-drevet tilbakemelding på intervjusvar</li>
-      <li>For å vise deg statistikk over dine egne søknader</li>
-    </ul>
-
-    <h2>3. Tredjeparts tjenester vi bruker</h2>
-
-    <p><strong>Supabase</strong> — brukes til sikker lagring av kontodata og profilinformasjon. Supabase er GDPR-sertifisert og lagrer data i Europa. Les mer på <a href="https://supabase.com/privacy" target="_blank">supabase.com/privacy</a>.</p>
-
-    <p><strong>Anthropic Claude API</strong> — AI-modellen som analyserer jobbsøknader, gir tilbakemelding og driver intervjutreningen. Tekstinnhold du sender til appen (f.eks. jobbsøknader og intervjusvar) behandles av Anthropic for å generere svar. Anthropic lagrer ikke innholdet for trening av modellen. Les mer på <a href="https://www.anthropic.com/privacy" target="_blank">anthropic.com/privacy</a>.</p>
-
-    <div class="highlight">
-      Vi selger <strong>ikke</strong> dataene dine til tredjepart, og vi bruker dem ikke til reklame.
-    </div>
-
-    <h2>4. Hvor lenge vi lagrer data</h2>
-    <p>
-      Dataene dine lagres så lenge kontoen din er aktiv. Hvis du sletter kontoen din,
-      slettes all informasjon knyttet til den innen 30 dager.
-    </p>
-
-    <h2>5. Dine rettigheter</h2>
-    <p>Du har rett til å:</p>
-    <ul>
-      <li><strong>Innsyn</strong> — be om en kopi av dataene vi har om deg</li>
-      <li><strong>Retting</strong> — korrigere feil i profilinformasjonen din</li>
-      <li><strong>Sletting</strong> — slette kontoen og alle data (se punkt 6)</li>
-      <li><strong>Dataportabilitet</strong> — motta dataene dine i et maskinlesbart format</li>
-      <li><strong>Klage</strong> — klage til Datatilsynet hvis du mener vi behandler dataene feil</li>
-    </ul>
-
-    <h2>6. Slett konto og data</h2>
-    <p>
-      Du kan slette kontoen din og alle tilknyttede data direkte i appen under
-      <strong>Profil → Innstillinger → Slett konto</strong>.
-    </p>
-    <p>
-      Du kan også sende en e-post til oss (se kontaktinformasjon under), så sletter vi
-      kontoen din manuelt innen 5 virkedager.
-    </p>
-    <p>
-      Sletting er permanent og kan ikke angres. Alle jobbsøknader, analyser og
-      profilinformasjon fjernes fra våre systemer.
-    </p>
-
-    <h2>7. Sikkerhet</h2>
-    <p>
-      Vi bruker kryptert kommunikasjon (HTTPS) for all dataoverføring. Innlogging skjer
-      via engangskoder på e-post — ingen passord lagres. Tilgang til databasen er
-      begrenset og loggføres.
-    </p>
-
-    <h2>8. Kontakt oss</h2>
-    <p>Har du spørsmål om personvern, ønsker innsyn eller vil slette kontoen din?</p>
-    <div class="contact-box">
-      <p><strong>Ærlig jobbcoach</strong></p>
-      <p>E-post: <a href="mailto:bjelland76@gmail.com">bjelland76@gmail.com</a></p>
-      <p>Nettside: <a href="https://www.fandv.no" target="_blank">www.fandv.no</a></p>
-    </div>
-
+<header>
+  <div class="container nav-row">
+    <div class="logo">Ærlig<span class="dot">.</span></div>
   </div>
+</header>
 
-  <footer>
-    © 2026 Ærlig jobbcoach · <a href="https://www.fandv.no">www.fandv.no</a>
-  </footer>
+<section class="hero">
+  <div class="container">
+    <span class="badge">Bygget for det norske arbeidsmarkedet</span>
+    <h1>Din digitale karriere-lommebok<span class="dot">.</span></h1>
+    <p class="tagline">AI tilpasser CV til hver jobb du søker — ærlig, presist og på ditt språk.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="https://jobbsoker-ai-app-full-frontend.onrender.com" target="_blank" rel="noopener">Start gratis i dag</a>
+      <a class="btn btn-secondary" href="#funksjoner">Se hvordan det fungerer</a>
+    </div>
+  </div>
+</section>
+
+<section id="funksjoner">
+  <div class="container">
+    <div class="section-header">
+      <span class="eyebrow">Funksjoner</span>
+      <h2>Alt du trenger for å søke smartere</h2>
+      <p>Fra match-score til intervjutrening — Ærlig følger deg gjennom hele søkeprosessen.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🎯</div>
+        <h3>Ærlig match-score</h3>
+        <p>Se ærlig hvor godt du matcher en stilling — ingen falske forhåpninger, bare fakta.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📝</div>
+        <h3>Tilpasset CV og søknad</h3>
+        <p>AI skreddersyr CV og søknadsbrev til hver enkelt jobbannonse, automatisk.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎙️</div>
+        <h3>Intervjutrening med tale</h3>
+        <p>Øv på ekte intervjuspørsmål med stemme og få tilbakemelding i sanntid.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💼</div>
+        <h3>Karriere-lommebok</h3>
+        <p>Samle erfaring, utdanning og ferdigheter på ett sted — klar til bruk når som helst.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="priser">
+  <div class="container">
+    <div class="section-header">
+      <span class="eyebrow">Priser</span>
+      <h2>Enkel og rettferdig prising</h2>
+      <p>Start gratis. Betal kun for det du faktisk bruker.</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <h3>Gratis</h3>
+        <div class="price">0 kr</div>
+        <div class="desc">Kom i gang uten forpliktelser</div>
+        <ul>
+          <li>3 jobbanalyser</li>
+          <li>Full profil / karriere-lommebok</li>
+          <li>Ærlig match-score</li>
+        </ul>
+        <a class="btn btn-secondary" href="https://jobbsoker-ai-app-full-frontend.onrender.com" target="_blank" rel="noopener">Kom i gang</a>
+      </div>
+      <div class="price-card featured">
+        <span class="price-tag">Mest populær</span>
+        <h3>1 jobbpakke</h3>
+        <div class="price">39 kr</div>
+        <div class="desc">For deg som søker én jobb nå</div>
+        <ul>
+          <li>1 komplett jobbanalyse</li>
+          <li>Tilpasset CV og søknad</li>
+          <li>Intervjutrening med tale</li>
+        </ul>
+        <a class="btn btn-primary" href="https://jobbsoker-ai-app-full-frontend.onrender.com" target="_blank" rel="noopener">Velg pakke</a>
+      </div>
+      <div class="price-card">
+        <h3>5 jobbpakker</h3>
+        <div class="price">149 kr</div>
+        <div class="desc">For deg som søker flere jobber</div>
+        <ul>
+          <li>5 komplette jobbanalyser</li>
+          <li>Tilpasset CV og søknad</li>
+          <li>Intervjutrening med tale</li>
+          <li>Beste pris per jobbpakke</li>
+        </ul>
+        <a class="btn btn-secondary" href="https://jobbsoker-ai-app-full-frontend.onrender.com" target="_blank" rel="noopener">Velg pakke</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="lang-section">
+  <div class="container">
+    <div class="section-header">
+      <span class="eyebrow">Språk</span>
+      <h2>Snakker ditt språk</h2>
+      <p>Ærlig støtter deg på morsmålet ditt, uansett hvor du kommer fra.</p>
+    </div>
+    <div class="lang-chips">
+      <div class="lang-chip"><span class="flag">🇳🇴</span> Norsk</div>
+      <div class="lang-chip"><span class="flag">🇬🇧</span> English</div>
+      <div class="lang-chip"><span class="flag">🇻🇳</span> Tiếng Việt</div>
+      <div class="lang-chip"><span class="flag">🇵🇱</span> Polski</div>
+      <div class="lang-chip"><span class="flag">🇱🇹</span> Lietuvių</div>
+      <div class="lang-chip"><span class="flag">🇸🇦</span> العربية</div>
+      <div class="lang-chip"><span class="flag">🇸🇴</span> Soomaali</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="cta-band">
+    <h2>Klar til å søke smartere?</h2>
+    <p>Start gratis i dag — ingen kredittkort, ingen binding.</p>
+    <a class="btn btn-primary" href="https://jobbsoker-ai-app-full-frontend.onrender.com" target="_blank" rel="noopener">Start gratis i dag</a>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="footer-line">Ingen passord · Ingen binding · Start gratis</div>
+    <div class="footer-contact">Kontakt oss: <a href="mailto:fogvshop@gmail.com">fogvshop@gmail.com</a></div>
+    <div class="footer-logo">Ærlig<span style="color:#E8501A">.</span> — © 2026</div>
+  </div>
+</footer>
+
 </body>
 </html>
