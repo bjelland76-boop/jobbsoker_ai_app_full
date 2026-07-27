@@ -188,81 +188,6 @@
     color: var(--text-muted);
   }
 
-  /* PRICING */
-  .pricing-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-    align-items: stretch;
-  }
-  .price-card {
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    padding: 32px 26px;
-    box-shadow: 0 2px 8px rgba(31, 27, 23, 0.04);
-    display: flex;
-    flex-direction: column;
-    position: relative;
-  }
-  .price-card.featured {
-    border: 2px solid var(--accent);
-    box-shadow: 0 12px 28px rgba(232, 80, 26, 0.18);
-    transform: scale(1.03);
-  }
-  .price-tag {
-    position: absolute;
-    top: -13px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--accent);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 4px 14px;
-    border-radius: 999px;
-    white-space: nowrap;
-  }
-  .price-card h3 {
-    font-size: 18px;
-    font-weight: 700;
-    margin-bottom: 4px;
-  }
-  .price-card .price {
-    font-size: 36px;
-    font-weight: 800;
-    margin: 10px 0 4px;
-  }
-  .price-card .price span {
-    font-size: 15px;
-    font-weight: 500;
-    color: var(--text-muted);
-  }
-  .price-card .desc {
-    color: var(--text-muted);
-    font-size: 14px;
-    margin-bottom: 20px;
-  }
-  .price-card ul {
-    list-style: none;
-    margin-bottom: 24px;
-    flex-grow: 1;
-  }
-  .price-card ul li {
-    font-size: 14px;
-    color: var(--text);
-    padding: 7px 0;
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  .price-card ul li::before {
-    content: "✓";
-    color: var(--accent);
-    font-weight: 700;
-    flex-shrink: 0;
-  }
-
   /* LANGUAGES */
   .lang-section {
     text-align: center;
@@ -344,8 +269,6 @@
   /* RESPONSIVE */
   @media (max-width: 860px) {
     .features-grid { grid-template-columns: repeat(2, 1fr); }
-    .pricing-grid { grid-template-columns: 1fr; }
-    .price-card.featured { transform: none; order: -1; }
   }
   @media (max-width: 520px) {
     .features-grid { grid-template-columns: 1fr; }
@@ -411,44 +334,10 @@
   <div class="container">
     <div class="section-header">
       <span class="eyebrow">Priser</span>
-      <h2>Enkel og rettferdig prising</h2>
-      <p>Start gratis. Betal kun for det du faktisk bruker.</p>
-    </div>
-    <div class="pricing-grid">
-      <div class="price-card">
-        <h3>Gratis</h3>
-        <div class="price">0 kr</div>
-        <div class="desc">Kom i gang uten forpliktelser</div>
-        <ul>
-          <li>3 jobbanalyser</li>
-          <li>Full profil / karriere-lommebok</li>
-          <li>Ærlig match-score</li>
-        </ul>
-        <a class="btn btn-secondary" href="https://jobbsoker-ai-app-full-frontend.onrender.com" target="_blank" rel="noopener">Kom i gang</a>
-      </div>
-      <div class="price-card featured">
-        <span class="price-tag">Mest populær</span>
-        <h3>1 jobbpakke</h3>
-        <div class="price">39 kr</div>
-        <div class="desc">For deg som søker én jobb nå</div>
-        <ul>
-          <li>1 komplett jobbanalyse</li>
-          <li>Tilpasset CV og søknad</li>
-          <li>Intervjutrening med tale</li>
-        </ul>
-        <a class="btn btn-primary" href="https://jobbsoker-ai-app-full-frontend.onrender.com" target="_blank" rel="noopener">Velg pakke</a>
-      </div>
-      <div class="price-card">
-        <h3>5 jobbpakker</h3>
-        <div class="price">149 kr</div>
-        <div class="desc">For deg som søker flere jobber</div>
-        <ul>
-          <li>5 komplette jobbanalyser</li>
-          <li>Tilpasset CV og søknad</li>
-          <li>Intervjutrening med tale</li>
-          <li>Beste pris per jobbpakke</li>
-        </ul>
-        <a class="btn btn-secondary" href="https://jobbsoker-ai-app-full-frontend.onrender.com" target="_blank" rel="noopener">Velg pakke</a>
+      <h2>Gratis i lanseringsfasen</h2>
+      <p>Ærlig er helt gratis å bruke nå. Registrer deg i dag og få full tilgang til alle funksjoner — ingen kredittkort, ingen binding.</p>
+      <div style="margin-top: 28px;">
+        <a class="btn btn-primary" href="https://jobbsoker-ai-app-full-frontend.onrender.com" target="_blank" rel="noopener">Start gratis i dag</a>
       </div>
     </div>
   </div>
