@@ -489,6 +489,7 @@ Candidate:
 
 {match_block + chr(10) if match_block else ""}Rules:
 - Write in English (British or neutral international English).
+- Translate ALL text to English, including job titles, education titles, and descriptions. Keep proper nouns and company names in their original form unless they have a widely recognized English equivalent.
 - Do NOT invent experience or education.
 - Do NOT use placeholders like [phone] or [address].
 - {style_text}
@@ -528,13 +529,18 @@ Professional Summary (important):
 Core Skills:
 - 8–12 bullet points (•), primarily technical/concrete skills and systems.
 - Soft skills only if supported by concrete examples.
+- Translate every skill into English (e.g. "journalføring" → "clinical documentation", "regnskapsføring" → "bookkeeping"). Never leave a Norwegian word or phrase in the skills list.
 
 Work Experience:
 - Only roles found in Candidate Experience.
+- Translate Norwegian job titles into their natural English equivalent (e.g. "Butikkmedarbeider" → "Retail Assistant", "Daglig leder" → "General Manager"). Never leave a job title untranslated.
+- Company names: keep well-known brand/company names as-is (e.g. "Rema 1000", "Equinor"). Translate generic public-sector or descriptive employer names into English (e.g. "Kristiansand kommune" → "Municipality of Kristiansand").
 - For each role: 2–5 short bullet points with responsibilities/results (do not invent).
 
 Education:
 - Only institutions found in Candidate Education.
+- Translate degree/programme titles into English (e.g. "Bachelor i sykepleie" → "Bachelor's Degree in Nursing").
+- Institution names: translate consistently into English (e.g. "Universitetet i Agder" → "University of Agder", "Norges Handelshøyskole" → "Norwegian School of Economics"). Keep the institution's own official English name if it is commonly used; otherwise translate the Norwegian name directly rather than leaving it untranslated.
 - For periods: use the EXACT year values from the data (e.g. "2022–2025").
 - If STATUS is PÅGÅENDE: write the period as e.g. "2023– (In Progress)". If STATUS is FULLFØRT: write ONLY the years (e.g. "2022–2025"), never add "In Progress" or similar.
 
@@ -757,6 +763,7 @@ Candidate:
 
 {match_block + chr(10) if match_block else ""}Rules:
 - Write in English (British or neutral international English).
+- Translate ALL text to English, including job titles, education titles, and descriptions. Keep proper nouns and company names in their original form unless they have a widely recognized English equivalent.
 - Do NOT invent experience or education.
 - Do NOT use placeholders like [phone] or [address].
 - {style_text}
@@ -766,7 +773,7 @@ Candidate:
 {SHARED_ANTI_HALLUCINATION_RULES_EN}
 
 {m1}: 3–4 paragraphs, no bullet points. Mention role and company by name. No contact details or date.
-{m2}: Plain text (ATS-friendly), no markdown, no tables. Sections in order: Professional Summary / Core Skills / Work Experience / Education / Languages / References. Professional Summary: 3–5 concrete sentences. Core Skills: 8–12 bullets (•). Work Experience: only actual roles from Candidate data, 2–5 bullets each. Education periods: use EXACT year values from data; if STATUS is PÅGÅENDE write e.g. "2023– (In Progress)"; if STATUS is FULLFØRT write only the years (e.g. "2022–2025"). Languages: format as "Language (Level)" e.g. "Norwegian (Native)".
+{m2}: Plain text (ATS-friendly), no markdown, no tables. Sections in order: Professional Summary / Core Skills / Work Experience / Education / Languages / References. Professional Summary: 3–5 concrete sentences. Core Skills: 8–12 bullets (•); translate every skill into English (e.g. "journalføring" → "clinical documentation") — never leave a Norwegian word in the skills list. Work Experience: only actual roles from Candidate data, 2–5 bullets each; translate Norwegian job titles into their natural English equivalent (e.g. "Butikkmedarbeider" → "Retail Assistant") — never leave a job title untranslated; keep well-known brand/company names as-is but translate generic public-sector employer names (e.g. "Kristiansand kommune" → "Municipality of Kristiansand"). Education: translate degree/programme titles into English (e.g. "Bachelor i sykepleie" → "Bachelor's Degree in Nursing"); translate institution names consistently into English (e.g. "Universitetet i Agder" → "University of Agder"), using the institution's own official English name where commonly used; periods use EXACT year values from data; if STATUS is PÅGÅENDE write e.g. "2023– (In Progress)"; if STATUS is FULLFØRT write only the years (e.g. "2022–2025"). Languages: format as "Language (Level)" e.g. "Norwegian (Native)".
 {m3}: 3–4 sentences, polite, reference the role and company. NEVER mention language level or language proficiency in the cover letter.""".strip()
     else:
         prompt = f"""Svar med NØYAKTIG disse tre seksjonene med overskrifter, ingenting annet:
