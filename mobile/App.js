@@ -303,6 +303,7 @@ function AppContent() {
   }
 
   function endActiveInterview() {
+    console.log('[Interview] endActiveInterview called, jobId=', interviewActiveJobId, 'platform=', Platform.OS); // eslint-disable-line no-console
     const jobId = interviewActiveJobId;
     const doEnd = () => {
       setInterviewSessions((prev) => {
