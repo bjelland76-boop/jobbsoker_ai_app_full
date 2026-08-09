@@ -105,6 +105,7 @@ def ensure_profile_columns() -> None:
         ensure_col("profiles", "references_json", "references_json TEXT DEFAULT ''")
         ensure_col("profiles", "cv_gaps", "cv_gaps TEXT DEFAULT ''")
         ensure_col("profiles", "has_seen_onboarding", "has_seen_onboarding INTEGER DEFAULT 0")
+        ensure_col("profiles", "is_tester", "is_tester BOOLEAN DEFAULT FALSE")
 
         # jobs
         ensure_col("jobs", "user_id", "user_id INTEGER")
@@ -302,6 +303,20 @@ async def lifespan(app: FastAPI):
     # Ensure tables exist before serving requests.
     Base.metadata.create_all(bind=engine)
     ensure_profile_columns()
+
+    # TEMPORARY: dump id/email for every profile at startup so they can be
+    # reviewed via Render logs before deciding who gets is_tester=true.
+    try:
+        _db = SessionLocal()
+        for _p in _db.query(Profile.id, Profile.email).order_by(Profile.id).all():
+            print(f"[ProfileList] id={_p.id} email={_p.email!r}", flush=True)
+    except Exception as _e:
+        print(f"[ProfileList] failed: {_e!r}", flush=True)
+    finally:
+        try:
+            _db.close()
+        except Exception:
+            pass
 
     # Best-effort cleanup of old login codes.
     try:
