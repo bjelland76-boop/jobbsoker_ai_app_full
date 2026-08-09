@@ -98,6 +98,7 @@ export async function apiFetch(path, options) {
     const msg = (data && (data.detail || data.error)) || r.statusText || 'Ukjent feil';
     const err = new Error(msg);
     err.status = r.status;
+    err.code = (data && data.error) || null;
     throw err;
   }
 

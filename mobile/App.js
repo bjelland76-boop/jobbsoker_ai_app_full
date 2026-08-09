@@ -31,6 +31,7 @@ import CvAnalysisScreen from './screens/CvAnalysisScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import AnalysisScreen from './screens/AnalysisScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import FreeLimitModal from './components/FreeLimitModal';
 import { ProfileContext } from './context/ProfileContext';
 
 const TIP_REFRESH_MS = 4 * 60 * 60 * 1000; // Rotate career tip every 4 hours
@@ -129,6 +130,7 @@ function AppContent() {
     cvTemplate, setCvTemplate,
     cvLanguage, setCvLanguage,
     templatePickerVisible,
+    freeLimitModalVisible, setFreeLimitModalVisible,
     profileUpdatedSinceAnalysis, setProfileUpdatedSinceAnalysis,
     loading,
     jobAnalyses, setJobAnalyses,
@@ -793,6 +795,7 @@ function AppContent() {
     <SafeAreaView style={styles.container}>
       {showFaq && renderFaq()}
       {showOnboarding && renderOnboarding()}
+      <FreeLimitModal visible={freeLimitModalVisible} onClose={() => setFreeLimitModalVisible(false)} />
       {activeTab === 'interview' ? (
         renderInterview()
       ) : (

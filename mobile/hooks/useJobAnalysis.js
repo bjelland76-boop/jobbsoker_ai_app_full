@@ -24,6 +24,7 @@ export default function useJobAnalysis({
   const [cvTemplate, setCvTemplate] = useState('profesjonell');
   const [cvLanguage, setCvLanguage] = useState('no');
   const [templatePickerVisible, setTemplatePickerVisible] = useState(false);
+  const [freeLimitModalVisible, setFreeLimitModalVisible] = useState(false);
   const [pendingGenerateKind, setPendingGenerateKind] = useState(null); // 'pdf' | 'send' | null
   const [profileUpdatedSinceAnalysis, setProfileUpdatedSinceAnalysis] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -344,7 +345,11 @@ export default function useJobAnalysis({
     } catch (e) {
       console.error('[Assistant] analyzeJob failed', e);
       logEvent('analyze_job_failed');
-      Alert.alert('Feil', errText(e));
+      if (e?.code === 'free_limit_reached') {
+        setFreeLimitModalVisible(true);
+      } else {
+        Alert.alert('Feil', errText(e));
+      }
     } finally {
       setLoading(false);
     }
@@ -804,6 +809,7 @@ export default function useJobAnalysis({
     cvTemplate, setCvTemplate,
     cvLanguage, setCvLanguage,
     templatePickerVisible,
+    freeLimitModalVisible, setFreeLimitModalVisible,
     profileUpdatedSinceAnalysis, setProfileUpdatedSinceAnalysis,
     loading,
     jobAnalyses, setJobAnalyses,

@@ -48,6 +48,7 @@ class Profile(Base):
     tone: Mapped[str] = mapped_column(String(50), default="normal")
     has_seen_onboarding: Mapped[bool] = mapped_column(Boolean, default=False)
     is_tester: Mapped[bool] = mapped_column(Boolean, default=False)
+    analysis_count: Mapped[int] = mapped_column(Integer, default=0)
 
 class Job(Base):
     __tablename__ = "jobs"

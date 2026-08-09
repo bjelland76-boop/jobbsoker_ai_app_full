@@ -26,7 +26,7 @@ from fastapi import (
     status,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import delete, func, inspect, select, text
 from sqlalchemy.orm import Session
@@ -106,6 +106,7 @@ def ensure_profile_columns() -> None:
         ensure_col("profiles", "cv_gaps", "cv_gaps TEXT DEFAULT ''")
         ensure_col("profiles", "has_seen_onboarding", "has_seen_onboarding INTEGER DEFAULT 0")
         ensure_col("profiles", "is_tester", "is_tester BOOLEAN DEFAULT FALSE")
+        ensure_col("profiles", "analysis_count", "analysis_count INTEGER DEFAULT 0")
 
         # jobs
         ensure_col("jobs", "user_id", "user_id INTEGER")
@@ -304,14 +305,22 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     ensure_profile_columns()
 
-    # TEMPORARY: dump id/email for every profile at startup so they can be
-    # reviewed via Render logs before deciding who gets is_tester=true.
+    # Grandfather every profile that existed before the free-analysis-limit
+    # feature into unlimited (is_tester) access, so nobody already using the
+    # app gets locked out. Explicit id list = exactly the profiles reviewed
+    # via Render logs before this change; new signups are unaffected.
     try:
         _db = SessionLocal()
-        for _p in _db.query(Profile.id, Profile.email).order_by(Profile.id).all():
-            print(f"[ProfileList] id={_p.id} email={_p.email!r}", flush=True)
+        _grandfathered_ids = [
+            2, 3, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+            21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+        ]
+        _db.query(Profile).filter(Profile.id.in_(_grandfathered_ids)).update(
+            {Profile.is_tester: True}, synchronize_session=False
+        )
+        _db.commit()
     except Exception as _e:
-        print(f"[ProfileList] failed: {_e!r}", flush=True)
+        print(f"[Grandfather] failed: {_e!r}", flush=True)
     finally:
         try:
             _db.close()
@@ -2228,6 +2237,16 @@ def analyze_url(
     if not profile or profile.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
 
+    FREE_ANALYSIS_LIMIT = 3
+    if not bool(profile.is_tester) and int(profile.analysis_count or 0) >= FREE_ANALYSIS_LIMIT:
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={
+                "error": "free_limit_reached",
+                "message": "Du har brukt dine 3 gratis analyser",
+            },
+        )
+
     try:
         result = analyze_job_url(
             profile,
@@ -2277,6 +2296,11 @@ def analyze_url(
         result["job_id"] = job.id
         result["has_tailored_cv_no"] = bool(_to_text(result.get("tailored_cv")))
         result["has_tailored_cv_en"] = bool(_to_text(result.get("tailored_cv_en")))
+
+        if not bool(profile.is_tester):
+            profile.analysis_count = int(profile.analysis_count or 0) + 1
+            db.commit()
+
         return result
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
