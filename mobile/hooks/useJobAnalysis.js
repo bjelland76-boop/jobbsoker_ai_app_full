@@ -477,18 +477,26 @@ export default function useJobAnalysis({
         const langLabel = cvLanguage === 'en'
           ? (uiLanguage === 'en' ? 'English' : 'engelsk')
           : (uiLanguage === 'en' ? 'Norwegian' : 'norsk');
-        const confirmed = await new Promise(resolve => {
-          Alert.alert(
-            uiLanguage === 'en' ? 'Regenerate CV?' : 'Generer ny CV?',
-            uiLanguage === 'en'
-              ? `You already have a CV in ${langLabel}. Generate a new one? This will replace the existing one.`
-              : `Du har allerede en CV på ${langLabel}. Vil du generere en ny? Dette erstatter den eksisterende.`,
-            [
-              { text: uiLanguage === 'en' ? 'Cancel' : 'Avbryt', style: 'cancel', onPress: () => resolve(false) },
-              { text: uiLanguage === 'en' ? 'Generate new' : 'Generer ny', onPress: () => resolve(true) },
-            ]
-          );
-        });
+        const title = uiLanguage === 'en' ? 'Regenerate CV?' : 'Generer ny CV?';
+        const body = uiLanguage === 'en'
+          ? `You already have a CV in ${langLabel}. Generate a new one? This will replace the existing one.`
+          : `Du har allerede en CV på ${langLabel}. Vil du generere en ny? Dette erstatter den eksisterende.`;
+
+        let confirmed;
+        if (Platform.OS === 'web') {
+          confirmed = window.confirm(`${title}\n\n${body}`);
+        } else {
+          confirmed = await new Promise(resolve => {
+            Alert.alert(
+              title,
+              body,
+              [
+                { text: uiLanguage === 'en' ? 'Cancel' : 'Avbryt', style: 'cancel', onPress: () => resolve(false) },
+                { text: uiLanguage === 'en' ? 'Generate new' : 'Generer ny', onPress: () => resolve(true) },
+              ]
+            );
+          });
+        }
         if (!confirmed) return;
       }
     }
