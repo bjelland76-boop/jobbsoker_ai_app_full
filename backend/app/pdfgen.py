@@ -3,13 +3,10 @@ from __future__ import annotations
 import base64
 import io
 import json
-import logging
 import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
-
-logger = logging.getLogger(__name__)
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -1886,10 +1883,8 @@ def make_application_pdfs(
         t = "profesjonell"
 
     doc_class = _FULL_WIDTH_DOC_CLASSES.get(t)
-    logger.info(
-        "[CvTemplate] make_application_pdfs received template=%r -> normalized=%r -> doc_class=%s",
-        template, t, doc_class.__name__ if doc_class is not None else f"_SidebarPdfDoc(theme={t})",
-    )
+    _resolved_name = doc_class.__name__ if doc_class is not None else f"_SidebarPdfDoc(theme={t})"
+    print(f"[CvTemplate] make_application_pdfs received template={template!r} -> normalized={t!r} -> doc_class={_resolved_name}", flush=True)
 
     if doc_class is not None:
         # Full-width, no-sidebar templates (klassisk / moderne / skandinavisk)
