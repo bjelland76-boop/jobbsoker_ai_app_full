@@ -11,6 +11,7 @@ import {
   Pressable,
   Alert,
   Linking,
+  Platform,
 } from 'react-native';
 
 import { THEME } from './styles/theme';
@@ -280,6 +281,13 @@ function AppContent() {
   }
 
   function confirmRestartInterviewSession(jobId) {
+    if (Platform.OS === 'web') {
+      // eslint-disable-next-line no-alert
+      if (window.confirm(`${t('interview.end_confirm_title')}\n\n${t('interview.end_confirm_body')}`)) {
+        startNewInterviewSession(jobId);
+      }
+      return;
+    }
     Alert.alert(
       t('interview.end_confirm_title'),
       t('interview.end_confirm_body'),
@@ -296,23 +304,29 @@ function AppContent() {
 
   function endActiveInterview() {
     const jobId = interviewActiveJobId;
+    const doEnd = () => {
+      setInterviewSessions((prev) => {
+        const next = { ...prev };
+        delete next[jobId];
+        return next;
+      });
+      setInterviewActiveJobId(null);
+    };
+
+    if (Platform.OS === 'web') {
+      // eslint-disable-next-line no-alert
+      if (window.confirm(`${t('interview.end_confirm_title')}\n\n${t('interview.end_confirm_body')}`)) {
+        doEnd();
+      }
+      return;
+    }
+
     Alert.alert(
       t('interview.end_confirm_title'),
       t('interview.end_confirm_body'),
       [
         { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('interview.end_confirm_action'),
-          style: 'destructive',
-          onPress: () => {
-            setInterviewSessions((prev) => {
-              const next = { ...prev };
-              delete next[jobId];
-              return next;
-            });
-            setInterviewActiveJobId(null);
-          },
-        },
+        { text: t('interview.end_confirm_action'), style: 'destructive', onPress: doEnd },
       ]
     );
   }
