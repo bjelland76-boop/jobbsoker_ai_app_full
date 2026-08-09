@@ -327,6 +327,48 @@ async def lifespan(app: FastAPI):
         except Exception:
             pass
 
+    # TEMPORARY: create a fresh, non-tester QA account to verify the
+    # free-analysis-limit end to end (3 allowed, 4th returns 403). Prints
+    # credentials/ids to Render logs so they can be used from outside, then
+    # both this block and the account get removed once verified.
+    try:
+        _db = SessionLocal()
+        _qa_email = "qa-freelimit-test@aerlig.local"
+        _qa_user = get_user_by_email(_db, _qa_email)
+        if not _qa_user:
+            _qa_user = User(email=_qa_email, password_hash="")
+            _db.add(_qa_user)
+            _db.commit()
+            _db.refresh(_qa_user)
+        _qa_profile = _db.scalars(
+            select(Profile).where(Profile.user_id == _qa_user.id)
+        ).first()
+        if not _qa_profile:
+            _qa_profile = Profile(
+                user_id=_qa_user.id,
+                name="QA Freelimit Test",
+                email=_qa_email,
+                skills="Testing, QA",
+                experience="QA Tester - Test AS - 2024-2025 - Testet ting.",
+            )
+            _db.add(_qa_profile)
+            _db.commit()
+            _db.refresh(_qa_profile)
+        _qa_token = create_access_token(user_id=_qa_user.id)
+        print(
+            f"[QaAccount] user_id={_qa_user.id} profile_id={_qa_profile.id} "
+            f"is_tester={_qa_profile.is_tester} analysis_count={_qa_profile.analysis_count} "
+            f"token={_qa_token}",
+            flush=True,
+        )
+    except Exception as _e:
+        print(f"[QaAccount] failed: {_e!r}", flush=True)
+    finally:
+        try:
+            _db.close()
+        except Exception:
+            pass
+
     # Best-effort cleanup of old login codes.
     try:
         db = SessionLocal()
