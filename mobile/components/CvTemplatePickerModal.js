@@ -282,79 +282,23 @@ export default function CvTemplatePickerModal({ visible, onClose, onConfirm, rec
 
   const ExpandedFull = expandedTemplate ? FULL_BY_KEY[expandedTemplate] : null;
 
+  // IMPORTANT: only ever mount ONE <Modal> for this component. React Native
+  // Web portals every Modal to a separate DOM layer; a second, nested Modal
+  // (for the enlarged preview) can end up stacked so its buttons never
+  // receive clicks. Toggle content within a single Modal instead.
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible
+      transparent
+      animationType="fade"
+      onRequestClose={expandedTemplate ? () => setExpandedTemplate(null) : onClose}
+    >
       <View style={sharedStyles.cvModalOverlay}>
-        <View style={[sharedStyles.cvModalCard, st.card]}>
-          <View style={st.header}>
-            <Text style={sharedStyles.cvModalTitle}>{t('cv_template.title')}</Text>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Text style={st.closeX}>×</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={sharedStyles.cvModalSubtitle}>{t('cv_template.subtitle')}</Text>
-
-          <ScrollView style={{ maxHeight: 480 }} showsVerticalScrollIndicator={false}>
-            <View style={st.grid}>
-              {TEMPLATES.map((tpl) => {
-                const isFullWidth = tpl.key === 'skandinavisk';
-                const Mini = MINI_BY_KEY[tpl.key];
-                const selected = pendingSelection === tpl.key;
-                return (
-                  <TouchableOpacity
-                    key={tpl.key}
-                    style={[st.thumbCard, isFullWidth ? st.thumbCardFull : st.thumbCardHalf, selected && st.thumbCardSelected]}
-                    onPress={() => setExpandedTemplate(tpl.key)}
-                  >
-                    <Mini />
-                    <Text style={st.thumbName}>{tpl.name}</Text>
-                    <View style={st.thumbRadioRow}>
-                      <Radio selected={selected} />
-                      <Text style={st.thumbRadioLabel}>{selected ? t('cv_template.selected') : t('cv_template.choose_this')}</Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            <View style={st.divider} />
-
-            <TouchableOpacity
-              style={[st.recommendedRow, pendingSelection === 'anbefalt' && st.recommendedRowSelected]}
-              onPress={() => setPendingSelection('anbefalt')}
-            >
-              <Text style={st.sparkle}>✨</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={st.recommendedTitle}>{t('cv_template.recommended_title')}</Text>
-                <Text style={st.recommendedSubtitle}>
-                  {pendingSelection === 'anbefalt'
-                    ? `${t('cv_template.recommended_result_prefix')} ${recommendedName}`
-                    : t('cv_template.recommended_subtitle')}
-                </Text>
-              </View>
-              <Radio selected={pendingSelection === 'anbefalt'} />
-            </TouchableOpacity>
-          </ScrollView>
-
-          <TouchableOpacity
-            style={[sharedStyles.aerligSecondaryButton, { marginTop: 16 }, !pendingSelection && st.disabledButton]}
-            disabled={!pendingSelection}
-            onPress={handleConfirm}
-          >
-            <Text style={sharedStyles.aerligSecondaryButtonText}>{t('cv_template.generate_cv')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[sharedStyles.aerligDangerButton, { marginTop: 10 }]} onPress={onClose}>
-            <Text style={sharedStyles.aerligDangerButtonText}>{t('common.cancel')}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {expandedTemplate ? (
-        <Modal visible transparent animationType="slide" onRequestClose={() => setExpandedTemplate(null)}>
-          <View style={sharedStyles.cvModalOverlay}>
-            <View style={[sharedStyles.cvModalCard, st.expandedCard]}>
-              <ScrollView showsVerticalScrollIndicator={false}>
-                <Text style={sharedStyles.cvModalTitle}>{TEMPLATE_NAME_BY_KEY[expandedTemplate]}</Text>
+        <View style={[sharedStyles.cvModalCard, expandedTemplate ? st.expandedCard : st.card]}>
+          {expandedTemplate ? (
+            <>
+              <Text style={sharedStyles.cvModalTitle}>{TEMPLATE_NAME_BY_KEY[expandedTemplate]}</Text>
+              <ScrollView style={{ maxHeight: 440 }} showsVerticalScrollIndicator={false}>
                 {ExpandedFull ? <ExpandedFull /> : null}
               </ScrollView>
               <View style={st.expandedButtonRow}>
@@ -371,10 +315,73 @@ export default function CvTemplatePickerModal({ visible, onClose, onConfirm, rec
                   <Text style={sharedStyles.aerligSecondaryButtonText}>{t('cv_template.choose_this_template')}</Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          </View>
-        </Modal>
-      ) : null}
+            </>
+          ) : (
+            <>
+              <View style={st.header}>
+                <Text style={sharedStyles.cvModalTitle}>{t('cv_template.title')}</Text>
+                <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <Text style={st.closeX}>×</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={sharedStyles.cvModalSubtitle}>{t('cv_template.subtitle')}</Text>
+
+              <ScrollView style={{ maxHeight: 480 }} showsVerticalScrollIndicator={false}>
+                <View style={st.grid}>
+                  {TEMPLATES.map((tpl) => {
+                    const isFullWidth = tpl.key === 'skandinavisk';
+                    const Mini = MINI_BY_KEY[tpl.key];
+                    const selected = pendingSelection === tpl.key;
+                    return (
+                      <TouchableOpacity
+                        key={tpl.key}
+                        style={[st.thumbCard, isFullWidth ? st.thumbCardFull : st.thumbCardHalf, selected && st.thumbCardSelected]}
+                        onPress={() => setExpandedTemplate(tpl.key)}
+                      >
+                        <Mini />
+                        <Text style={st.thumbName}>{tpl.name}</Text>
+                        <View style={st.thumbRadioRow}>
+                          <Radio selected={selected} />
+                          <Text style={st.thumbRadioLabel}>{selected ? t('cv_template.selected') : t('cv_template.choose_this')}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <View style={st.divider} />
+
+                <TouchableOpacity
+                  style={[st.recommendedRow, pendingSelection === 'anbefalt' && st.recommendedRowSelected]}
+                  onPress={() => setPendingSelection('anbefalt')}
+                >
+                  <Text style={st.sparkle}>✨</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={st.recommendedTitle}>{t('cv_template.recommended_title')}</Text>
+                    <Text style={st.recommendedSubtitle}>
+                      {pendingSelection === 'anbefalt'
+                        ? `${t('cv_template.recommended_result_prefix')} ${recommendedName}`
+                        : t('cv_template.recommended_subtitle')}
+                    </Text>
+                  </View>
+                  <Radio selected={pendingSelection === 'anbefalt'} />
+                </TouchableOpacity>
+              </ScrollView>
+
+              <TouchableOpacity
+                style={[sharedStyles.aerligSecondaryButton, { marginTop: 16 }, !pendingSelection && st.disabledButton]}
+                disabled={!pendingSelection}
+                onPress={handleConfirm}
+              >
+                <Text style={sharedStyles.aerligSecondaryButtonText}>{t('cv_template.generate_cv')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[sharedStyles.aerligDangerButton, { marginTop: 10 }]} onPress={onClose}>
+                <Text style={sharedStyles.aerligDangerButtonText}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </View>
     </Modal>
   );
 }
