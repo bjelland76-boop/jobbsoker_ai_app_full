@@ -322,6 +322,20 @@
     "profile_too_empty": "Add work experience or education to your profile to get a personalised interview.",
     "go_to_profile": "→ Go to Profile",
     "practice_title": "Interview practice",
-    "practice_subtitle": "Practice common interview questions."
+    "practice_subtitle": "Practice common interview questions.",
+    "pick_job_title": "Choose a job to practice",
+    "pick_job_subtitle": "Choose which job ad you want to practice the interview for.",
+    "no_jobs_title": "No analyzed jobs yet",
+    "no_jobs_body": "Analyze a job ad first, then you can practice an interview for it.",
+    "go_to_analyze": "Analyze a job",
+    "start_new": "Start new interview",
+    "resume": "Resume interview",
+    "end_and_restart": "End and start new",
+    "ongoing_badge": "Interview in progress",
+    "end_interview": "End interview",
+    "end_confirm_title": "End interview?",
+    "end_confirm_body": "Are you sure? The interview will not be saved.",
+    "end_confirm_action": "Yes, end it",
+    "back_to_jobs": "Back to job list"
   }
 }

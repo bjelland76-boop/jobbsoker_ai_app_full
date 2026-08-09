@@ -322,6 +322,20 @@
     "profile_too_empty": "Uzupełnij profil (doświadczenie lub wykształcenie), aby uzyskać spersonalizowaną rozmowę.",
     "go_to_profile": "→ Przejdź do Profilu",
     "practice_title": "Trening rozmów",
-    "practice_subtitle": "Ćwicz typowe pytania rekrutacyjne."
+    "practice_subtitle": "Ćwicz typowe pytania rekrutacyjne.",
+    "pick_job_title": "Wybierz stanowisko do treningu",
+    "pick_job_subtitle": "Wybierz, dla którego ogłoszenia chcesz przeprowadzić trening rozmowy.",
+    "no_jobs_title": "Brak przeanalizowanych ofert",
+    "no_jobs_body": "Najpierw przeanalizuj ogłoszenie o pracę, aby móc przeprowadzić dla niego trening rozmowy.",
+    "go_to_analyze": "Przeanalizuj ofertę pracy",
+    "start_new": "Rozpocznij nową rozmowę",
+    "resume": "Kontynuuj rozmowę",
+    "end_and_restart": "Zakończ i zacznij nową",
+    "ongoing_badge": "Rozmowa w toku",
+    "end_interview": "Zakończ rozmowę",
+    "end_confirm_title": "Zakończyć rozmowę?",
+    "end_confirm_body": "Czy na pewno? Rozmowa nie zostanie zapisana.",
+    "end_confirm_action": "Tak, zakończ",
+    "back_to_jobs": "Powrót do listy ofert"
   }
 }

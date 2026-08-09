@@ -17,6 +17,7 @@ import { THEME } from './styles/theme';
 import { styles } from './styles/styles';
 import { INTERVIEW_QUESTIONS, CAREER_TIPS } from './constants/content';
 import InterviewScreen from './screens/InterviewScreen';
+import InterviewJobPickerScreen from './screens/InterviewJobPickerScreen';
 import { AppProvider, useApp, apiFetch, API } from './context/AppContext';
 import useProfile from './hooks/useProfile';
 import useJobAnalysis from './hooks/useJobAnalysis';
@@ -198,11 +199,11 @@ function AppContent() {
     if (authTokenState !== null) return;
     setInterviewIndex(0);
     setInterviewNotes({});
-    setInterviewMessages([]);
+    setInterviewSessions({});
+    setInterviewActiveJobId(null);
     setInterviewDraft('');
     setInterviewLoading(false);
     setInterviewError('');
-    setInterviewStarted(false);
   }, [authTokenState]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
@@ -221,12 +222,100 @@ function AppContent() {
   const [interviewIndex, setInterviewIndex] = useState(0);
   const [interviewNotes, setInterviewNotes] = useState({});
 
-  // AI-intervju v2 (ekte samtale)
-  const [interviewMessages, setInterviewMessages] = useState([]);
+  // AI-intervju v2 (ekte samtale) — én sesjon per jobb, slik at brukeren kan
+  // velge hvilken jobb hen vil øve på og senere fortsette en pågående samtale.
+  // Key: job id. Value: { jobTitle, company, jobContext, messages, started }.
+  const [interviewSessions, setInterviewSessions] = useState({});
+  const [interviewActiveJobId, setInterviewActiveJobId] = useState(null);
   const [interviewDraft, setInterviewDraft] = useState('');
   const [interviewLoading, setInterviewLoading] = useState(false);
   const [interviewError, setInterviewError] = useState('');
-  const [interviewStarted, setInterviewStarted] = useState(false);
+
+  const activeInterviewSession = interviewActiveJobId != null
+    ? (interviewSessions[interviewActiveJobId] || null)
+    : null;
+
+  function setActiveSessionMessages(messages) {
+    setInterviewSessions((prev) => {
+      const jobId = interviewActiveJobId;
+      if (jobId == null) return prev;
+      const cur = prev[jobId] || {};
+      return { ...prev, [jobId]: { ...cur, messages } };
+    });
+  }
+
+  function setActiveSessionStarted(started) {
+    setInterviewSessions((prev) => {
+      const jobId = interviewActiveJobId;
+      if (jobId == null) return prev;
+      const cur = prev[jobId] || {};
+      return { ...prev, [jobId]: { ...cur, started } };
+    });
+  }
+
+  async function startNewInterviewSession(jobId) {
+    try {
+      const detail = await apiFetch(`/job-analyses/${jobId}?profile_id=${profileId}`);
+      const jTitle = String(detail?.job_title || detail?.job?.title || '').trim();
+      const jCompany = String(detail?.company || detail?.job?.company || '').trim();
+      const jContext = String(
+        detail?.honest_assessment || detail?.raw_job_text || detail?.job_text || ''
+      ).trim();
+      setInterviewSessions((prev) => ({
+        ...prev,
+        [jobId]: { jobTitle: jTitle, company: jCompany, jobContext: jContext, messages: [], started: false },
+      }));
+      setInterviewDraft('');
+      setInterviewError('');
+      setInterviewActiveJobId(jobId);
+    } catch (e) {
+      Alert.alert('Feil', errText(e));
+    }
+  }
+
+  function resumeInterviewSession(jobId) {
+    setInterviewDraft('');
+    setInterviewError('');
+    setInterviewActiveJobId(jobId);
+  }
+
+  function confirmRestartInterviewSession(jobId) {
+    Alert.alert(
+      t('interview.end_confirm_title'),
+      t('interview.end_confirm_body'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('interview.end_confirm_action'), style: 'destructive', onPress: () => startNewInterviewSession(jobId) },
+      ]
+    );
+  }
+
+  function backToInterviewList() {
+    setInterviewActiveJobId(null);
+  }
+
+  function endActiveInterview() {
+    const jobId = interviewActiveJobId;
+    Alert.alert(
+      t('interview.end_confirm_title'),
+      t('interview.end_confirm_body'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('interview.end_confirm_action'),
+          style: 'destructive',
+          onPress: () => {
+            setInterviewSessions((prev) => {
+              const next = { ...prev };
+              delete next[jobId];
+              return next;
+            });
+            setInterviewActiveJobId(null);
+          },
+        },
+      ]
+    );
+  }
 
   async function refreshCareerTip({ force = false } = {}) {
     const tips = CAREER_TIPS[uiLanguage] ?? CAREER_TIPS.no;
@@ -602,28 +691,50 @@ function AppContent() {
 
 
 
-  const renderInterview = () => (
-    <InterviewScreen
-      uiLanguage={uiLanguage}
-      t={t}
-      analysis={analysis}
-      apiFetch={apiFetch}
-      logEvent={logEvent}
-      setActiveTab={setActiveTab}
-      interviewMessages={interviewMessages}
-      setInterviewMessages={setInterviewMessages}
-      interviewDraft={interviewDraft}
-      setInterviewDraft={setInterviewDraft}
-      interviewLoading={interviewLoading}
-      setInterviewLoading={setInterviewLoading}
-      interviewError={interviewError}
-      setInterviewError={setInterviewError}
-      interviewStarted={interviewStarted}
-      setInterviewStarted={setInterviewStarted}
-      profileTooEmpty={isProfileTooEmpty()}
-      styles={styles}
-    />
-  );
+  const renderInterview = () => {
+    if (interviewActiveJobId == null) {
+      return (
+        <InterviewJobPickerScreen
+          jobAnalyses={jobAnalyses}
+          jobAnalysesLoading={jobAnalysesLoading}
+          loadJobAnalyses={loadJobAnalyses}
+          interviewSessions={interviewSessions}
+          onStartNew={startNewInterviewSession}
+          onResume={resumeInterviewSession}
+          onEndAndRestart={confirmRestartInterviewSession}
+        />
+      );
+    }
+
+    const session = activeInterviewSession || { jobTitle: '', company: '', jobContext: '', messages: [], started: false };
+
+    return (
+      <InterviewScreen
+        uiLanguage={uiLanguage}
+        t={t}
+        jobTitle={session.jobTitle}
+        company={session.company}
+        jobContext={session.jobContext}
+        apiFetch={apiFetch}
+        logEvent={logEvent}
+        setActiveTab={setActiveTab}
+        onBackToList={backToInterviewList}
+        onEndInterview={endActiveInterview}
+        interviewMessages={session.messages}
+        setInterviewMessages={setActiveSessionMessages}
+        interviewDraft={interviewDraft}
+        setInterviewDraft={setInterviewDraft}
+        interviewLoading={interviewLoading}
+        setInterviewLoading={setInterviewLoading}
+        interviewError={interviewError}
+        setInterviewError={setInterviewError}
+        interviewStarted={session.started}
+        setInterviewStarted={setActiveSessionStarted}
+        profileTooEmpty={isProfileTooEmpty()}
+        styles={styles}
+      />
+    );
+  };
 
 
 

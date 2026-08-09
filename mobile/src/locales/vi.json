@@ -322,6 +322,20 @@
     "profile_too_empty": "Thêm kinh nghiệm hoặc học vấn vào hồ sơ để có buổi phỏng vấn được cá nhân hóa.",
     "go_to_profile": "→ Đi đến Hồ sơ",
     "practice_title": "Luyện phỏng vấn",
-    "practice_subtitle": "Luyện các câu hỏi phỏng vấn phổ biến."
+    "practice_subtitle": "Luyện các câu hỏi phỏng vấn phổ biến.",
+    "pick_job_title": "Chọn công việc để luyện tập",
+    "pick_job_subtitle": "Chọn tin tuyển dụng bạn muốn luyện phỏng vấn.",
+    "no_jobs_title": "Chưa có công việc nào được phân tích",
+    "no_jobs_body": "Hãy phân tích một tin tuyển dụng trước, sau đó bạn có thể luyện phỏng vấn cho công việc đó.",
+    "go_to_analyze": "Phân tích một công việc",
+    "start_new": "Bắt đầu phỏng vấn mới",
+    "resume": "Tiếp tục phỏng vấn",
+    "end_and_restart": "Kết thúc và bắt đầu lại",
+    "ongoing_badge": "Phỏng vấn đang diễn ra",
+    "end_interview": "Kết thúc phỏng vấn",
+    "end_confirm_title": "Kết thúc phỏng vấn?",
+    "end_confirm_body": "Bạn có chắc không? Cuộc phỏng vấn sẽ không được lưu.",
+    "end_confirm_action": "Có, kết thúc",
+    "back_to_jobs": "Quay lại danh sách công việc"
   }
 }

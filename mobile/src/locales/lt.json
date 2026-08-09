@@ -322,6 +322,20 @@
     "profile_too_empty": "Užpildykite savo profilį (patirtį ar išsilavinimą), kad gautumėte asmeninį interviu.",
     "go_to_profile": "→ Eiti į Profilį",
     "practice_title": "Interviu treniruotė",
-    "practice_subtitle": "Treniruokitės su įprastais interviu klausimais."
+    "practice_subtitle": "Treniruokitės su įprastais interviu klausimais.",
+    "pick_job_title": "Pasirinkite darbą treniruotei",
+    "pick_job_subtitle": "Pasirinkite, kuriam darbo skelbimui norite treniruoti interviu.",
+    "no_jobs_title": "Kol kas nėra analizuotų darbų",
+    "no_jobs_body": "Pirmiausia išanalizuokite darbo skelbimą, tada galėsite jam treniruoti interviu.",
+    "go_to_analyze": "Analizuoti darbo skelbimą",
+    "start_new": "Pradėti naują interviu",
+    "resume": "Tęsti interviu",
+    "end_and_restart": "Baigti ir pradėti naują",
+    "ongoing_badge": "Vykstantis interviu",
+    "end_interview": "Baigti interviu",
+    "end_confirm_title": "Baigti interviu?",
+    "end_confirm_body": "Ar tikrai? Interviu nebus išsaugotas.",
+    "end_confirm_action": "Taip, baigti",
+    "back_to_jobs": "Grįžti į darbų sąrašą"
   }
 }

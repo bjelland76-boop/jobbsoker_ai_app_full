@@ -323,6 +323,20 @@
     "profile_too_empty": "Buuxi profaylkaaga (khibrad ama waxbarasho) si aad u hesho wareysi shakhsi ah.",
     "go_to_profile": "→ Aad Profaylka",
     "practice_title": "Tababar wareysi",
-    "practice_subtitle": "Ku tababaro su'aalaha wareysiga caadiga ah."
+    "practice_subtitle": "Ku tababaro su'aalaha wareysiga caadiga ah.",
+    "pick_job_title": "Dooro shaqada aad tababari doonto",
+    "pick_job_subtitle": "Dooro xayeysiiska shaqada ee aad rabto inaad wareysi u tababarto.",
+    "no_jobs_title": "Wali ma jiraan shaqooyin la falanqeeyay",
+    "no_jobs_body": "Marka hore falanqee xayeysiin shaqo, ka dibna waxaad ku tababari kartaa wareysi shaqadaas.",
+    "go_to_analyze": "Falanqee shaqo",
+    "start_new": "Bilow wareysi cusub",
+    "resume": "Sii wad wareysiga",
+    "end_and_restart": "Dhammee oo bilow mid cusub",
+    "ongoing_badge": "Wareysi socda",
+    "end_interview": "Dhammee wareysiga",
+    "end_confirm_title": "Dhammeynta wareysiga?",
+    "end_confirm_body": "Ma hubtaa? Wareysigu ma keydsami doono.",
+    "end_confirm_action": "Haa, dhammee",
+    "back_to_jobs": "Ku noqo liiska shaqooyinka"
   }
 }

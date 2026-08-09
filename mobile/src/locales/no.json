@@ -322,6 +322,20 @@
     "profile_too_empty": "Fyll ut profilen din (erfaring eller utdanning) for å få et personlig intervju.",
     "go_to_profile": "→ Gå til Profil",
     "practice_title": "Intervju-øving",
-    "practice_subtitle": "Øv på vanlige intervjuspørsmål."
+    "practice_subtitle": "Øv på vanlige intervjuspørsmål.",
+    "pick_job_title": "Velg jobb å øve på",
+    "pick_job_subtitle": "Velg hvilken jobbannonse du vil øve intervju for.",
+    "no_jobs_title": "Ingen analyserte jobber ennå",
+    "no_jobs_body": "Analyser en jobbannonse først, så kan du øve intervju for den.",
+    "go_to_analyze": "Analyser en jobb",
+    "start_new": "Start nytt intervju",
+    "resume": "Fortsett intervju",
+    "end_and_restart": "Avslutt og start nytt",
+    "ongoing_badge": "Pågående intervju",
+    "end_interview": "Avslutt intervju",
+    "end_confirm_title": "Avslutt intervju?",
+    "end_confirm_body": "Er du sikker? Intervjuet vil ikke lagres.",
+    "end_confirm_action": "Ja, avslutt",
+    "back_to_jobs": "Tilbake til jobbliste"
   }
 }

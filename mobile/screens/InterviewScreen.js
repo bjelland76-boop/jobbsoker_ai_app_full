@@ -22,10 +22,14 @@ const TOTAL_QUESTIONS = 8;
 export default function InterviewScreen({
   uiLanguage,
   t,
-  analysis,
+  jobTitle,
+  company,
+  jobContext,
   apiFetch,
   logEvent,
   setActiveTab,
+  onBackToList,
+  onEndInterview,
   interviewMessages,
   setInterviewMessages,
   interviewDraft,
@@ -43,7 +47,6 @@ export default function InterviewScreen({
   const recordingRef = React.useRef(null);
   const [isRecording, setIsRecording] = React.useState(false);
   const [transcribing, setTranscribing] = React.useState(false);
-  const [isFinal, setIsFinal] = React.useState(false);
 
   React.useEffect(() => {
     return () => {
@@ -54,12 +57,12 @@ export default function InterviewScreen({
     };
   }, []);
 
-  // Reset local state when interview is restarted from parent
-  React.useEffect(() => {
-    if (!interviewStarted) {
-      setIsFinal(false);
-    }
-  }, [interviewStarted]);
+  // Derived from message history (not local state) so resuming a session
+  // saved in the job picker shows the right state immediately on mount.
+  const lastMessage = (interviewMessages && interviewMessages.length > 0)
+    ? interviewMessages[interviewMessages.length - 1]
+    : null;
+  const isFinal = !!(lastMessage && lastMessage.role === 'assistant' && lastMessage.isFinal);
 
   const ripple = Platform.OS === 'android'
     ? { android_ripple: { color: 'rgba(26, 26, 46, 0.10)' } }
@@ -67,15 +70,6 @@ export default function InterviewScreen({
 
   const qList = INTERVIEW_QUESTIONS[uiLanguage] || INTERVIEW_QUESTIONS.no;
   const fallbackQuestion = qList[0] || 'Fortell litt om deg selv.';
-
-  const jobTitle = String(analysis?.job_title || analysis?.job?.title || '').trim();
-  const company = String(analysis?.company || analysis?.job?.company || '').trim();
-  const jobContext = String(
-    analysis?.honest_assessment
-    || analysis?.raw_job_text
-    || analysis?.job_text
-    || ''
-  ).trim();
 
   // Derive progress from message history
   const userTurnCount = (interviewMessages || []).filter((m) => m.role === 'user').length;
@@ -153,7 +147,6 @@ export default function InterviewScreen({
     }
     setInterviewLoading(true);
     setInterviewError('');
-    setIsFinal(false);
 
     try {
       const res = await apiFetch('/interview/chat', {
@@ -241,7 +234,6 @@ export default function InterviewScreen({
       setInterviewDraft('');
 
       if (aiMessage.isFinal) {
-        setIsFinal(true);
         logEvent?.('interview_completed');
         setTimeout(() => scrollRef.current?.scrollToEnd?.({ animated: true }), 200);
       }
@@ -257,7 +249,6 @@ export default function InterviewScreen({
     setInterviewDraft('');
     setInterviewError('');
     setInterviewStarted(false);
-    setIsFinal(false);
   }
 
   const micLabel = transcribing
@@ -282,7 +273,7 @@ export default function InterviewScreen({
           <Pressable
             android_ripple={{ color: 'rgba(26, 26, 46, 0.10)' }}
             style={styles.aerligBackButton}
-            onPress={() => setActiveTab('home')}
+            onPress={onBackToList}
           >
             <Text style={styles.aerligBackButtonText}>{t('common.back')}</Text>
           </Pressable>
@@ -566,12 +557,23 @@ export default function InterviewScreen({
             </TouchableOpacity>
           ) : null}
 
+          {interviewStarted ? (
+            <TouchableOpacity
+              style={[styles.aerligSecondaryButton, { borderColor: '#ef4444' }]}
+              onPress={onEndInterview}
+            >
+              <Text style={[styles.aerligSecondaryButtonText, { color: '#ef4444' }]}>
+                {t('interview.end_interview')}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+
           <Pressable
             {...ripple}
             style={[styles.aerligSecondaryButton, { marginTop: 0 }]}
-            onPress={() => setActiveTab('home')}
+            onPress={onBackToList}
           >
-            <Text style={styles.aerligSecondaryButtonText}>{t('common.back')}</Text>
+            <Text style={styles.aerligSecondaryButtonText}>{t('interview.back_to_jobs')}</Text>
           </Pressable>
         </View>
       </ScrollView>

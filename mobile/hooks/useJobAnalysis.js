@@ -264,6 +264,13 @@ export default function useJobAnalysis({
     loadJobAnalyses({ silent: true });
   }, [activeTab, profileId, profilePhotoData, includePhotoDefault]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Keep the interview job picker's list fresh too
+  useEffect(() => {
+    if (activeTab !== 'interview') return;
+    if (!profileId) return;
+    loadJobAnalyses({ silent: true });
+  }, [activeTab, profileId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ---------------------------------------------------------------------------
   // Analyze job
   // ---------------------------------------------------------------------------
