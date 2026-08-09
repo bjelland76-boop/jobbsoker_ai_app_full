@@ -135,6 +135,12 @@
     "section_cv": "CV",
     "no_text": "Nėra teksto, ką rodyti."
   },
+  "faq": {
+    "generate_cv_q": "Kaip sugeneruoti CV ir motyvacinį laišką?",
+    "generate_cv_a": "Pirmiausia išanalizuokite darbą, atidarykite analizę ir paspauskite „Generuoti CV ir motyvacinį laišką“. Tada pamatysite šablonų pasirinkimą su 5 skirtingais CV šablonais — paspauskite ant bet kurio šablono, kad peržiūrėtumėte jį visu dydžiu. Pasirinkite šabloną arba leiskite DI rekomenduoti geriausią būtent šiam darbui.",
+    "templates_q": "Kokie CV šablonai yra prieinami?",
+    "templates_a": "Galite rinktis iš 5 šablonų: Kūrybinis (dviejų stulpelių su spalvota šonine juosta), Profesionalus (švarus, tvarkingas vieno stulpelio), Klasikinis (tradicinis seryfinis stilius), Modernus (oranžinis akcentas, ryški tipografija) ir Skandinaviškas (minimalistinis su daug erdvės). Taip pat galite pasirinkti „Rekomenduojamas“ — tada DI parenka geriausią šabloną pagal darbą, į kurį teikiate paraišką."
+  },
   "cv_template": {
     "title": "Pasirinkite CV šabloną",
     "subtitle": "Palieskite šabloną, kad peržiūrėtumėte jį didesniu formatu — pasirinkite, kai apsispręsite.",

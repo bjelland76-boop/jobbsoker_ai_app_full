@@ -135,6 +135,12 @@
     "section_cv": "CV",
     "no_text": "No text to show."
   },
+  "faq": {
+    "generate_cv_q": "How do I generate a CV and cover letter?",
+    "generate_cv_a": "Analyze a job first, open the analysis and tap 'Generate CV and cover letter'. You'll then see a template picker with 5 different CV templates to choose from — tap any template to preview it in full size. Pick a template, or let AI recommend the best one for this specific job.",
+    "templates_q": "Which CV templates are available?",
+    "templates_a": "You can choose between 5 templates: Creative (two-column with a colored sidebar), Professional (clean, tidy single column), Classic (traditional serif style), Modern (orange accent, bold typography), and Scandinavian (minimalist with lots of whitespace). You can also choose 'Recommended' — then AI picks the best template based on the job you're applying for."
+  },
   "cv_template": {
     "title": "Choose CV template",
     "subtitle": "Tap a template to preview it in full — select it once you've decided.",

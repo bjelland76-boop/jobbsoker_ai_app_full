@@ -135,6 +135,12 @@
     "section_cv": "CV",
     "no_text": "Không có văn bản để hiển thị."
   },
+  "faq": {
+    "generate_cv_q": "Làm thế nào để tạo CV và thư xin việc?",
+    "generate_cv_a": "Trước tiên hãy phân tích một công việc, mở phân tích đó và nhấn 'Tạo CV và thư xin việc'. Bạn sẽ thấy trình chọn mẫu với 5 mẫu CV khác nhau — nhấn vào từng mẫu để xem trước ở kích thước đầy đủ. Chọn một mẫu hoặc để AI đề xuất mẫu phù hợp nhất cho công việc này.",
+    "templates_q": "Có những mẫu CV nào?",
+    "templates_a": "Bạn có thể chọn giữa 5 mẫu: Sáng tạo (hai cột với thanh bên có màu), Chuyên nghiệp (một cột gọn gàng, sạch sẽ), Cổ điển (kiểu chữ serif truyền thống), Hiện đại (điểm nhấn màu cam, kiểu chữ nổi bật) và Scandinavia (tối giản với nhiều khoảng trắng). Bạn cũng có thể chọn 'Đề xuất' — khi đó AI sẽ chọn mẫu phù hợp nhất dựa trên công việc bạn đang ứng tuyển."
+  },
   "cv_template": {
     "title": "Chọn mẫu CV",
     "subtitle": "Nhấn vào một mẫu để xem trước ở kích thước đầy đủ — chọn khi bạn đã quyết định.",

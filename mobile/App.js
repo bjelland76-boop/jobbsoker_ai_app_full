@@ -528,8 +528,12 @@ function AppContent() {
       a: 'Match-scoren viser hvor godt profilen din matcher kravene i jobbannonsen. Under 40% er svak match, 40–70% er god match, over 70% er sterk match.',
     },
     {
-      q: 'Hvordan genererer jeg CV og søknad?',
-      a: 'Analyser en jobb først, åpne analysen og trykk \'Generer CV og søknad\'. Appen lager dokumenter tilpasset nettopp denne stillingen basert på profilen din.',
+      q: t('faq.generate_cv_q'),
+      a: t('faq.generate_cv_a'),
+    },
+    {
+      q: t('faq.templates_q'),
+      a: t('faq.templates_a'),
     },
     {
       q: 'Hva er forskjellen på PDF og e-post?',

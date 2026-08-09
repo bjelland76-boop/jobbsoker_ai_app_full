@@ -135,6 +135,12 @@
     "section_cv": "CV",
     "no_text": "Ingen tekst å vise."
   },
+  "faq": {
+    "generate_cv_q": "Hvordan genererer jeg CV og søknad?",
+    "generate_cv_a": "Analyser en jobb først, åpne analysen og trykk 'Generer CV og søknad'. Du får da opp et malvalg med 5 forskjellige CV-maler å velge mellom — du kan trykke på hver mal for å se den i stort. Velg en mal eller la AI anbefale den beste for akkurat denne jobben.",
+    "templates_q": "Hvilke CV-maler finnes?",
+    "templates_a": "Du kan velge mellom 5 maler: Kreativ (to-kolonne med farget sidebar), Profesjonell (ren og ryddig én-kolonne), Klassisk (tradisjonell seriff-stil), Moderne (oransje aksent, tydelig typografi) og Skandinavisk (minimalistisk med mye luft). Du kan også velge 'Anbefalt' — da velger AI den beste malen basert på jobben du søker."
+  },
   "cv_template": {
     "title": "Velg CV-mal",
     "subtitle": "Trykk på en mal for å se den i stort — velg når du har bestemt deg.",

@@ -135,6 +135,12 @@
     "section_cv": "CV",
     "no_text": "Brak tekstu do wyświetlenia."
   },
+  "faq": {
+    "generate_cv_q": "Jak wygenerować CV i list motywacyjny?",
+    "generate_cv_a": "Najpierw przeanalizuj ofertę pracy, otwórz analizę i naciśnij „Generuj CV i list motywacyjny”. Pojawi się wybór szablonu z 5 różnymi szablonami CV do wyboru — możesz dotknąć każdego szablonu, aby zobaczyć go w pełnym rozmiarze. Wybierz szablon lub pozwól AI polecić najlepszy dla tej konkretnej oferty.",
+    "templates_q": "Jakie szablony CV są dostępne?",
+    "templates_a": "Możesz wybierać spośród 5 szablonów: Kreatywny (dwie kolumny z kolorowym paskiem bocznym), Profesjonalny (czysty, uporządkowany, jedna kolumna), Klasyczny (tradycyjny styl szeryfowy), Nowoczesny (pomarańczowy akcent, wyrazista typografia) i Skandynawski (minimalistyczny, dużo przestrzeni). Możesz też wybrać „Zalecany” — wtedy AI wybiera najlepszy szablon na podstawie oferty, na którą aplikujesz."
+  },
   "cv_template": {
     "title": "Wybierz szablon CV",
     "subtitle": "Dotknij szablonu, aby zobaczyć podgląd w pełnym rozmiarze — wybierz, gdy się zdecydujesz.",

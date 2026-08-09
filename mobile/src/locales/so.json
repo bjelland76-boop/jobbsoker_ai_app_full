@@ -136,6 +136,12 @@
     "no_text": "Qoraal lama tusin.",
     "analysis_language_notice": "Falanqaynta waxay ku muuqan kartaa Af-Noorweejian. Tani waa xaalad ku-meel-gaar ah."
   },
+  "faq": {
+    "generate_cv_q": "Sideen u sameeyaa CV iyo warqad codsi?",
+    "generate_cv_a": "Marka hore falanqee shaqo, fur falanqaynta oo riix 'Samee CV iyo warqad codsi'. Waxaad arki doontaa doorasho qaab leh 5 qaabab oo CV kala duwan — riix qaab kasta si aad u aragto si buuxda. Dooro qaab ama u daa AI inuu kula talo galo kan ugu fiican shaqadan gaarka ah.",
+    "templates_q": "Waa maxay qaababka CV-ga ee la heli karo?",
+    "templates_a": "Waxaad ka dooran kartaa 5 qaabab: Hal-abuur (laba tiir oo leh baar dhinac midab leh), Xirfad-yaqaan (hal tiir oo nadiif ah), Dhaqameed (qaab dhaqameed), Casri (midab oranji ah, far cad), iyo Iskandinaafi (fudud oo leh meel bannaan badan). Waxa kale oo aad dooran kartaa 'La talinayo' — markaas AI wuxuu doortaa qaabka ugu fiican iyadoo lagu saleynayo shaqada aad codsanayso."
+  },
   "cv_template": {
     "title": "Dooro qaabka CV-ga",
     "subtitle": "Riix qaab si aad u aragto si buuxda — dooro marka aad go'aan gaarto.",
