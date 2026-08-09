@@ -1624,6 +1624,185 @@ class _ClassicPdfDoc:
         return str(self.path)
 
 
+class _ModernePdfDoc(_ClassicPdfDoc):
+    """Full-width layout for 'Moderne': orange left accent stripe, sans-serif,
+    large left-aligned name, grey uppercase section labels with a rule to the
+    right of the text, orange bullet dots.
+    """
+
+    _MARGIN_X = 2.4 * cm
+    _FONT_BODY = "Helvetica"
+    _FONT_HEAD = "Helvetica-Bold"
+    _COLOR_BLACK = colors.HexColor("#0f172a")
+    _COLOR_DARK = colors.HexColor("#1a1a1a")
+    _COLOR_MID = colors.HexColor("#333333")
+    _COLOR_MUTED = colors.HexColor("#6b7280")
+    _COLOR_RULE = colors.HexColor("#d1d5db")
+    _COLOR_ACCENT = colors.HexColor("#E8501A")
+    _STRIPE_W = 0.18 * cm
+
+    def _new_page(self) -> None:
+        if self.page_no > 0:
+            self.c.showPage()
+        self.page_no += 1
+        self.y = self.height - self._MARGIN_TOP
+        c = self.c
+        c.setFillColor(self._COLOR_ACCENT)
+        c.rect(0, 0, self._STRIPE_W, self.height, fill=1, stroke=0)
+        c.setFillColor(self._COLOR_MUTED)
+        c.setFont(self._FONT_BODY, 8)
+        c.drawRightString(self.right, 0.9 * cm, f"Side {self.page_no}")
+
+    def _draw_header(self) -> None:
+        c = self.c
+        name = (getattr(self.profile, "name", "") or "").strip()
+        c.setFillColor(self._COLOR_BLACK)
+        c.setFont(self._FONT_HEAD, 22)
+        c.drawString(self.left, self.y, name or "CV")
+        self.y -= 0.85 * cm
+
+        parts: list[str] = []
+        phone = (getattr(self.profile, "phone", "") or "").strip()
+        email = (getattr(self.profile, "email", "") or "").strip()
+        addr = (getattr(self.profile, "address", "") or "").strip()
+        postal_code = (getattr(self.profile, "postal_code", "") or "").strip()
+        postal_place = (getattr(self.profile, "postal_place", "") or "").strip()
+        location = " ".join([x for x in [postal_code, postal_place] if x]) or addr
+        if phone:
+            parts.append(phone)
+        if email:
+            parts.append(email)
+        if location:
+            parts.append(location)
+
+        if parts:
+            c.setFillColor(self._COLOR_MUTED)
+            c.setFont(self._FONT_BODY, 9.5)
+            c.drawString(self.left, self.y, "  |  ".join(parts))
+            self.y -= 0.55 * cm
+
+        c.setStrokeColor(self._COLOR_RULE)
+        c.setLineWidth(1)
+        c.line(self.left, self.y, self.right, self.y)
+        self.y -= 0.65 * cm
+
+    def _section_header(self, title: str) -> None:
+        self._ensure_space(1.3 * cm)
+        self.y -= 0.25 * cm
+        c = self.c
+        label = title.upper()
+        c.setFillColor(self._COLOR_MUTED)
+        c.setFont(self._FONT_HEAD, 11)
+        c.drawString(self.left, self.y, label)
+        text_w = pdfmetrics.stringWidth(label, self._FONT_HEAD, 11)
+        line_x = self.left + text_w + 0.35 * cm
+        if line_x < self.right:
+            c.setStrokeColor(self._COLOR_RULE)
+            c.setLineWidth(0.8)
+            c.line(line_x, self.y + 0.12 * cm, self.right, self.y + 0.12 * cm)
+        self.y -= 0.75 * cm
+
+    def _cv_bullet_lines(self, lines: list[str], *, font: str = "", size: float = 10.0, leading: float = 0.53 * cm) -> None:
+        font = font or self._FONT_BODY
+        c = self.c
+        bullet_x = self.left
+        text_x = self.left + 0.65 * cm
+        max_w = self.content_w - 0.65 * cm
+        for raw in lines:
+            stripped = (raw or "").strip()
+            if not stripped:
+                self.y -= 0.18 * cm
+                continue
+            if stripped.startswith("•"):
+                stripped = stripped[1:].strip()
+            elif stripped.startswith("-"):
+                stripped = stripped[1:].strip()
+            wrapped = self._wrap(stripped, max_w, font, size)
+            for i, wline in enumerate(wrapped):
+                self._ensure_space(0.62 * cm)
+                if i == 0:
+                    c.setFillColor(self._COLOR_ACCENT)
+                    c.setFont(font, size)
+                    c.drawString(bullet_x, self.y, "•")
+                c.setFillColor(colors.HexColor("#333333"))
+                c.setFont(font, size)
+                c.drawString(text_x, self.y, wline)
+                self.y -= leading
+        self.y -= 0.10 * cm
+
+
+class _SkandinaviskPdfDoc(_ClassicPdfDoc):
+    """Full-width layout for 'Skandinavisk': very light beige page background,
+    light-weight left-aligned name, small grey uppercase labels, thin light
+    dividers, generous whitespace, greyscale only.
+    """
+
+    _MARGIN_X = 2.5 * cm
+    _MARGIN_TOP = 2.6 * cm
+    _FONT_BODY = "Helvetica"
+    _FONT_HEAD = "Helvetica"
+    _COLOR_BLACK = colors.HexColor("#1f2937")
+    _COLOR_DARK = colors.HexColor("#374151")
+    _COLOR_MID = colors.HexColor("#4b5563")
+    _COLOR_MUTED = colors.HexColor("#9ca3af")
+    _COLOR_RULE = colors.HexColor("#e5e7eb")
+    _BG = colors.HexColor("#FAFAF8")
+
+    def _new_page(self) -> None:
+        if self.page_no > 0:
+            self.c.showPage()
+        self.page_no += 1
+        c = self.c
+        c.setFillColor(self._BG)
+        c.rect(0, 0, self.width, self.height, fill=1, stroke=0)
+        self.y = self.height - self._MARGIN_TOP
+        c.setFillColor(self._COLOR_MUTED)
+        c.setFont(self._FONT_BODY, 8)
+        c.drawRightString(self.right, 0.9 * cm, f"Side {self.page_no}")
+
+    def _draw_header(self) -> None:
+        c = self.c
+        name = (getattr(self.profile, "name", "") or "").strip()
+        c.setFillColor(self._COLOR_BLACK)
+        c.setFont(self._FONT_HEAD, 22)
+        c.drawString(self.left, self.y, name or "CV")
+        self.y -= 0.9 * cm
+
+        parts: list[str] = []
+        phone = (getattr(self.profile, "phone", "") or "").strip()
+        email = (getattr(self.profile, "email", "") or "").strip()
+        addr = (getattr(self.profile, "address", "") or "").strip()
+        postal_code = (getattr(self.profile, "postal_code", "") or "").strip()
+        postal_place = (getattr(self.profile, "postal_place", "") or "").strip()
+        location = " ".join([x for x in [postal_code, postal_place] if x]) or addr
+        if phone:
+            parts.append(phone)
+        if email:
+            parts.append(email)
+        if location:
+            parts.append(location)
+
+        if parts:
+            c.setFillColor(self._COLOR_MUTED)
+            c.setFont(self._FONT_BODY, 9.5)
+            c.drawString(self.left, self.y, "  ·  ".join(parts))
+            self.y -= 0.6 * cm
+
+        c.setStrokeColor(self._COLOR_RULE)
+        c.setLineWidth(0.6)
+        c.line(self.left, self.y, self.right, self.y)
+        self.y -= 0.75 * cm
+
+    def _section_header(self, title: str) -> None:
+        self._ensure_space(1.4 * cm)
+        self.y -= 0.35 * cm
+        c = self.c
+        c.setFillColor(self._COLOR_MUTED)
+        c.setFont(self._FONT_HEAD, 9.5)
+        c.drawString(self.left, self.y, title.upper())
+        self.y -= 0.55 * cm
+
+
 class _SidebarCvOnlyDoc(_SidebarPdfDoc):
     """CV-only variant of the sidebar template.
 
@@ -1666,19 +1845,18 @@ class _SidebarCvOnlyDoc(_SidebarPdfDoc):
         return str(self.path)
 
 
-_VALID_TEMPLATES = {"kreativ", "profesjonell", "klassisk"}
+_VALID_TEMPLATES = {"kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk"}
 
+_SIDEBAR_THEMES = {
+    "kreativ": THEME_KREATIV,
+    "profesjonell": THEME_PROFESJONELL,
+}
 
-def _resolve_theme(template: str) -> _Theme | None:
-    """Return a _Theme for sidebar templates, or None for full-width (klassisk)."""
-    t = (template or "profesjonell").strip().lower()
-    if t not in _VALID_TEMPLATES:
-        t = "profesjonell"
-    if t == "kreativ":
-        return THEME_KREATIV
-    if t == "klassisk":
-        return None  # signals _ClassicPdfDoc
-    return THEME_PROFESJONELL
+_FULL_WIDTH_DOC_CLASSES = {
+    "klassisk": _ClassicPdfDoc,
+    "moderne": _ModernePdfDoc,
+    "skandinavisk": _SkandinaviskPdfDoc,
+}
 
 
 def make_application_pdfs(
@@ -1692,7 +1870,7 @@ def make_application_pdfs(
 ):
     """Generate TWO PDFs — combined (søknad+CV) and CV-only.
 
-    `template` is one of: "kreativ", "profesjonell", "klassisk".
+    `template` is one of: "kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk".
     Returns (combined_pdf_path, cv_only_pdf_path).
     """
 
@@ -1700,22 +1878,27 @@ def make_application_pdfs(
     combined_filename = f"soknad_og_cv_{base}.pdf"
     cv_filename = f"cv_{base}.pdf"
 
-    theme = _resolve_theme(template)
+    t = (template or "profesjonell").strip().lower()
+    if t not in _VALID_TEMPLATES:
+        t = "profesjonell"
 
-    if theme is None:
-        # Klassisk: full-width, no sidebar
-        combined_doc = _ClassicPdfDoc(
+    doc_class = _FULL_WIDTH_DOC_CLASSES.get(t)
+
+    if doc_class is not None:
+        # Full-width, no-sidebar templates (klassisk / moderne / skandinavisk)
+        combined_doc = doc_class(
             combined_filename, profile, job,
             cover_letter, tailored_cv,
             include_photo=include_photo,
         )
-        cv_doc = _ClassicPdfDoc(
+        cv_doc = doc_class(
             cv_filename, profile, job,
             "", tailored_cv,
             include_photo=include_photo,
             cv_only=True,
         )
     else:
+        theme = _SIDEBAR_THEMES[t]
         combined_doc = _SidebarPdfDoc(
             combined_filename, profile, job,
             cover_letter=cover_letter, cv_text=tailored_cv,

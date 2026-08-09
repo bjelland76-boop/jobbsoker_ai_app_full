@@ -23,6 +23,8 @@ export default function useJobAnalysis({
   const [tailoredCvJobTitle, setTailoredCvJobTitle] = useState('');
   const [cvTemplate, setCvTemplate] = useState('profesjonell');
   const [cvLanguage, setCvLanguage] = useState('no');
+  const [templatePickerVisible, setTemplatePickerVisible] = useState(false);
+  const [pendingGenerateKind, setPendingGenerateKind] = useState(null); // 'pdf' | 'send' | null
   const [profileUpdatedSinceAnalysis, setProfileUpdatedSinceAnalysis] = useState(false);
   const [loading, setLoading] = useState(false);
   const [jobAnalyses, setJobAnalyses] = useState([]);
@@ -351,7 +353,7 @@ export default function useJobAnalysis({
   // ---------------------------------------------------------------------------
   // Send application (email)
   // ---------------------------------------------------------------------------
-  async function sendApplication() {
+  async function sendApplication(template = '') {
     if (!profileId) {
       Alert.alert('Feil', 'Lagre profilen før sending');
       return;
@@ -404,6 +406,7 @@ export default function useJobAnalysis({
           application_style: applicationStyle,
           include_photo: includePhoto,
           language: cvLanguage,
+          ...(template ? { template } : {}),
         }),
       });
 
@@ -439,7 +442,7 @@ export default function useJobAnalysis({
   // ---------------------------------------------------------------------------
   // Generate PDF
   // ---------------------------------------------------------------------------
-  async function generatePdf() {
+  async function generatePdf(template = '') {
     if (!profileId) {
       Alert.alert('Feil', 'Lagre profilen først');
       return;
@@ -510,7 +513,8 @@ export default function useJobAnalysis({
     try {
       let pkg;
       if (analysis?.job_id) {
-        const streamUrl = `${API}/job-analyses/${analysis.job_id}/stream-documents?profile_id=${profileId}&application_style=${encodeURIComponent(applicationStyle)}&include_photo=${includePhoto}&language=${cvLanguage}`;
+        const templateParam = template ? `&template=${encodeURIComponent(template)}` : '';
+        const streamUrl = `${API}/job-analyses/${analysis.job_id}/stream-documents?profile_id=${profileId}&application_style=${encodeURIComponent(applicationStyle)}&include_photo=${includePhoto}&language=${cvLanguage}${templateParam}`;
         const resp = await fetch(streamUrl, {
           method: 'POST',
           headers: { Authorization: `Bearer ${authTokenState}` },
@@ -556,6 +560,7 @@ export default function useJobAnalysis({
             application_style: applicationStyle,
             include_photo: includePhoto,
             language: cvLanguage,
+            ...(template ? { template } : {}),
           }),
         });
       }
@@ -637,6 +642,30 @@ export default function useJobAnalysis({
     } finally {
       setIsGenerating(false);
       generationLockRef.current = false;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // CV template picker (popup shown before generation)
+  // ---------------------------------------------------------------------------
+  function openTemplatePicker(kind) {
+    setPendingGenerateKind(kind);
+    setTemplatePickerVisible(true);
+  }
+
+  function closeTemplatePicker() {
+    setTemplatePickerVisible(false);
+    setPendingGenerateKind(null);
+  }
+
+  function confirmTemplateAndGenerate(template) {
+    const kind = pendingGenerateKind;
+    setTemplatePickerVisible(false);
+    setPendingGenerateKind(null);
+    if (kind === 'send') {
+      sendApplication(template);
+    } else {
+      generatePdf(template);
     }
   }
 
@@ -766,6 +795,7 @@ export default function useJobAnalysis({
     tailoredCvJobTitle, setTailoredCvJobTitle,
     cvTemplate, setCvTemplate,
     cvLanguage, setCvLanguage,
+    templatePickerVisible,
     profileUpdatedSinceAnalysis, setProfileUpdatedSinceAnalysis,
     loading,
     jobAnalyses, setJobAnalyses,
@@ -802,6 +832,9 @@ export default function useJobAnalysis({
     sendApplication,
     generatePdf,
     regeneratePdfWithTemplate,
+    openTemplatePicker,
+    closeTemplatePicker,
+    confirmTemplateAndGenerate,
     loadApplications,
     updateApplicationProgress,
     loadDocuments,

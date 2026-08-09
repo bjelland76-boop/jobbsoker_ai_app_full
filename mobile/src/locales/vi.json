@@ -135,6 +135,18 @@
     "section_cv": "CV",
     "no_text": "Không có văn bản để hiển thị."
   },
+  "cv_template": {
+    "title": "Chọn mẫu CV",
+    "subtitle": "Nhấn vào một mẫu để xem trước ở kích thước đầy đủ — chọn khi bạn đã quyết định.",
+    "choose_this": "Chọn mẫu này",
+    "selected": "Đã chọn",
+    "recommended_title": "Dùng mẫu được đề xuất",
+    "recommended_subtitle": "AI chọn mẫu phù hợp nhất dựa trên tin tuyển dụng bạn đã phân tích",
+    "recommended_result_prefix": "AI đề xuất:",
+    "generate_cv": "Tạo CV",
+    "back": "Quay lại",
+    "choose_this_template": "Chọn mẫu này"
+  },
   "cv_analysis": {
     "title": "Phân tích CV / hồ sơ",
     "subtitle": "Nhận gợi ý về việc làm phù hợp và lời khuyên dựa trên học vấn và kinh nghiệm.",

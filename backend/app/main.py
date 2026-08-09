@@ -375,6 +375,7 @@ class SendAnalysisIn(BaseModel):
     application_style: str = "vanlig"  # kort | vanlig | profesjonell
     include_photo: bool = True
     language: str = "no"  # "no" | "en"
+    template: str | None = None  # "kreativ"|"profesjonell"|"klassisk"|"moderne"|"skandinavisk"; None = use AI-recommended cv_mal
 
 
 class ProgressIn(BaseModel):
@@ -1672,7 +1673,7 @@ def generate_tailored_cv(
     profile_id: int = Query(..., ge=1),
     application_style: str = Query(default="vanlig"),
     include_photo: bool = Query(default=True),
-    template: str = Query(default=""),  # "kreativ"|"profesjonell"|"klassisk"; empty = use stored cv_mal
+    template: str = Query(default=""),  # "kreativ"|"profesjonell"|"klassisk"|"moderne"|"skandinavisk"; empty = use stored cv_mal
     language: str = Query(default="no"),  # "no" | "en"
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -1685,7 +1686,7 @@ def generate_tailored_cv(
     """
     from .job_analyzer import generate_application_texts, fetch_job_text
 
-    _VALID_TEMPLATES = {"kreativ", "profesjonell", "klassisk"}
+    _VALID_TEMPLATES = {"kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk"}
 
     profile = db.get(Profile, profile_id)
     if not profile or profile.user_id != current_user.id:
@@ -1848,6 +1849,7 @@ def stream_documents(
     application_style: str = Query(default="vanlig"),
     include_photo: bool = Query(default=True),
     language: str = Query(default="no"),
+    template: str = Query(default=""),  # "kreativ"|"profesjonell"|"klassisk"|"moderne"|"skandinavisk"; empty = use stored cv_mal
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -1909,7 +1911,13 @@ def stream_documents(
         if d.extracted_text.strip()
     )
 
-    effective_template = stored.get("cv_mal") or "profesjonell"
+    _VALID_TEMPLATES = {"kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk"}
+    template_norm = (template or "").strip().lower()
+    if template_norm not in _VALID_TEMPLATES:
+        template_norm = ""
+    effective_template = template_norm or str(stored.get("cv_mal") or "profesjonell")
+    if effective_template not in _VALID_TEMPLATES:
+        effective_template = "profesjonell"
     row_id = row.id
     job_id_val = job.id
     profile_id_val = profile.id
@@ -2031,6 +2039,7 @@ def generateApplicationPackage(
     application_style: str = "vanlig",
     include_photo: bool = True,
     language: str = "no",
+    template_override: str | None = None,
     current_user: User,
     db: Session,
 ) -> tuple[dict, dict]:
@@ -2123,7 +2132,9 @@ def generateApplicationPackage(
         employer_cover_letter = sanitize_employer_text(cover_letter_raw)
         employer_tailored_cv = sanitize_employer_text(pdf_tailored_cv_raw)
 
-        cv_mal = str(result.get("cv_mal") or "profesjonell")
+        _VALID_TEMPLATES = {"kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk"}
+        override_norm = (template_override or "").strip().lower()
+        cv_mal = override_norm if override_norm in _VALID_TEMPLATES else str(result.get("cv_mal") or "profesjonell")
         cover_pdf, cv_pdf = make_application_pdfs(
             profile,
             job,
@@ -2290,6 +2301,7 @@ def analyze_url_and_send(
             application_style=data.application_style,
             include_photo=bool(data.include_photo),
             language=data.language,
+            template_override=data.template,
             current_user=current_user,
             db=db,
         )

@@ -100,6 +100,7 @@ class JobAnalysisOut(BaseModel):
     email_text: Optional[str] = None
 
     # Visual CV template auto-selected based on job type.
+    # One of: "kreativ" | "profesjonell" | "klassisk" | "moderne" | "skandinavisk"
     cv_mal: str = "profesjonell"
 
     # Whether a generated CV already exists for each language (used by frontend confirm dialog).
@@ -123,7 +124,7 @@ class ApplicationPackageOut(BaseModel):
     cv: str
     coverLetter: str
     pdfUrl: str
-    cvMal: str = "profesjonell"  # which visual template was used
+    cvMal: str = "profesjonell"  # which visual template was used: kreativ|profesjonell|klassisk|moderne|skandinavisk
     language: str = "no"  # "no" | "en"
 
 

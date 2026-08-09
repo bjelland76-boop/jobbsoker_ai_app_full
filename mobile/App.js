@@ -128,6 +128,7 @@ function AppContent() {
     tailoredCvJobTitle, setTailoredCvJobTitle,
     cvTemplate, setCvTemplate,
     cvLanguage, setCvLanguage,
+    templatePickerVisible,
     profileUpdatedSinceAnalysis, setProfileUpdatedSinceAnalysis,
     loading,
     jobAnalyses, setJobAnalyses,
@@ -158,6 +159,9 @@ function AppContent() {
     sendApplication,
     generatePdf,
     regeneratePdfWithTemplate,
+    openTemplatePicker,
+    closeTemplatePicker,
+    confirmTemplateAndGenerate,
     loadApplications,
     updateApplicationProgress,
     loadDocuments,
@@ -825,6 +829,10 @@ function AppContent() {
             regeneratePdfWithTemplate={regeneratePdfWithTemplate}
             openDocument={openDocument}
             profilePhotoData={profilePhotoData}
+            templatePickerVisible={templatePickerVisible}
+            openTemplatePicker={openTemplatePicker}
+            closeTemplatePicker={closeTemplatePicker}
+            confirmTemplateAndGenerate={confirmTemplateAndGenerate}
           />}
           {activeTab === 'new' && <NewJobScreen
             jobUrl={jobUrl} setJobUrl={setJobUrl}

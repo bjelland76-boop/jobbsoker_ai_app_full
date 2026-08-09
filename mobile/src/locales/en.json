@@ -135,6 +135,18 @@
     "section_cv": "CV",
     "no_text": "No text to show."
   },
+  "cv_template": {
+    "title": "Choose CV template",
+    "subtitle": "Tap a template to preview it in full — select it once you've decided.",
+    "choose_this": "Choose this",
+    "selected": "Selected",
+    "recommended_title": "Use recommended template",
+    "recommended_subtitle": "AI picks the best template based on the job ad you analyzed",
+    "recommended_result_prefix": "AI recommended:",
+    "generate_cv": "Generate CV",
+    "back": "Back",
+    "choose_this_template": "Choose this template"
+  },
   "cv_analysis": {
     "title": "Analyze CV / profile",
     "subtitle": "Get suggestions for relevant jobs and advice based on education and experience.",

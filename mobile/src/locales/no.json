@@ -135,6 +135,18 @@
     "section_cv": "CV",
     "no_text": "Ingen tekst å vise."
   },
+  "cv_template": {
+    "title": "Velg CV-mal",
+    "subtitle": "Trykk på en mal for å se den i stort — velg når du har bestemt deg.",
+    "choose_this": "Velg denne",
+    "selected": "Valgt",
+    "recommended_title": "Velg anbefalt mal",
+    "recommended_subtitle": "AI velger beste mal basert på jobbannonsen du analyserte",
+    "recommended_result_prefix": "AI anbefalte:",
+    "generate_cv": "Generer CV",
+    "back": "Tilbake",
+    "choose_this_template": "Velg denne malen"
+  },
   "cv_analysis": {
     "title": "Analyser CV / profil",
     "subtitle": "Få forslag til relevante jobber og råd basert på utdanning og erfaring.",

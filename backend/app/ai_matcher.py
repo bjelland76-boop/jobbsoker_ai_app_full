@@ -32,7 +32,7 @@ class MatchResult(TypedDict):
     seniority_match: int
     top_reason: str
     main_risk: str
-    cv_mal: str  # "kreativ" | "profesjonell" | "klassisk"
+    cv_mal: str  # "kreativ" | "profesjonell" | "klassisk" | "moderne" | "skandinavisk"
 
 
 def _compress_text(text: str, max_len: int = 2500) -> str:
@@ -189,7 +189,7 @@ def _normalize_list(v: Any, *, max_items: int = 3, max_item_chars: int = 60) -> 
 
 def _normalize_result(data: Any) -> MatchResult:
     # Output contract: always return these fields, no extras.
-    _CV_MAL_VALID = {"kreativ", "profesjonell", "klassisk"}
+    _CV_MAL_VALID = {"kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk"}
 
     out: MatchResult = {
         "score": 0,
@@ -406,7 +406,7 @@ def analyze_job_match(
         '"missing":["max 3; only genuine gaps not inferable from stated experience"],'
         '"recommended_cv_changes":["max 3; actionable CV edits addressing missing requirements; <=120 chars; no generic"],'
         '"advice":"1 short sentence",'
-        '"cv_mal":"profesjonell (DEFAULT for de fleste stillinger: salg/IT/helse/bygg/kontor/service/logistikk/HR) | kreativ (KUN for: designer/UX/grafisk/animasjon/reklame/media/innhold) | klassisk (KUN for: advokat/jurist/revisor/forsker/akademiker/offentlig forvaltning) — velg basert på stillingstittelen i JOB-seksjonen"'
+        '"cv_mal":"profesjonell (DEFAULT for de fleste stillinger: salg/kontor/service/logistikk/bygg/HR generelt) | kreativ (KUN for: designer/UX/grafisk/animasjon/reklame/media/innhold) | klassisk (KUN for: advokat/jurist/revisor/forsker/akademiker/offentlig forvaltning) | moderne (KUN for: tech/IT/startup/utvikler/data/produkt) | skandinavisk (KUN for: helse/omsorg/offentlig sektor/konservative bransjer — alternativ til klassisk) — velg basert på stillingstittelen i JOB-seksjonen"'
         "}"
         f"\n{lang_rule}"
     )

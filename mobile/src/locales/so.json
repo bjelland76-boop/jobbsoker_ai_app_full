@@ -136,6 +136,18 @@
     "no_text": "Qoraal lama tusin.",
     "analysis_language_notice": "Falanqaynta waxay ku muuqan kartaa Af-Noorweejian. Tani waa xaalad ku-meel-gaar ah."
   },
+  "cv_template": {
+    "title": "Dooro qaabka CV-ga",
+    "subtitle": "Riix qaab si aad u aragto si buuxda — dooro marka aad go'aan gaarto.",
+    "choose_this": "Dooro kan",
+    "selected": "La doortay",
+    "recommended_title": "Isticmaal qaabka la talinayo",
+    "recommended_subtitle": "AI-gu wuxuu doortaa qaabka ugu fiican iyadoo lagu saleynayo shaqada aad falanqaysay",
+    "recommended_result_prefix": "AI wuxuu talinayaa:",
+    "generate_cv": "Samee CV",
+    "back": "Dib u noqo",
+    "choose_this_template": "Dooro qaabkan"
+  },
   "cv_analysis": {
     "title": "Falanqee CV / profaylka",
     "subtitle": "Hel soo jeedin shaqooyin ku habboon iyo talooyin ku salaysan waxbarasho iyo khibrad.",

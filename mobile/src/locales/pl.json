@@ -135,6 +135,18 @@
     "section_cv": "CV",
     "no_text": "Brak tekstu do wyświetlenia."
   },
+  "cv_template": {
+    "title": "Wybierz szablon CV",
+    "subtitle": "Dotknij szablonu, aby zobaczyć podgląd w pełnym rozmiarze — wybierz, gdy się zdecydujesz.",
+    "choose_this": "Wybierz ten",
+    "selected": "Wybrano",
+    "recommended_title": "Użyj zalecanego szablonu",
+    "recommended_subtitle": "AI wybiera najlepszy szablon na podstawie przeanalizowanego ogłoszenia",
+    "recommended_result_prefix": "AI zaleciło:",
+    "generate_cv": "Generuj CV",
+    "back": "Wstecz",
+    "choose_this_template": "Wybierz ten szablon"
+  },
   "cv_analysis": {
     "title": "Analizuj CV / profil",
     "subtitle": "Uzyskaj sugestie odpowiednich stanowisk i porady na podstawie wykształcenia i doświadczenia.",

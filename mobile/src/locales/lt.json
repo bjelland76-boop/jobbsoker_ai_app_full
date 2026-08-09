@@ -135,6 +135,18 @@
     "section_cv": "CV",
     "no_text": "Nėra teksto, ką rodyti."
   },
+  "cv_template": {
+    "title": "Pasirinkite CV šabloną",
+    "subtitle": "Palieskite šabloną, kad peržiūrėtumėte jį didesniu formatu — pasirinkite, kai apsispręsite.",
+    "choose_this": "Pasirinkti šį",
+    "selected": "Pasirinkta",
+    "recommended_title": "Naudoti rekomenduojamą šabloną",
+    "recommended_subtitle": "DI parenka geriausią šabloną pagal išanalizuotą skelbimą",
+    "recommended_result_prefix": "DI rekomendavo:",
+    "generate_cv": "Generuoti CV",
+    "back": "Atgal",
+    "choose_this_template": "Pasirinkti šį šabloną"
+  },
   "cv_analysis": {
     "title": "Analizuoti CV / profilį",
     "subtitle": "Gaukite pasiūlymus dėl tinkamų darbų ir patarimus pagal išsilavinimą bei patirtį.",

@@ -6,6 +6,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { styles } from '../styles/styles';
 import { THEME } from '../styles/theme';
+import CvTemplatePickerModal from '../components/CvTemplatePickerModal';
 
 export default function AnalysisScreen({
   // analysis state
@@ -23,6 +24,7 @@ export default function AnalysisScreen({
   toggleFavoriteAnalysis, hideJobAnalysis,
   openSavedAnalysis, moveAnalysisToApplications,
   regeneratePdfWithTemplate, openDocument,
+  templatePickerVisible, openTemplatePicker, closeTemplatePicker, confirmTemplateAndGenerate,
   // profile state
   profilePhotoData,
 }) {
@@ -398,7 +400,7 @@ export default function AnalysisScreen({
 
             <TouchableOpacity
               style={[styles.aerligSecondaryButton, isGenerating ? { opacity: 0.6 } : null]}
-              onPress={sendApplication}
+              onPress={() => openTemplatePicker('send')}
               disabled={isGenerating}
             >
               <Text style={styles.aerligSecondaryButtonText}>{sending ? t('analysis.sending') : t('analysis.send_application')}</Text>
@@ -406,11 +408,18 @@ export default function AnalysisScreen({
 
             <TouchableOpacity
               style={[styles.aerligSecondaryButton, isGenerating ? { opacity: 0.6 } : null]}
-              onPress={generatePdf}
+              onPress={() => openTemplatePicker('pdf')}
               disabled={isGenerating}
             >
               <Text style={styles.aerligSecondaryButtonText}>{generatingPdf ? t('analysis.generating') : t('analysis.generate_pdf')}</Text>
             </TouchableOpacity>
+
+            <CvTemplatePickerModal
+              visible={templatePickerVisible}
+              onClose={closeTemplatePicker}
+              onConfirm={confirmTemplateAndGenerate}
+              recommendedTemplate={analysis?.cv_mal || cvTemplate}
+            />
 
             {streamingProgress ? (
               <Text style={{ fontSize: 12, color: '#6B7280', fontStyle: 'italic', marginTop: 6, marginBottom: 2 }} numberOfLines={2}>
@@ -430,8 +439,8 @@ export default function AnalysisScreen({
                   <Text style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>
                     {t('analysis.template_label')}: <Text style={{ fontWeight: '700', color: '#0f172a' }}>{cvTemplate.charAt(0).toUpperCase() + cvTemplate.slice(1)}</Text>
                   </Text>
-                  <View style={{ flexDirection: 'row', gap: 6 }}>
-                    {['kreativ', 'profesjonell', 'klassisk'].map((tpl) => {
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {['kreativ', 'profesjonell', 'klassisk', 'moderne', 'skandinavisk'].map((tpl) => {
                       const active = cvTemplate === tpl;
                       return (
                         <TouchableOpacity
