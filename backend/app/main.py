@@ -1719,6 +1719,10 @@ def generate_tailored_cv(
     effective_template = template_norm or str(stored.get("cv_mal") or "profesjonell")
     if effective_template not in _VALID_TEMPLATES:
         effective_template = "profesjonell"
+    logger.info(
+        "[CvTemplate] generate_tailored_cv job_id=%s received template=%r stored_cv_mal=%r -> effective_template=%r",
+        job_id, template, stored.get("cv_mal"), effective_template,
+    )
 
     # Language-specific storage keys: Norwegian uses legacy keys, English uses _en suffix
     lang = "en" if (language or "no").strip().lower() == "en" else "no"
@@ -1918,6 +1922,10 @@ def stream_documents(
     effective_template = template_norm or str(stored.get("cv_mal") or "profesjonell")
     if effective_template not in _VALID_TEMPLATES:
         effective_template = "profesjonell"
+    logger.info(
+        "[CvTemplate] stream_documents job_id=%s received template=%r stored_cv_mal=%r -> effective_template=%r",
+        job_id, template, stored.get("cv_mal"), effective_template,
+    )
     row_id = row.id
     job_id_val = job.id
     profile_id_val = profile.id
@@ -2135,6 +2143,10 @@ def generateApplicationPackage(
         _VALID_TEMPLATES = {"kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk"}
         override_norm = (template_override or "").strip().lower()
         cv_mal = override_norm if override_norm in _VALID_TEMPLATES else str(result.get("cv_mal") or "profesjonell")
+        logger.info(
+            "[CvTemplate] generateApplicationPackage received template_override=%r ai_cv_mal=%r -> cv_mal=%r",
+            template_override, result.get("cv_mal"), cv_mal,
+        )
         cover_pdf, cv_pdf = make_application_pdfs(
             profile,
             job,
