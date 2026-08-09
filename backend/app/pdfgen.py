@@ -1874,17 +1874,15 @@ def make_application_pdfs(
     Returns (combined_pdf_path, cv_only_pdf_path).
     """
 
-    base = safe_name(f"{job.title}_{job.company}")
-    combined_filename = f"soknad_og_cv_{base}.pdf"
-    cv_filename = f"cv_{base}.pdf"
-
     t = (template or "profesjonell").strip().lower()
     if t not in _VALID_TEMPLATES:
         t = "profesjonell"
 
+    base = safe_name(f"{job.title}_{job.company}")
+    combined_filename = f"soknad_og_cv_{base}_{t}.pdf"
+    cv_filename = f"cv_{base}_{t}.pdf"
+
     doc_class = _FULL_WIDTH_DOC_CLASSES.get(t)
-    _resolved_name = doc_class.__name__ if doc_class is not None else f"_SidebarPdfDoc(theme={t})"
-    print(f"[CvTemplate] make_application_pdfs received template={template!r} -> normalized={t!r} -> doc_class={_resolved_name}", flush=True)
 
     if doc_class is not None:
         # Full-width, no-sidebar templates (klassisk / moderne / skandinavisk)

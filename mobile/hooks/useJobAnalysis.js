@@ -396,7 +396,6 @@ export default function useJobAnalysis({
     setApplicationPackage(null);
 
     try {
-      console.log('[CvTemplate] sendApplication -> analyze-url-and-send', { template });
       const pkg = await apiFetch('/analyze-url-and-send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -410,8 +409,6 @@ export default function useJobAnalysis({
           ...(template ? { template } : {}),
         }),
       });
-
-      console.log('[CvTemplate] sendApplication response', { requestedTemplate: template, pdfUrl: pkg?.pdfUrl, cvMalEchoedByBackend: pkg?.cvMal });
 
       const isValidPackage = pkg && typeof pkg.cv === 'string' && typeof pkg.coverLetter === 'string';
 
@@ -518,7 +515,6 @@ export default function useJobAnalysis({
       if (analysis?.job_id) {
         const templateParam = template ? `&template=${encodeURIComponent(template)}` : '';
         const streamUrl = `${API}/job-analyses/${analysis.job_id}/stream-documents?profile_id=${profileId}&application_style=${encodeURIComponent(applicationStyle)}&include_photo=${includePhoto}&language=${cvLanguage}${templateParam}`;
-        console.log('[CvTemplate] generatePdf -> stream-documents', { template, streamUrl });
         const resp = await fetch(streamUrl, {
           method: 'POST',
           headers: { Authorization: `Bearer ${authTokenState}` },
@@ -568,8 +564,6 @@ export default function useJobAnalysis({
           }),
         });
       }
-
-      console.log('[CvTemplate] generatePdf response', { requestedTemplate: template, pdfUrl: pkg?.pdfUrl, cvMalEchoedByBackend: pkg?.cvMal });
 
       const isValidPackage = pkg && typeof pkg.cv === 'string' && typeof pkg.coverLetter === 'string';
 
@@ -668,7 +662,6 @@ export default function useJobAnalysis({
     const kind = pendingGenerateKind;
     setTemplatePickerVisible(false);
     setPendingGenerateKind(null);
-    console.log('[CvTemplate] confirmTemplateAndGenerate', { kind, template });
     if (kind === 'send') {
       sendApplication(template);
     } else {
