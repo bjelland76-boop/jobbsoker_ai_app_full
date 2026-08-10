@@ -454,10 +454,6 @@ class CreateCheckoutIn(BaseModel):
     email: str = ""
 
 
-class ConfirmPaymentIn(BaseModel):
-    session_id: str
-
-
 class SendAnalysisIn(BaseModel):
     profile_id: int
     url: str
@@ -2353,64 +2349,53 @@ def create_checkout(
     return {"checkout_url": session.url}
 
 
-@app.post("/confirm-payment", tags=["billing"])
-def confirm_payment(
-    data: ConfirmPaymentIn,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Temporary, non-webhook payment confirmation.
+@app.post("/stripe-webhook", tags=["billing"])
+async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
+    """Authoritative payment confirmation via Stripe webhook.
 
-    Trusts nothing from the client except the Stripe session_id. Credits and
-    the paying user_id are always read back from Stripe's own record of the
-    session (metadata set server-side in /create-checkout), never from the
-    client-supplied query string. Idempotent: a session_id can only ever be
-    confirmed once (see StripePayment). Will be replaced by a webhook.
+    No user auth here — the caller is Stripe's servers, not a logged-in user.
+    Trust comes entirely from verifying the signature against
+    STRIPE_WEBHOOK_SECRET using the raw request body. Idempotent: a Checkout
+    Session id can only ever grant credits once (see StripePayment).
     """
 
-    secret_key = os.getenv("STRIPE_SECRET_KEY")
-    if not secret_key:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Stripe er ikke konfigurert (STRIPE_SECRET_KEY mangler)")
-    stripe.api_key = secret_key
+    webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+    if not webhook_secret:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Stripe webhook er ikke konfigurert (STRIPE_WEBHOOK_SECRET mangler)")
 
-    existing = db.scalars(
-        select(StripePayment).where(StripePayment.session_id == data.session_id)
-    ).first()
-    if existing:
-        profile = db.scalars(select(Profile).where(Profile.user_id == existing.user_id)).first()
-        return {
-            "credits_added": 0,
-            "already_confirmed": True,
-            "job_credits": int(profile.job_credits or 0) if profile else 0,
-        }
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature", "")
 
     try:
-        session = stripe.checkout.Session.retrieve(data.session_id)
+        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Stripe-feil: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Ugyldig webhook-signatur: {e}")
 
-    if session.get("payment_status") != "paid":
-        raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail="Betaling ikke bekreftet")
+    if event.get("type") == "checkout.session.completed":
+        session = event["data"]["object"]
+        session_id = session.get("id") or ""
+        meta = session.get("metadata") or {}
 
-    meta = session.get("metadata") or {}
-    try:
-        meta_user_id = int(meta.get("user_id"))
-        credits = int(meta.get("credits"))
-    except (TypeError, ValueError):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ugyldig betalingsmetadata")
+        try:
+            meta_user_id = int(meta.get("user_id"))
+            credits = int(meta.get("credits"))
+        except (TypeError, ValueError):
+            logger.error("[stripe-webhook] invalid metadata on session %s: %r", session_id, meta)
+            return {"received": True}
 
-    if meta_user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Denne betalingen tilhører ikke innlogget bruker")
+        existing = db.scalars(
+            select(StripePayment).where(StripePayment.session_id == session_id)
+        ).first()
+        if not existing and session_id:
+            profile = db.scalars(select(Profile).where(Profile.user_id == meta_user_id)).first()
+            if profile:
+                profile.job_credits = int(profile.job_credits or 0) + credits
+                db.add(StripePayment(session_id=session_id, user_id=meta_user_id, credits=credits))
+                db.commit()
+            else:
+                logger.error("[stripe-webhook] no profile for user_id %s (session %s)", meta_user_id, session_id)
 
-    profile = db.scalars(select(Profile).where(Profile.user_id == current_user.id)).first()
-    if not profile:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
-
-    profile.job_credits = int(profile.job_credits or 0) + credits
-    db.add(StripePayment(session_id=data.session_id, user_id=current_user.id, credits=credits))
-    db.commit()
-
-    return {"credits_added": credits, "already_confirmed": False, "job_credits": profile.job_credits}
+    return {"received": True}
 
 
 @app.post("/analyze-url", response_model=JobAnalysisOut)

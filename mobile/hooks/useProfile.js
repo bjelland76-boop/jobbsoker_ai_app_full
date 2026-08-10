@@ -281,11 +281,14 @@ export default function useProfile({ onProfileSaved } = {}) {
     try {
       const data = await apiFetch('/profiles');
       if (Array.isArray(data) && data.length > 0) {
-        setJobCredits(data[0].job_credits || 0);
+        const credits = data[0].job_credits || 0;
+        setJobCredits(credits);
+        return credits;
       }
     } catch (e) {
       if (__DEV__) console.log('Kunne ikke oppdatere credits:', e);
     }
+    return null;
   }
 
   // ---------------------------------------------------------------------------

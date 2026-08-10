@@ -203,7 +203,9 @@ function AppContent() {
   }, []);
 
   // Returning from Stripe Checkout (web): https://aerlig.no/betalt?credits=X&user_id=Y&session_id=Z
-  // Confirm the payment (server-side verified against Stripe) and refresh credits.
+  // Crediting itself happens server-side via the Stripe webhook (authoritative,
+  // works even if the user never returns here) — this just polls the balance
+  // for a few seconds so the UI reflects it without requiring a manual refresh.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!authReady || !authTokenState) return;
@@ -212,25 +214,30 @@ function AppContent() {
     const sessionId = params.get('session_id');
     if (!sessionId) return;
 
+    const expectedCredits = parseInt(params.get('credits'), 10) || 0;
+
+    try {
+      window.history.replaceState({}, '', window.location.pathname);
+    } catch (_) { /* ignore */ }
+
     (async () => {
-      try {
-        const res = await apiFetch('/confirm-payment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: sessionId }),
-        });
-        await refreshJobCredits();
-        const added = res?.credits_added || 0;
-        if (added > 0) {
-          Alert.alert('Betaling bekreftet', `${added} credits er lagt til kontoen din.`);
+      const before = await refreshJobCredits();
+      let confirmed = false;
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        const current = await refreshJobCredits();
+        if (typeof current === 'number' && typeof before === 'number' && current > before) {
+          confirmed = true;
+          break;
         }
-      } catch (e) {
-        console.error('[Assistant] confirm-payment failed', e);
-        Alert.alert('Feil', 'Kunne ikke bekrefte betalingen. Kontakt oss hvis dette gjentar seg.');
-      } finally {
-        try {
-          window.history.replaceState({}, '', window.location.pathname);
-        } catch (_) { /* ignore */ }
+      }
+      if (confirmed) {
+        Alert.alert('Betaling bekreftet', `${expectedCredits > 0 ? expectedCredits : ''} credits er lagt til kontoen din.`.trim());
+      } else {
+        Alert.alert(
+          'Betaling mottatt',
+          'Vi venter fortsatt på bekreftelse fra Stripe. Credits dukker opp om kort tid — sjekk gjerne på nytt om litt.'
+        );
       }
     })();
   }, [authReady, authTokenState]); // eslint-disable-line react-hooks/exhaustive-deps
