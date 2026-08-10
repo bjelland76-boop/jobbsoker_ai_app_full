@@ -393,38 +393,34 @@ async def lifespan(app: FastAPI):
         except Exception:
             pass
 
-    # TEMPORARY: create a fresh, non-tester QA account to verify the new
-    # cv_analysis_count limit end to end.
+    # TEMPORARY: remove the QA account used to verify cv_analysis_count.
     try:
         _db = SessionLocal()
         _qa_email = "qa-cvanalysis-test@aerlig.local"
         _qa_user = get_user_by_email(_db, _qa_email)
-        if not _qa_user:
-            _qa_user = User(email=_qa_email, password_hash="")
-            _db.add(_qa_user)
+        if _qa_user:
+            _qa_profile_ids = [
+                pid for (pid,) in _db.query(Profile.id).where(Profile.user_id == _qa_user.id).all()
+            ]
+            _qa_job_ids = [
+                jid for (jid,) in _db.query(Job.id).where(Job.user_id == _qa_user.id).all()
+            ]
+            _db.query(StripePayment).where(StripePayment.user_id == _qa_user.id).delete(synchronize_session=False)
+            if _qa_profile_ids:
+                _db.query(GeneratedApplication).where(
+                    GeneratedApplication.profile_id.in_(_qa_profile_ids)
+                ).delete(synchronize_session=False)
+                _db.query(JobAnalysisHistory).where(
+                    JobAnalysisHistory.profile_id.in_(_qa_profile_ids)
+                ).delete(synchronize_session=False)
+            if _qa_job_ids:
+                _db.query(Job).where(Job.id.in_(_qa_job_ids)).delete(synchronize_session=False)
+            _db.query(Profile).where(Profile.user_id == _qa_user.id).delete(synchronize_session=False)
+            _db.query(User).where(User.id == _qa_user.id).delete(synchronize_session=False)
             _db.commit()
-            _db.refresh(_qa_user)
-        _qa_profile = _db.scalars(select(Profile).where(Profile.user_id == _qa_user.id)).first()
-        if not _qa_profile:
-            _qa_profile = Profile(
-                user_id=_qa_user.id,
-                name="QA CvAnalysis Test",
-                email=_qa_email,
-                skills="Testing, QA",
-                experience="QA Tester - Test AS - 2024-2025 - Testet ting.",
-            )
-            _db.add(_qa_profile)
-            _db.commit()
-            _db.refresh(_qa_profile)
-        _qa_token = create_access_token(user_id=_qa_user.id)
-        print(
-            f"[QaCvAnalysis] user_id={_qa_user.id} profile_id={_qa_profile.id} "
-            f"cv_analysis_count={_qa_profile.cv_analysis_count} analysis_count={_qa_profile.analysis_count} "
-            f"token={_qa_token}",
-            flush=True,
-        )
+            print(f"[QaCvAnalysisCleanup] removed user_id={_qa_user.id}", flush=True)
     except Exception as _e:
-        print(f"[QaCvAnalysis] failed: {_e!r}", flush=True)
+        print(f"[QaCvAnalysisCleanup] failed: {_e!r}", flush=True)
     finally:
         try:
             _db.close()
