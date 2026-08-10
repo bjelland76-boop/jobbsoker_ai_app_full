@@ -2363,6 +2363,7 @@ def create_checkout(
     if not secret_key:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Stripe er ikke konfigurert (STRIPE_SECRET_KEY mangler)")
     stripe.api_key = secret_key
+    stripe.api_version = "2025-03-31.basil"
 
     price_env = _PACKAGE_PRICE_ENV[data.package]
     price_id = os.getenv(price_env)
