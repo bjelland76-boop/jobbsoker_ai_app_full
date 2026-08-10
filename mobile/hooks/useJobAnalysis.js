@@ -806,7 +806,11 @@ export default function useJobAnalysis({
       setCvAnalysis(data);
       setActiveTab('cv');
     } catch (e) {
-      Alert.alert('Feil', errText(e));
+      if (e?.code === 'free_limit_reached') {
+        showPaymentModal(e?.data?.limit_type || 'cv_analyse');
+      } else {
+        Alert.alert('Feil', errText(e));
+      }
     }
     setCvLoading(false);
   }

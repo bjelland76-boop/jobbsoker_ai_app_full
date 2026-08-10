@@ -9,6 +9,7 @@ const ORANGE = '#E8501A';
 const LIMIT_LABELS = {
   analyse: 'analyser',
   cv: 'CV-genereringer',
+  cv_analyse: 'CV-analyser',
   intervju: 'intervjuøkter',
 };
 

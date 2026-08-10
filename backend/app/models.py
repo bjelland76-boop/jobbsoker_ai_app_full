@@ -50,6 +50,7 @@ class Profile(Base):
     is_tester: Mapped[bool] = mapped_column(Boolean, default=False)
     analysis_count: Mapped[int] = mapped_column(Integer, default=0)
     cv_generation_count: Mapped[int] = mapped_column(Integer, default=0)
+    cv_analysis_count: Mapped[int] = mapped_column(Integer, default=0)
     interview_count: Mapped[int] = mapped_column(Integer, default=0)
     job_credits: Mapped[int] = mapped_column(Integer, default=0)
 

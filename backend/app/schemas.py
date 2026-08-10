@@ -33,6 +33,7 @@ class ProfileOut(BaseModel):
     is_tester: bool = False
     analysis_count: int = 0
     cv_generation_count: int = 0
+    cv_analysis_count: int = 0
     interview_count: int = 0
     job_credits: int = 0
 

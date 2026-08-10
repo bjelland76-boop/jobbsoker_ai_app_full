@@ -111,6 +111,7 @@ def ensure_profile_columns() -> None:
         ensure_col("profiles", "is_tester", "is_tester BOOLEAN DEFAULT FALSE")
         ensure_col("profiles", "analysis_count", "analysis_count INTEGER DEFAULT 0")
         ensure_col("profiles", "cv_generation_count", "cv_generation_count INTEGER DEFAULT 0")
+        ensure_col("profiles", "cv_analysis_count", "cv_analysis_count INTEGER DEFAULT 0")
         ensure_col("profiles", "interview_count", "interview_count INTEGER DEFAULT 0")
         ensure_col("profiles", "job_credits", "job_credits INTEGER DEFAULT 0")
 
@@ -167,9 +168,16 @@ def ensure_profile_columns() -> None:
 
 
 FREE_LIMIT = 3
+_LIMIT_COUNT_ATTR = {
+    "analyse": "analysis_count",
+    "cv": "cv_generation_count",
+    "cv_analyse": "cv_analysis_count",
+    "intervju": "interview_count",
+}
 _FREE_LIMIT_LABELS = {
     "analyse": "analyser",
     "cv": "CV-genereringer",
+    "cv_analyse": "CV-analyser",
     "intervju": "intervjuøkter",
 }
 
@@ -183,7 +191,7 @@ def _check_free_limit(profile: Profile, limit_type: str) -> JSONResponse | None:
     """
     if bool(profile.is_tester):
         return None
-    count_attr = {"analyse": "analysis_count", "cv": "cv_generation_count", "intervju": "interview_count"}[limit_type]
+    count_attr = _LIMIT_COUNT_ATTR[limit_type]
     if int(getattr(profile, count_attr) or 0) < FREE_LIMIT:
         return None
     if int(profile.job_credits or 0) > 0:
@@ -203,7 +211,7 @@ def _consume_free_limit(db: Session, profile: Profile, limit_type: str) -> None:
     """Call once, after the gated action has succeeded. Mirrors _check_free_limit's logic."""
     if bool(profile.is_tester):
         return
-    count_attr = {"analyse": "analysis_count", "cv": "cv_generation_count", "intervju": "interview_count"}[limit_type]
+    count_attr = _LIMIT_COUNT_ATTR[limit_type]
     count = int(getattr(profile, count_attr) or 0)
     if count < FREE_LIMIT:
         setattr(profile, count_attr, count + 1)
@@ -336,6 +344,7 @@ def profile_to_dict(profile: Profile) -> dict:
         "is_tester": bool(getattr(profile, "is_tester", False)),
         "analysis_count": int(getattr(profile, "analysis_count", 0) or 0),
         "cv_generation_count": int(getattr(profile, "cv_generation_count", 0) or 0),
+        "cv_analysis_count": int(getattr(profile, "cv_analysis_count", 0) or 0),
         "interview_count": int(getattr(profile, "interview_count", 0) or 0),
         "job_credits": int(getattr(profile, "job_credits", 0) or 0),
     }
@@ -1428,7 +1437,7 @@ def analyze_cv(
     if not profile or profile.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
 
-    blocked = _check_free_limit(profile, "analyse")
+    blocked = _check_free_limit(profile, "cv_analyse")
     if blocked is not None:
         return blocked
 
@@ -1438,7 +1447,7 @@ def analyze_cv(
         traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    _consume_free_limit(db, profile, "analyse")
+    _consume_free_limit(db, profile, "cv_analyse")
     return result
 
 
