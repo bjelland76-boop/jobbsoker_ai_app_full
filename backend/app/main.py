@@ -369,7 +369,7 @@ async def lifespan(app: FastAPI):
     try:
         _db = SessionLocal()
         _grandfathered_ids = [
-            2, 3, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+            2, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
             21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
         ]
         _db.query(Profile).filter(Profile.id.in_(_grandfathered_ids)).update(
@@ -378,6 +378,22 @@ async def lifespan(app: FastAPI):
         _db.commit()
     except Exception as _e:
         print(f"[Grandfather] failed: {_e!r}", flush=True)
+    finally:
+        try:
+            _db.close()
+        except Exception:
+            pass
+
+    # One-time: fb@frydenbo.no (profile id 3) asked to be un-grandfathered
+    # after testing with 5 CV analyses and hitting no limit.
+    try:
+        _db = SessionLocal()
+        _db.query(Profile).where(Profile.id == 3).update(
+            {Profile.is_tester: False}, synchronize_session=False
+        )
+        _db.commit()
+    except Exception as _e:
+        print(f"[Ungrandfather] failed: {_e!r}", flush=True)
     finally:
         try:
             _db.close()
@@ -1412,11 +1428,18 @@ def analyze_cv(
     if not profile or profile.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
 
+    blocked = _check_free_limit(profile, "analyse")
+    if blocked is not None:
+        return blocked
+
     try:
-        return analyze_profile_cv(profile, language=data.language)
+        result = analyze_profile_cv(profile, language=data.language)
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+    _consume_free_limit(db, profile, "analyse")
+    return result
 
 
 @app.get("/job-analyses", response_model=list[JobAnalysisItemOut], tags=["analysis"])
