@@ -2339,8 +2339,8 @@ def create_checkout(
         session = stripe.checkout.Session.create(
             mode="payment",
             line_items=[{"price": price_id, "quantity": 1}],
-            success_url=f"https://aerlig.no/betalt?credits={credits}&user_id={current_user.id}&session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url="https://aerlig.no",
+            success_url=f"https://app.aerlig.no/betalt?credits={credits}&user_id={current_user.id}&session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url="https://app.aerlig.no",
             customer_email=data.email or current_user.email,
             metadata={"user_id": str(current_user.id), "credits": str(credits)},
         )

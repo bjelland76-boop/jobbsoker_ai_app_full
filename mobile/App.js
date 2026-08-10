@@ -202,7 +202,7 @@ function AppContent() {
     } catch (e) { /* ignore */ }
   }, []);
 
-  // Returning from Stripe Checkout (web): https://aerlig.no/betalt?credits=X&user_id=Y&session_id=Z
+  // Returning from Stripe Checkout (web): https://app.aerlig.no/betalt?credits=X&user_id=Y&session_id=Z
   // Crediting itself happens server-side via the Stripe webhook (authoritative,
   // works even if the user never returns here) — this just polls the balance
   // for a few seconds so the UI reflects it without requiring a manual refresh.
