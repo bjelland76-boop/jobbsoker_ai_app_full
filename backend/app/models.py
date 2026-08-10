@@ -49,6 +49,9 @@ class Profile(Base):
     has_seen_onboarding: Mapped[bool] = mapped_column(Boolean, default=False)
     is_tester: Mapped[bool] = mapped_column(Boolean, default=False)
     analysis_count: Mapped[int] = mapped_column(Integer, default=0)
+    cv_generation_count: Mapped[int] = mapped_column(Integer, default=0)
+    interview_count: Mapped[int] = mapped_column(Integer, default=0)
+    job_credits: Mapped[int] = mapped_column(Integer, default=0)
 
 class Job(Base):
     __tablename__ = "jobs"
@@ -174,3 +177,18 @@ class UsageEvent(Base):
     action: Mapped[str] = mapped_column(String(100), index=True)
     event_meta: Mapped[str] = mapped_column("metadata", Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+
+class StripePayment(Base):
+    """Records confirmed Stripe Checkout sessions so /confirm-payment is
+    idempotent (a session can only ever grant credits once), and so credits
+    are only ever granted after verifying payment_status with Stripe itself
+    — never trusted from client-supplied query params.
+    """
+
+    __tablename__ = "stripe_payments"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[str] = mapped_column(String(200), unique=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    credits: Mapped[int] = mapped_column(Integer)
+    confirmed_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

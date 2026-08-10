@@ -99,6 +99,7 @@ export async function apiFetch(path, options) {
     const err = new Error(msg);
     err.status = r.status;
     err.code = (data && data.error) || null;
+    err.data = data;
     throw err;
   }
 
@@ -128,6 +129,12 @@ export function AppProvider({ children }) {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showFaq, setShowFaq] = useState(false);
   const [faqOpenIndex, setFaqOpenIndex] = useState(-1);
+
+  // Payment modal: null | 'analyse' | 'cv' | 'intervju' — which free limit was hit.
+  // Shared here (not in useJobAnalysis) so InterviewScreen can trigger it too.
+  const [paymentModalLimitType, setPaymentModalLimitType] = useState(null);
+  const showPaymentModal = (limitType) => setPaymentModalLimitType(limitType || 'analyse');
+  const closePaymentModal = () => setPaymentModalLimitType(null);
 
   // ---------------------------------------------------------------------------
   // Effects
@@ -313,6 +320,7 @@ export function AppProvider({ children }) {
       showOnboarding, setShowOnboarding,
       showFaq, setShowFaq,
       faqOpenIndex, setFaqOpenIndex,
+      paymentModalLimitType, showPaymentModal, closePaymentModal,
       // Functions
       doAuth,
       logout,

@@ -31,7 +31,7 @@ import CvAnalysisScreen from './screens/CvAnalysisScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import AnalysisScreen from './screens/AnalysisScreen';
 import ProfileScreen from './screens/ProfileScreen';
-import FreeLimitModal from './components/FreeLimitModal';
+import PaymentModal from './components/PaymentModal';
 import { ProfileContext } from './context/ProfileContext';
 
 const TIP_REFRESH_MS = 4 * 60 * 60 * 1000; // Rotate career tip every 4 hours
@@ -99,6 +99,7 @@ function AppContent() {
     showOnboarding, setShowOnboarding,
     showFaq, setShowFaq,
     faqOpenIndex, setFaqOpenIndex,
+    paymentModalLimitType, showPaymentModal, closePaymentModal,
     doAuth, logout, deleteAccount,
     logEvent, errText,
     setAndPersistUiLanguage, t,
@@ -109,6 +110,7 @@ function AppContent() {
   });
   const {
     profileId,
+    jobCredits, refreshJobCredits,
     profileEmail,
     profilePhotoData,
     includePhotoInPdf, setIncludePhotoInPdf,
@@ -130,7 +132,6 @@ function AppContent() {
     cvTemplate, setCvTemplate,
     cvLanguage, setCvLanguage,
     templatePickerVisible,
-    freeLimitModalVisible, setFreeLimitModalVisible,
     profileUpdatedSinceAnalysis, setProfileUpdatedSinceAnalysis,
     loading,
     jobAnalyses, setJobAnalyses,
@@ -200,6 +201,39 @@ function AppContent() {
       meta.setAttribute('content', 'width=device-width, initial-scale=1.0, viewport-fit=cover');
     } catch (e) { /* ignore */ }
   }, []);
+
+  // Returning from Stripe Checkout (web): https://aerlig.no/betalt?credits=X&user_id=Y&session_id=Z
+  // Confirm the payment (server-side verified against Stripe) and refresh credits.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!authReady || !authTokenState) return;
+
+    const params = new URLSearchParams(window.location.search || '');
+    const sessionId = params.get('session_id');
+    if (!sessionId) return;
+
+    (async () => {
+      try {
+        const res = await apiFetch('/confirm-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId }),
+        });
+        await refreshJobCredits();
+        const added = res?.credits_added || 0;
+        if (added > 0) {
+          Alert.alert('Betaling bekreftet', `${added} credits er lagt til kontoen din.`);
+        }
+      } catch (e) {
+        console.error('[Assistant] confirm-payment failed', e);
+        Alert.alert('Feil', 'Kunne ikke bekrefte betalingen. Kontakt oss hvis dette gjentar seg.');
+      } finally {
+        try {
+          window.history.replaceState({}, '', window.location.pathname);
+        } catch (_) { /* ignore */ }
+      }
+    })();
+  }, [authReady, authTokenState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset interview state on logout (profile/analysis reset in their own hooks)
   useEffect(() => {
@@ -795,7 +829,13 @@ function AppContent() {
     <SafeAreaView style={styles.container}>
       {showFaq && renderFaq()}
       {showOnboarding && renderOnboarding()}
-      <FreeLimitModal visible={freeLimitModalVisible} onClose={() => setFreeLimitModalVisible(false)} />
+      <PaymentModal
+        visible={!!paymentModalLimitType}
+        limitType={paymentModalLimitType}
+        onClose={closePaymentModal}
+        userId={userId}
+        userEmail={authEmail}
+      />
       {activeTab === 'interview' ? (
         renderInterview()
       ) : (
@@ -803,6 +843,7 @@ function AppContent() {
           {activeTab === 'home' && <HomeScreen
             profileId={profileId} name={name} profileEmail={profileEmail}
             skills={skills} phone={phone} experienceEntries={experienceEntries}
+            jobCredits={jobCredits}
             jobAnalyses={jobAnalyses} analysis={analysis}
             applications={applications} statsMe={statsMe}
             openSavedAnalysis={openSavedAnalysis}

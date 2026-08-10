@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 
 import { INTERVIEW_QUESTIONS } from '../constants/content';
+import { useApp } from '../context/AppContext';
 
 const TOTAL_QUESTIONS = 8;
 
@@ -43,6 +44,7 @@ export default function InterviewScreen({
   profileTooEmpty,
   styles,
 }) {
+  const { showPaymentModal } = useApp();
   const scrollRef = React.useRef(null);
   const recordingRef = React.useRef(null);
   const [isRecording, setIsRecording] = React.useState(false);
@@ -171,6 +173,10 @@ export default function InterviewScreen({
       setInterviewStarted(true);
       logEvent?.('interview_started');
     } catch (e) {
+      if (e?.code === 'free_limit_reached') {
+        showPaymentModal(e?.data?.limit_type || 'intervju');
+        return;
+      }
       setInterviewError(t('interview.start_error'));
       setInterviewMessages([{
         role: 'assistant',

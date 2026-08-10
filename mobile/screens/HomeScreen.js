@@ -64,7 +64,7 @@ function AdminStats({ adminStats, adminStatsLoading, setAdminStats, setAdminStat
 
 export default function HomeScreen({
   // Profile state
-  profileId, name, profileEmail, skills, phone, experienceEntries,
+  profileId, name, profileEmail, skills, phone, experienceEntries, jobCredits,
   // Analysis state
   jobAnalyses, analysis, applications, statsMe,
   openSavedAnalysis,
@@ -206,6 +206,14 @@ export default function HomeScreen({
         <Text style={styles.aerligHeroGreeting}>
           {greetingWord}{firstName ? `, ${firstName}` : ''}! {greetingEmoji}
         </Text>
+        {jobCredits > 0 ? (
+          <View style={{
+            alignSelf: 'flex-start', backgroundColor: '#FEF0EB', borderWidth: 1.5, borderColor: '#E8501A',
+            borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4, marginTop: 6, marginBottom: 2,
+          }}>
+            <Text style={{ color: '#E8501A', fontSize: 12, fontWeight: '700' }}>💳 {jobCredits} credits igjen</Text>
+          </View>
+        ) : null}
         <Text style={styles.aerligHeroSubtitle}>
           {dynamicMessage}
         </Text>

@@ -51,6 +51,7 @@ export default function useProfile({ onProfileSaved } = {}) {
   // State
   // ---------------------------------------------------------------------------
   const [profileId, setProfileId] = useState(null);
+  const [jobCredits, setJobCredits] = useState(0);
   const [name, setName] = useState('Ærlig JobbCoach');
   const [profileEmail, setProfileEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -182,6 +183,7 @@ export default function useProfile({ onProfileSaved } = {}) {
         if (Array.isArray(data) && data.length > 0) {
           const profile = data[0];
           setProfileId(profile.id);
+          setJobCredits(profile.job_credits || 0);
           setName(profile.name || 'Ærlig JobbCoach');
           setProfileEmail(profile.email || '');
           setPhone(profile.phone || '');
@@ -271,6 +273,20 @@ export default function useProfile({ onProfileSaved } = {}) {
     profileLoadedRef.current = false;
     loadProfile();
   }, [authTokenState]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---------------------------------------------------------------------------
+  // Job credits (refetched after a Stripe purchase is confirmed)
+  // ---------------------------------------------------------------------------
+  async function refreshJobCredits() {
+    try {
+      const data = await apiFetch('/profiles');
+      if (Array.isArray(data) && data.length > 0) {
+        setJobCredits(data[0].job_credits || 0);
+      }
+    } catch (e) {
+      if (__DEV__) console.log('Kunne ikke oppdatere credits:', e);
+    }
+  }
 
   // ---------------------------------------------------------------------------
   // Profile documents
@@ -793,6 +809,7 @@ export default function useProfile({ onProfileSaved } = {}) {
   return {
     // Identity
     profileId, setProfileId,
+    jobCredits, refreshJobCredits,
     name, setName,
     profileEmail, setProfileEmail,
     phone, setPhone,

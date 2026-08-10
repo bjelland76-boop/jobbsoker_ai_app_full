@@ -6,6 +6,8 @@ import re
 import secrets
 import traceback
 
+import stripe
+
 logger = logging.getLogger(__name__)
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
@@ -50,6 +52,7 @@ from .models import (
     LoginCode,
     Profile,
     ProfileDocument,
+    StripePayment,
     UsageEvent,
     User,
 )
@@ -107,6 +110,9 @@ def ensure_profile_columns() -> None:
         ensure_col("profiles", "has_seen_onboarding", "has_seen_onboarding INTEGER DEFAULT 0")
         ensure_col("profiles", "is_tester", "is_tester BOOLEAN DEFAULT FALSE")
         ensure_col("profiles", "analysis_count", "analysis_count INTEGER DEFAULT 0")
+        ensure_col("profiles", "cv_generation_count", "cv_generation_count INTEGER DEFAULT 0")
+        ensure_col("profiles", "interview_count", "interview_count INTEGER DEFAULT 0")
+        ensure_col("profiles", "job_credits", "job_credits INTEGER DEFAULT 0")
 
         # jobs
         ensure_col("jobs", "user_id", "user_id INTEGER")
@@ -158,6 +164,52 @@ def ensure_profile_columns() -> None:
         ensure_col("login_codes", "ip", "ip TEXT DEFAULT ''")
 
         conn.commit()
+
+
+FREE_LIMIT = 3
+_FREE_LIMIT_LABELS = {
+    "analyse": "analyser",
+    "cv": "CV-genereringer",
+    "intervju": "intervjuøkter",
+}
+
+
+def _check_free_limit(profile: Profile, limit_type: str) -> JSONResponse | None:
+    """Read-only check: None if the action is allowed, else a 403 response.
+
+    Call BEFORE doing the (expensive/slow) work, so a failure never
+    consumes a free slot or a credit. Call `_consume_free_limit` only
+    after the work actually succeeds.
+    """
+    if bool(profile.is_tester):
+        return None
+    count_attr = {"analyse": "analysis_count", "cv": "cv_generation_count", "intervju": "interview_count"}[limit_type]
+    if int(getattr(profile, count_attr) or 0) < FREE_LIMIT:
+        return None
+    if int(profile.job_credits or 0) > 0:
+        return None
+    label = _FREE_LIMIT_LABELS[limit_type]
+    return JSONResponse(
+        status_code=status.HTTP_403_FORBIDDEN,
+        content={
+            "error": "free_limit_reached",
+            "limit_type": limit_type,
+            "message": f"Du har brukt dine {FREE_LIMIT} gratis {label}",
+        },
+    )
+
+
+def _consume_free_limit(db: Session, profile: Profile, limit_type: str) -> None:
+    """Call once, after the gated action has succeeded. Mirrors _check_free_limit's logic."""
+    if bool(profile.is_tester):
+        return
+    count_attr = {"analyse": "analysis_count", "cv": "cv_generation_count", "intervju": "interview_count"}[limit_type]
+    count = int(getattr(profile, count_attr) or 0)
+    if count < FREE_LIMIT:
+        setattr(profile, count_attr, count + 1)
+    else:
+        profile.job_credits = max(0, int(profile.job_credits or 0) - 1)
+    db.commit()
 
 
 def _parse_json_field(value):
@@ -281,6 +333,11 @@ def profile_to_dict(profile: Profile) -> dict:
         "cv_text": (getattr(profile, "cv_text", "") or ""),
         "tone": (getattr(profile, "tone", "") or "normal"),
         "has_seen_onboarding": bool(getattr(profile, "has_seen_onboarding", False)),
+        "is_tester": bool(getattr(profile, "is_tester", False)),
+        "analysis_count": int(getattr(profile, "analysis_count", 0) or 0),
+        "cv_generation_count": int(getattr(profile, "cv_generation_count", 0) or 0),
+        "interview_count": int(getattr(profile, "interview_count", 0) or 0),
+        "job_credits": int(getattr(profile, "job_credits", 0) or 0),
     }
 
 
@@ -389,6 +446,16 @@ class AnalyzeUrlIn(BaseModel):
 class AnalyzeCvIn(BaseModel):
     profile_id: int
     language: str = "no"
+
+
+class CreateCheckoutIn(BaseModel):
+    package: int  # 1 | 5 | 10
+    user_id: int
+    email: str = ""
+
+
+class ConfirmPaymentIn(BaseModel):
+    session_id: str
 
 
 class SendAnalysisIn(BaseModel):
@@ -1756,6 +1823,11 @@ def generate_tailored_cv(
     stored_email = _to_text(stored.get(email_key))
     skip_claude = bool(template_norm) and bool(stored_cv) and bool(stored_letter)
 
+    if not skip_claude:
+        blocked = _check_free_limit(profile, "cv")
+        if blocked is not None:
+            return blocked
+
     if skip_claude:
         cover_letter = stored_letter
         tailored_cv = stored_cv
@@ -1814,6 +1886,8 @@ def generate_tailored_cv(
         stored[letter_key] = cover_letter
         stored[email_key] = email_text_val
         stored["tailored_for_job"] = True
+
+        _consume_free_limit(db, profile, "cv")
 
     # Always persist effective template
     stored["cv_mal"] = effective_template
@@ -1884,6 +1958,10 @@ def stream_documents(
     profile = db.get(Profile, profile_id)
     if not profile or profile.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Fant ikke profil")
+
+    blocked = _check_free_limit(profile, "cv")
+    if blocked is not None:
+        return blocked
 
     job = db.get(Job, job_id)
     if not job or job.user_id != current_user.id:
@@ -1974,6 +2052,11 @@ def stream_documents(
         except Exception as exc:
             yield f"data: {json.dumps({'t': 'e', 'msg': str(exc)})}\n\n"
             return
+
+        with _SessionLocal() as _consume_db:
+            _p = _consume_db.get(Profile, profile_id_val)
+            if _p:
+                _consume_free_limit(_consume_db, _p, "cv")
 
         # Persist text + generate PDFs with a fresh session (original db may be closed)
         pdf_url = ""
@@ -2204,6 +2287,7 @@ def generateApplicationPackage(
         _upsert_progress(db, profile.id, job.id)
 
         package["pdfUrl"] = f"/generated-applications/{approw.id}/pdf/cover"
+        _consume_free_limit(db, profile, "cv")
 
     # Email contract:
     # - Body: cover letter text (søknadstekst)
@@ -2225,6 +2309,110 @@ def generateApplicationPackage(
     return package, email_meta
 
 
+_PACKAGE_PRICE_ENV = {1: "STRIPE_PRICE_1", 5: "STRIPE_PRICE_5", 10: "STRIPE_PRICE_10"}
+_PACKAGE_CREDITS = {1: 3, 5: 15, 10: 30}
+
+
+@app.post("/create-checkout", tags=["billing"])
+def create_checkout(
+    data: CreateCheckoutIn,
+    current_user: User = Depends(get_current_user),
+):
+    if data.package not in _PACKAGE_CREDITS:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ugyldig pakke")
+
+    # Never let a client buy credits onto an arbitrary user_id — only the
+    # authenticated user's own account.
+    if data.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="user_id samsvarer ikke med innlogget bruker")
+
+    secret_key = os.getenv("STRIPE_SECRET_KEY")
+    if not secret_key:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Stripe er ikke konfigurert (STRIPE_SECRET_KEY mangler)")
+    stripe.api_key = secret_key
+
+    price_env = _PACKAGE_PRICE_ENV[data.package]
+    price_id = os.getenv(price_env)
+    if not price_id:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Stripe er ikke konfigurert ({price_env} mangler)")
+
+    credits = _PACKAGE_CREDITS[data.package]
+
+    try:
+        session = stripe.checkout.Session.create(
+            mode="payment",
+            line_items=[{"price": price_id, "quantity": 1}],
+            success_url=f"https://aerlig.no/betalt?credits={credits}&user_id={current_user.id}&session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url="https://aerlig.no",
+            customer_email=data.email or current_user.email,
+            metadata={"user_id": str(current_user.id), "credits": str(credits)},
+        )
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Stripe-feil: {e}")
+
+    return {"checkout_url": session.url}
+
+
+@app.post("/confirm-payment", tags=["billing"])
+def confirm_payment(
+    data: ConfirmPaymentIn,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Temporary, non-webhook payment confirmation.
+
+    Trusts nothing from the client except the Stripe session_id. Credits and
+    the paying user_id are always read back from Stripe's own record of the
+    session (metadata set server-side in /create-checkout), never from the
+    client-supplied query string. Idempotent: a session_id can only ever be
+    confirmed once (see StripePayment). Will be replaced by a webhook.
+    """
+
+    secret_key = os.getenv("STRIPE_SECRET_KEY")
+    if not secret_key:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Stripe er ikke konfigurert (STRIPE_SECRET_KEY mangler)")
+    stripe.api_key = secret_key
+
+    existing = db.scalars(
+        select(StripePayment).where(StripePayment.session_id == data.session_id)
+    ).first()
+    if existing:
+        profile = db.scalars(select(Profile).where(Profile.user_id == existing.user_id)).first()
+        return {
+            "credits_added": 0,
+            "already_confirmed": True,
+            "job_credits": int(profile.job_credits or 0) if profile else 0,
+        }
+
+    try:
+        session = stripe.checkout.Session.retrieve(data.session_id)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Stripe-feil: {e}")
+
+    if session.get("payment_status") != "paid":
+        raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail="Betaling ikke bekreftet")
+
+    meta = session.get("metadata") or {}
+    try:
+        meta_user_id = int(meta.get("user_id"))
+        credits = int(meta.get("credits"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ugyldig betalingsmetadata")
+
+    if meta_user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Denne betalingen tilhører ikke innlogget bruker")
+
+    profile = db.scalars(select(Profile).where(Profile.user_id == current_user.id)).first()
+    if not profile:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
+
+    profile.job_credits = int(profile.job_credits or 0) + credits
+    db.add(StripePayment(session_id=data.session_id, user_id=current_user.id, credits=credits))
+    db.commit()
+
+    return {"credits_added": credits, "already_confirmed": False, "job_credits": profile.job_credits}
+
+
 @app.post("/analyze-url", response_model=JobAnalysisOut)
 def analyze_url(
     data: AnalyzeUrlIn,
@@ -2237,15 +2425,9 @@ def analyze_url(
     if not profile or profile.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
 
-    FREE_ANALYSIS_LIMIT = 3
-    if not bool(profile.is_tester) and int(profile.analysis_count or 0) >= FREE_ANALYSIS_LIMIT:
-        return JSONResponse(
-            status_code=status.HTTP_403_FORBIDDEN,
-            content={
-                "error": "free_limit_reached",
-                "message": "Du har brukt dine 3 gratis analyser",
-            },
-        )
+    blocked = _check_free_limit(profile, "analyse")
+    if blocked is not None:
+        return blocked
 
     try:
         result = analyze_job_url(
@@ -2297,9 +2479,7 @@ def analyze_url(
         result["has_tailored_cv_no"] = bool(_to_text(result.get("tailored_cv")))
         result["has_tailored_cv_en"] = bool(_to_text(result.get("tailored_cv_en")))
 
-        if not bool(profile.is_tester):
-            profile.analysis_count = int(profile.analysis_count or 0) + 1
-            db.commit()
+        _consume_free_limit(db, profile, "analyse")
 
         return result
     except Exception as e:
@@ -2328,6 +2508,9 @@ def analyze_url_and_send(
     if not profile or profile.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
 
+    blocked = _check_free_limit(profile, "cv")
+    if blocked is not None:
+        return blocked
 
     result: dict = {"cv": "", "coverLetter": "", "pdfUrl": ""}
     email_meta: dict = {}
@@ -2378,6 +2561,7 @@ def analyze_url_and_send(
 async def interview_chat_api(
     request: Request,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """Interview practice chat endpoint used by the mobile UI.
 
@@ -2385,6 +2569,10 @@ async def interview_chat_api(
     Body: { job_title, company, job_context, user_answer, history }
 
     Response (strict): { feedback, question, tip }
+
+    Stateless: a new interview SESSION is identified by an empty `history`
+    (see startInterview() in the mobile app). The free-limit is charged once
+    per session (on the empty-history call), never per message.
     """
 
     from .interview_agent import interview_chat
@@ -2401,6 +2589,15 @@ async def interview_chat_api(
     if not isinstance(history, list):
         history = []
 
+    is_new_session = not history
+    profile = None
+    if is_new_session:
+        profile = db.scalars(select(Profile).where(Profile.user_id == current_user.id)).first()
+        if profile:
+            blocked = _check_free_limit(profile, "intervju")
+            if blocked is not None:
+                return blocked
+
     out = interview_chat(
         job_title=str(payload.get("job_title") or ""),
         company=str(payload.get("company") or ""),
@@ -2408,6 +2605,9 @@ async def interview_chat_api(
         user_answer=str(payload.get("user_answer") or ""),
         history=history,
     )
+
+    if is_new_session and profile:
+        _consume_free_limit(db, profile, "intervju")
 
     return {
         "feedback": str(out.get("feedback") or ""),

@@ -13,7 +13,7 @@ export default function useJobAnalysis({
   isProfileTooEmpty,
   flushAutoSave,
 } = {}) {
-  const { authTokenState, logEvent, errText, uiLanguage, activeTab, setActiveTab } = useApp();
+  const { authTokenState, logEvent, errText, uiLanguage, activeTab, setActiveTab, showPaymentModal } = useApp();
 
   // ---------------------------------------------------------------------------
   // State
@@ -24,7 +24,6 @@ export default function useJobAnalysis({
   const [cvTemplate, setCvTemplate] = useState('profesjonell');
   const [cvLanguage, setCvLanguage] = useState('no');
   const [templatePickerVisible, setTemplatePickerVisible] = useState(false);
-  const [freeLimitModalVisible, setFreeLimitModalVisible] = useState(false);
   const [pendingGenerateKind, setPendingGenerateKind] = useState(null); // 'pdf' | 'send' | null
   const [profileUpdatedSinceAnalysis, setProfileUpdatedSinceAnalysis] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -346,7 +345,7 @@ export default function useJobAnalysis({
       console.error('[Assistant] analyzeJob failed', e);
       logEvent('analyze_job_failed');
       if (e?.code === 'free_limit_reached') {
-        setFreeLimitModalVisible(true);
+        showPaymentModal(e?.data?.limit_type || 'analyse');
       } else {
         Alert.alert('Feil', errText(e));
       }
@@ -435,8 +434,12 @@ export default function useJobAnalysis({
       setGenerationBanner(failMsg);
     } catch (e) {
       console.error('[Assistant] sendApplication failed', e);
-      if (prevPackage) setApplicationPackage(prevPackage);
-      setGenerationBanner(failMsg);
+      if (e?.code === 'free_limit_reached') {
+        showPaymentModal(e?.data?.limit_type || 'cv');
+      } else {
+        if (prevPackage) setApplicationPackage(prevPackage);
+        setGenerationBanner(failMsg);
+      }
     } finally {
       setSending(false);
       setIsGenerating(false);
@@ -533,7 +536,13 @@ export default function useJobAnalysis({
           headers: { Authorization: `Bearer ${authTokenState}` },
         });
         if (!resp.ok) {
-          throw new Error(`HTTP ${resp.status}`);
+          let errData = null;
+          try { errData = await resp.json(); } catch (_) { /* ignore */ }
+          const err = new Error((errData && (errData.message || errData.error)) || `HTTP ${resp.status}`);
+          err.status = resp.status;
+          err.code = (errData && errData.error) || null;
+          err.data = errData;
+          throw err;
         }
         const reader = resp.body.getReader();
         const decoder = new TextDecoder();
@@ -616,8 +625,12 @@ export default function useJobAnalysis({
       setGenerationBanner(failMsg);
     } catch (e) {
       console.error('[Assistant] generatePdf failed', e);
-      if (prevPackage) setApplicationPackage(prevPackage);
-      setGenerationBanner(failMsg);
+      if (e?.code === 'free_limit_reached') {
+        showPaymentModal(e?.data?.limit_type || 'cv');
+      } else {
+        if (prevPackage) setApplicationPackage(prevPackage);
+        setGenerationBanner(failMsg);
+      }
     } finally {
       setGeneratingPdf(false);
       setIsGenerating(false);
@@ -809,7 +822,6 @@ export default function useJobAnalysis({
     cvTemplate, setCvTemplate,
     cvLanguage, setCvLanguage,
     templatePickerVisible,
-    freeLimitModalVisible, setFreeLimitModalVisible,
     profileUpdatedSinceAnalysis, setProfileUpdatedSinceAnalysis,
     loading,
     jobAnalyses, setJobAnalyses,
