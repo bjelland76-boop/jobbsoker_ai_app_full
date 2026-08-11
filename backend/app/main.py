@@ -378,7 +378,7 @@ async def lifespan(app: FastAPI):
     try:
         _db = SessionLocal()
         _grandfathered_ids = [
-            2, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+            5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
             21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
         ]
         _db.query(Profile).filter(Profile.id.in_(_grandfathered_ids)).update(
@@ -387,6 +387,22 @@ async def lifespan(app: FastAPI):
         _db.commit()
     except Exception as _e:
         print(f"[Grandfather] failed: {_e!r}", flush=True)
+    finally:
+        try:
+            _db.close()
+        except Exception:
+            pass
+
+    # One-time: frankbjelland@proton.me (profile id 2) asked to be
+    # un-grandfathered after testing showed it bypassing the free limit.
+    try:
+        _db = SessionLocal()
+        _db.query(Profile).where(Profile.id == 2).update(
+            {Profile.is_tester: False}, synchronize_session=False
+        )
+        _db.commit()
+    except Exception as _e:
+        print(f"[Ungrandfather2] failed: {_e!r}", flush=True)
     finally:
         try:
             _db.close()
