@@ -204,6 +204,69 @@
     color: var(--text-muted);
   }
 
+  /* PRICING */
+  .price-table {
+    max-width: 560px;
+    margin: 0 auto;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(31, 27, 23, 0.04);
+    overflow: hidden;
+    text-align: left;
+  }
+  .price-row {
+    padding: 28px 32px;
+  }
+  .price-row + .price-row {
+    border-top: 1px solid var(--border);
+  }
+  .price-row-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .price-row-head h3 {
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .price-amount {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--accent-dark);
+    white-space: nowrap;
+  }
+  .price-features {
+    list-style: none;
+    margin: 0 0 20px;
+    padding: 0;
+  }
+  .price-features li {
+    font-size: 14px;
+    color: var(--text-muted);
+    padding: 5px 0 5px 24px;
+    position: relative;
+  }
+  .price-features li::before {
+    content: "✓";
+    color: var(--accent);
+    font-weight: 700;
+    position: absolute;
+    left: 0;
+  }
+  .price-desc {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .price-note {
+    font-size: 13px;
+    color: var(--accent-dark);
+    font-weight: 600;
+  }
+
   /* LANGUAGES */
   .lang-section {
     text-align: center;
@@ -291,6 +354,7 @@
     .hero { padding: 48px 0 56px; }
     section { padding: 48px 0; }
     .cta-band { margin: 0 12px; padding: 40px 20px; }
+    .price-row { padding: 22px 20px; }
   }
 </style>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-6QXCPDB0K"></script>
@@ -357,10 +421,37 @@
   <div class="container">
     <div class="section-header">
       <span class="eyebrow">Priser</span>
-      <h2>Gratis i lanseringsfasen</h2>
-      <p>Ærlig er helt gratis å bruke nå. Registrer deg i dag og få full tilgang til alle funksjoner — ingen kredittkort, ingen binding.</p>
-      <div style="margin-top: 28px;">
-        <a class="btn btn-primary" href="https://jobbsoker-ai-app-full-frontend.onrender.com" target="_blank" rel="noopener">Start gratis i dag</a>
+      <h2>Enkel og rettferdig pris</h2>
+      <p>Start gratis — betal kun når du trenger mer.</p>
+    </div>
+    <div class="price-table">
+      <div class="price-row">
+        <div class="price-row-head">
+          <h3>Gratis</h3>
+          <span class="price-amount">0 kr</span>
+        </div>
+        <ul class="price-features">
+          <li>3 jobbanalyser</li>
+          <li>3 CV-genereringer</li>
+          <li>3 intervjuøkter</li>
+          <li>Profil og dokumentlagring</li>
+        </ul>
+        <a class="btn btn-primary" href="https://app.aerlig.no" target="_blank" rel="noopener">Start gratis</a>
+      </div>
+      <div class="price-row">
+        <div class="price-row-head">
+          <h3>1 jobbpakke ⭐</h3>
+          <span class="price-amount">19 kr</span>
+        </div>
+        <p class="price-desc">CV + søknad + intervju for én jobb</p>
+        <p class="price-note">Lanseringspris</p>
+      </div>
+      <div class="price-row">
+        <div class="price-row-head">
+          <h3>5 jobbpakker</h3>
+          <span class="price-amount">69 kr</span>
+        </div>
+        <p class="price-desc">Spar 27% — 5 komplette jobbsøk</p>
       </div>
     </div>
   </div>
@@ -397,6 +488,7 @@
   <div class="container">
     <div class="footer-line">Ingen passord · Ingen binding · Start gratis</div>
     <div class="footer-contact">Kontakt oss: <a href="mailto:fogvshop@gmail.com">fogvshop@gmail.com</a></div>
+    <div class="footer-contact">Ikke fornøyd? Kontakt oss på <a href="mailto:fogvshop@gmail.com">fogvshop@gmail.com</a> så finner vi en løsning.</div>
     <div class="footer-logo">Ærlig<span style="color:#E8501A">.</span> — © 2026</div>
   </div>
 </footer>
