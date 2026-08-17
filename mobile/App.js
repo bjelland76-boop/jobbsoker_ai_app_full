@@ -550,11 +550,18 @@ function AppContent() {
   }, [activeTab]);
 
   async function manageSubscription() {
+    console.log('[Assistant] manageSubscription() called');
     try {
       const res = await apiFetch('/create-portal-session', { method: 'POST' });
-      if (res?.portal_url) Linking.openURL(res.portal_url);
+      console.log('[Assistant] create-portal-session response:', res);
+      if (res?.portal_url) {
+        Linking.openURL(res.portal_url);
+      } else {
+        Alert.alert('Feil', 'Fikk ingen lenke til abonnementsportalen.');
+      }
     } catch (e) {
       console.error('[Assistant] create-portal-session failed', e);
+      Alert.alert('Feil', e?.message || 'Kunne ikke åpne abonnementsportalen.');
     }
   }
 
