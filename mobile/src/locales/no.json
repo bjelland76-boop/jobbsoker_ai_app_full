@@ -217,11 +217,7 @@
     "saving": "Lagrer...",
     "save": "Lagre",
     "loading": "Laster...",
-    "back_to_profile": "Tilbake til Profil",
-    "subscription_title": "Abonnement",
-    "subscription_active": "Du har et aktivt abonnement",
-    "subscription_renews": "Fornyes {{date}}",
-    "subscription_manage": "Administrer abonnement"
+    "back_to_profile": "Tilbake til Profil"
   },
   "profile": {
     "title": "Profil",
@@ -304,6 +300,9 @@
     "uploading": "Laster opp...",
     "language_selector_label": "Appspråk",
     "privacy_link": "GDPR / personvern",
+    "subscription_active": "Aktivt abonnement — 79kr/mnd",
+    "subscription_next_payment": "Neste betaling: {{date}}",
+    "subscription_manage": "Administrer abonnement",
     "logout_btn": "Logg ut",
     "delete_account_btn": "Slett konto",
     "analytics_label": "Anonym statistikk",

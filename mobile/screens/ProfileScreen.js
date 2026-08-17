@@ -15,7 +15,7 @@ const FEEDBACK_EMAIL = 'fogvshop@gmail.com';
 const FEEDBACK_SUBJECT = 'Tilbakemelding — Ærlig Jobbcoach';
 const FEEDBACK_BODY = 'Hei!\n\nHer er min tilbakemelding:\n\n';
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ onManageSubscription }) {
   const { t, logout, deleteAccount, setActiveTab, uiLanguage, setAndPersistUiLanguage } = useApp();
   const {
     profileId,
@@ -74,6 +74,8 @@ export default function ProfileScreen() {
     importCvFromCamera,
     importCvFromGallery,
     applyCvImport,
+    subscriptionStatus,
+    subscriptionEnd,
   } = useProfileContext();
 
   const [langOpen, setLangOpen] = useState(false);
@@ -1334,6 +1336,18 @@ export default function ProfileScreen() {
             </View>
           )}
         </View>
+
+        {subscriptionStatus === 'active' && (
+          <View style={[styles.profileField, { marginTop: 16 }]}>
+            <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('profile.subscription_active')}</Text>
+            {subscriptionEnd ? (
+              <Text style={[styles.helpText, styles.aerligHelpText]}>{t('profile.subscription_next_payment', { date: subscriptionEnd })}</Text>
+            ) : null}
+            <TouchableOpacity style={[styles.aerligSecondaryButton, { marginTop: 10 }]} onPress={onManageSubscription}>
+              <Text style={styles.aerligSecondaryButtonText}>{t('profile.subscription_manage')}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={{ marginTop: 32, gap: 12 }}>
           <TouchableOpacity

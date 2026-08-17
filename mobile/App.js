@@ -112,7 +112,7 @@ function AppContent() {
   const {
     profileId,
     jobCredits, refreshJobCredits,
-    subscriptionStatus, subscriptionEnd, refreshSubscription,
+    refreshSubscription,
     dismissInactivityReminder,
     profileEmail,
     profilePhotoData,
@@ -958,10 +958,8 @@ function AppContent() {
             autoEmail={autoEmail} setAutoEmail={setAutoEmail}
             settingsLoading={settingsLoading} settingsSaving={settingsSaving}
             saveSettings={saveSettings}
-            subscriptionStatus={subscriptionStatus} subscriptionEnd={subscriptionEnd}
-            onManageSubscription={manageSubscription}
           />}
-          {activeTab === 'profile' && <ProfileScreen />}
+          {activeTab === 'profile' && <ProfileScreen onManageSubscription={manageSubscription} />}
         </ScrollView>
       )}
       <View style={styles.bottomBar}>

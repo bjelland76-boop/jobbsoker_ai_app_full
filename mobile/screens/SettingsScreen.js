@@ -10,8 +10,6 @@ export default function SettingsScreen({
   autoEmail, setAutoEmail,
   settingsLoading, settingsSaving,
   saveSettings,
-  subscriptionStatus, subscriptionEnd,
-  onManageSubscription,
 }) {
   const { setActiveTab, t } = useApp();
 
@@ -45,19 +43,6 @@ export default function SettingsScreen({
           <Switch value={autoEmail} onValueChange={setAutoEmail} />
         </View>
       </View>
-
-      {subscriptionStatus === 'active' && (
-        <View style={styles.profileField}>
-          <Text style={styles.inputLabel}>{t('settings.subscription_title')}</Text>
-          <Text style={styles.messageText}>{t('settings.subscription_active')}</Text>
-          {subscriptionEnd ? (
-            <Text style={styles.helpText}>{t('settings.subscription_renews', { date: subscriptionEnd })}</Text>
-          ) : null}
-          <TouchableOpacity style={[styles.secondaryButton, { marginTop: 8 }]} onPress={onManageSubscription}>
-            <Text style={styles.secondaryButtonText}>{t('settings.subscription_manage')}</Text>
-          </TouchableOpacity>
-        </View>
-      )}
 
       <TouchableOpacity style={styles.primaryButton} onPress={saveSettings}>
         <Text style={styles.primaryButtonText}>{settingsSaving ? t('settings.saving') : t('settings.save')}</Text>
