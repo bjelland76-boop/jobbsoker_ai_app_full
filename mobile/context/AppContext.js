@@ -127,6 +127,7 @@ export function AppProvider({ children }) {
   const [uiLanguage, setUiLanguage] = useState('no');
   const [activeTab, setActiveTab] = useState('home');
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showInactivityReminder, setShowInactivityReminder] = useState(false);
   const [showFaq, setShowFaq] = useState(false);
   const [faqOpenIndex, setFaqOpenIndex] = useState(-1);
 
@@ -318,6 +319,7 @@ export function AppProvider({ children }) {
       uiLanguage, setUiLanguage,
       activeTab, setActiveTab,
       showOnboarding, setShowOnboarding,
+      showInactivityReminder, setShowInactivityReminder,
       showFaq, setShowFaq,
       faqOpenIndex, setFaqOpenIndex,
       paymentModalLimitType, showPaymentModal, closePaymentModal,

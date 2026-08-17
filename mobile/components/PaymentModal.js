@@ -20,11 +20,13 @@ const PACKAGES = [
 ];
 
 export default function PaymentModal({ visible, limitType, onClose, userId, userEmail }) {
+  const [type, setType] = useState('subscription');
   const [selected, setSelected] = useState(5);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (visible) {
+      setType('subscription');
       setSelected(5);
       setLoading(false);
     }
@@ -41,7 +43,7 @@ export default function PaymentModal({ visible, limitType, onClose, userId, user
       const res = await apiFetch('/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ package: selected, user_id: userId, email: userEmail || '' }),
+        body: JSON.stringify({ type, package: selected, user_id: userId, email: userEmail || '' }),
       });
       if (res?.checkout_url) {
         Linking.openURL(res.checkout_url);
@@ -61,13 +63,39 @@ export default function PaymentModal({ visible, limitType, onClose, userId, user
           <Text style={sharedStyles.cvModalSubtitle}>Du har brukt dine 3 gratis {limitLabel}</Text>
 
           <View style={{ marginTop: 4 }}>
+            <TouchableOpacity
+              style={[st.pkgCard, type === 'subscription' && st.pkgCardSelected]}
+              onPress={() => setType('subscription')}
+            >
+              <View style={st.pkgRadio}>
+                <View style={[st.radio, type === 'subscription' && st.radioSelected]}>
+                  {type === 'subscription' ? <Text style={st.radioCheck}>✓</Text> : null}
+                </View>
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Text style={st.pkgTitle}>⭐ Månedlig abonnement</Text>
+                </View>
+                <Text style={st.pkgDesc}>Fri bruk av alle funksjoner{'\n'}Avslutt når som helst</Text>
+              </View>
+              <Text style={st.pkgPrice}>79 kr/mnd</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={st.dividerRow}>
+            <View style={st.dividerLine} />
+            <Text style={st.dividerText}>eller</Text>
+            <View style={st.dividerLine} />
+          </View>
+
+          <View>
             {PACKAGES.map((pkg) => {
-              const isSelected = selected === pkg.id;
+              const isSelected = type === 'package' && selected === pkg.id;
               return (
                 <TouchableOpacity
                   key={pkg.id}
                   style={[st.pkgCard, isSelected && st.pkgCardSelected]}
-                  onPress={() => setSelected(pkg.id)}
+                  onPress={() => { setType('package'); setSelected(pkg.id); }}
                 >
                   <View style={st.pkgRadio}>
                     <View style={[st.radio, isSelected && st.radioSelected]}>
@@ -98,7 +126,7 @@ export default function PaymentModal({ visible, limitType, onClose, userId, user
             {loading ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Text style={st.payButtonText}>Betal med kort</Text>
+              <Text style={st.payButtonText}>{type === 'subscription' ? 'Abonner nå' : 'Betal med kort'}</Text>
             )}
           </TouchableOpacity>
           <TouchableOpacity style={[sharedStyles.aerligDangerButton, { marginTop: 10 }]} onPress={onClose}>
@@ -122,6 +150,9 @@ const st = StyleSheet.create({
     marginTop: 10,
   },
   pkgCardSelected: { borderColor: ORANGE, backgroundColor: '#FFF8F5' },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', marginTop: 14 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: '#e5e7eb' },
+  dividerText: { marginHorizontal: 10, fontSize: 12, color: '#9CA3AF', fontWeight: '600' },
   pkgRadio: { marginRight: 10 },
   radio: {
     width: 20, height: 20, borderRadius: 10, borderWidth: 1.5, borderColor: '#cbd5e1',

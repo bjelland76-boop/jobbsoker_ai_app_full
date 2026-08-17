@@ -114,6 +114,10 @@ def ensure_profile_columns() -> None:
         ensure_col("profiles", "cv_analysis_count", "cv_analysis_count INTEGER DEFAULT 0")
         ensure_col("profiles", "interview_count", "interview_count INTEGER DEFAULT 0")
         ensure_col("profiles", "job_credits", "job_credits INTEGER DEFAULT 0")
+        ensure_col("profiles", "subscription_status", "subscription_status TEXT DEFAULT NULL")
+        ensure_col("profiles", "subscription_end", "subscription_end DATETIME DEFAULT NULL")
+        ensure_col("profiles", "stripe_customer_id", "stripe_customer_id TEXT DEFAULT NULL")
+        ensure_col("profiles", "last_active_at", "last_active_at DATETIME DEFAULT NULL")
 
         # jobs
         ensure_col("jobs", "user_id", "user_id INTEGER")
@@ -189,7 +193,7 @@ def _check_free_limit(profile: Profile, limit_type: str) -> JSONResponse | None:
     consumes a free slot or a credit. Call `_consume_free_limit` only
     after the work actually succeeds.
     """
-    if bool(profile.is_tester):
+    if bool(profile.is_tester) or profile.subscription_status == "active":
         return None
     count_attr = _LIMIT_COUNT_ATTR[limit_type]
     if int(getattr(profile, count_attr) or 0) < FREE_LIMIT:
@@ -209,7 +213,7 @@ def _check_free_limit(profile: Profile, limit_type: str) -> JSONResponse | None:
 
 def _consume_free_limit(db: Session, profile: Profile, limit_type: str) -> None:
     """Call once, after the gated action has succeeded. Mirrors _check_free_limit's logic."""
-    if bool(profile.is_tester):
+    if bool(profile.is_tester) or profile.subscription_status == "active":
         return
     count_attr = _LIMIT_COUNT_ATTR[limit_type]
     count = int(getattr(profile, count_attr) or 0)
@@ -347,6 +351,10 @@ def profile_to_dict(profile: Profile) -> dict:
         "cv_analysis_count": int(getattr(profile, "cv_analysis_count", 0) or 0),
         "interview_count": int(getattr(profile, "interview_count", 0) or 0),
         "job_credits": int(getattr(profile, "job_credits", 0) or 0),
+        "subscription_status": getattr(profile, "subscription_status", None),
+        "subscription_end": (
+            profile.subscription_end.date().isoformat() if getattr(profile, "subscription_end", None) else None
+        ),
     }
 
 
@@ -474,9 +482,10 @@ class AnalyzeCvIn(BaseModel):
 
 
 class CreateCheckoutIn(BaseModel):
-    package: int  # 1 | 5 | 10
+    package: int = 0  # 1 | 5 | 10 (ignored when type == "subscription")
     user_id: int
     email: str = ""
+    type: str = "package"  # "package" | "subscription"
 
 
 class SendAnalysisIn(BaseModel):
@@ -1054,7 +1063,22 @@ def education_options(
 @app.get("/profiles", response_model=list[ProfileOut])
 def get_profiles(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     profiles = db.scalars(select(Profile).where(Profile.user_id == current_user.id)).all()
-    return [profile_to_dict(profile) for profile in profiles]
+
+    now = datetime.utcnow()
+    out = []
+    for profile in profiles:
+        show_reminder = (
+            profile.subscription_status == "active"
+            and profile.last_active_at is not None
+            and (now - profile.last_active_at).days >= 60
+        )
+        profile.last_active_at = now
+        d = profile_to_dict(profile)
+        d["show_inactivity_reminder"] = show_reminder
+        out.append(d)
+    db.commit()
+
+    return out
 
 
 @app.get("/profiles/{profile_id}", response_model=ProfileOut)
@@ -2346,11 +2370,8 @@ def create_checkout(
     data: CreateCheckoutIn,
     current_user: User = Depends(get_current_user),
 ):
-    if data.package not in _PACKAGE_CREDITS:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ugyldig pakke")
-
-    # Never let a client buy credits onto an arbitrary user_id — only the
-    # authenticated user's own account.
+    # Never let a client buy credits/subscribe onto an arbitrary user_id —
+    # only the authenticated user's own account.
     if data.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="user_id samsvarer ikke med innlogget bruker")
 
@@ -2359,6 +2380,28 @@ def create_checkout(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Stripe er ikke konfigurert (STRIPE_SECRET_KEY mangler)")
     stripe.api_key = secret_key
     stripe.api_version = "2025-03-31.basil"
+
+    if data.type == "subscription":
+        price_id = os.getenv("STRIPE_PRICE_SUB")
+        if not price_id:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Stripe er ikke konfigurert (STRIPE_PRICE_SUB mangler)")
+
+        try:
+            session = stripe.checkout.Session.create(
+                mode="subscription",
+                line_items=[{"price": price_id, "quantity": 1}],
+                success_url="https://app.aerlig.no/betalt",
+                cancel_url="https://app.aerlig.no",
+                customer_email=data.email or current_user.email,
+                metadata={"user_id": str(current_user.id)},
+            )
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Stripe-feil: {e}")
+
+        return {"checkout_url": session.url}
+
+    if data.package not in _PACKAGE_CREDITS:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ugyldig pakke")
 
     price_env = _PACKAGE_PRICE_ENV[data.package]
     price_id = os.getenv(price_env)
@@ -2404,8 +2447,16 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Ugyldig webhook-signatur: {e}")
 
-    if event.get("type") == "checkout.session.completed":
+    event_type = event.get("type")
+
+    if event_type == "checkout.session.completed":
         session = event["data"]["object"]
+        # Subscription-mode checkouts also fire this event but carry no
+        # "credits" metadata (that's granted via the subscription.* events
+        # below) — skip them here rather than logging a spurious error.
+        if session.get("mode") != "payment":
+            return {"received": True}
+
         session_id = session.get("id") or ""
         meta = session.get("metadata") or {}
 
@@ -2428,7 +2479,88 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             else:
                 logger.error("[stripe-webhook] no profile for user_id %s (session %s)", meta_user_id, session_id)
 
+    elif event_type in (
+        "customer.subscription.created",
+        "customer.subscription.updated",
+        "customer.subscription.deleted",
+    ):
+        sub = event["data"]["object"]
+        customer_id = sub.get("customer") or ""
+
+        status_map = {
+            "active": "active",
+            "trialing": "active",
+            "past_due": "past_due",
+            "unpaid": "past_due",
+            "canceled": "cancelled",
+            "incomplete_expired": "cancelled",
+        }
+        our_status = status_map.get(sub.get("status") or "", "cancelled")
+        if event_type == "customer.subscription.deleted":
+            our_status = "cancelled"
+
+        period_end = sub.get("current_period_end")
+        if not period_end:
+            items = (sub.get("items") or {}).get("data") or []
+            if items:
+                period_end = items[0].get("current_period_end")
+        end_dt = datetime.utcfromtimestamp(period_end) if period_end else None
+
+        profile = None
+        meta_user_id = (sub.get("metadata") or {}).get("user_id")
+        if meta_user_id:
+            try:
+                profile = db.scalars(select(Profile).where(Profile.user_id == int(meta_user_id))).first()
+            except (TypeError, ValueError):
+                profile = None
+        if not profile and customer_id:
+            profile = db.scalars(select(Profile).where(Profile.stripe_customer_id == customer_id)).first()
+
+        if profile:
+            if customer_id:
+                profile.stripe_customer_id = customer_id
+            profile.subscription_status = our_status
+            profile.subscription_end = end_dt
+            db.commit()
+        else:
+            logger.error("[stripe-webhook] no profile found for subscription customer %s", customer_id)
+
+    elif event_type == "invoice.payment_failed":
+        invoice = event["data"]["object"]
+        customer_id = invoice.get("customer") or ""
+        profile = (
+            db.scalars(select(Profile).where(Profile.stripe_customer_id == customer_id)).first()
+            if customer_id
+            else None
+        )
+        if profile:
+            profile.subscription_status = "past_due"
+            db.commit()
+
     return {"received": True}
+
+
+@app.post("/create-portal-session", tags=["billing"])
+def create_portal_session(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    profile = db.scalars(select(Profile).where(Profile.user_id == current_user.id)).first()
+    if not profile or not profile.stripe_customer_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ingen aktiv Stripe-kunde funnet")
+
+    secret_key = os.getenv("STRIPE_SECRET_KEY")
+    if not secret_key:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Stripe er ikke konfigurert (STRIPE_SECRET_KEY mangler)")
+    stripe.api_key = secret_key
+    stripe.api_version = "2025-03-31.basil"
+
+    try:
+        session = stripe.billing_portal.Session.create(
+            customer=profile.stripe_customer_id,
+            return_url="https://app.aerlig.no",
+        )
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Stripe-feil: {e}")
+
+    return {"portal_url": session.url}
 
 
 @app.post("/analyze-url", response_model=JobAnalysisOut)
@@ -2638,6 +2770,7 @@ async def interview_chat_api(
 @app.post("/interview/transcribe", tags=["interview"])
 async def interview_transcribe_api(
     audio: UploadFile = File(..., description='Audio file (multipart/form-data field name: "audio")'),
+    language: str = Form(default="no", description="UI language code (no/en/vi/pl/lt/ar/so), used as a Whisper language hint"),
     current_user: User = Depends(get_current_user),
 ):
     """Transcribe a recorded interview answer.
@@ -2671,7 +2804,7 @@ async def interview_transcribe_api(
             f.write(raw)
             tmp_path = Path(f.name)
 
-        text = transcribe_path(tmp_path)
+        text = transcribe_path(tmp_path, language=language)
         return {"text": str(text or "")}
     finally:
         if tmp_path:

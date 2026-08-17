@@ -106,6 +106,7 @@ export default function InterviewScreen({
         const audioResponse = await fetch(uri);
         const blob = await audioResponse.blob();
         formData.append('audio', blob, 'recording.webm');
+        formData.append('language', uiLanguage);
 
         const result = await apiFetch('/interview/transcribe', {
           method: 'POST',

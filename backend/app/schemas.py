@@ -36,6 +36,9 @@ class ProfileOut(BaseModel):
     cv_analysis_count: int = 0
     interview_count: int = 0
     job_credits: int = 0
+    subscription_status: Optional[str] = None
+    subscription_end: Optional[str] = None
+    show_inactivity_reminder: bool = False
 
 
 class JobOut(BaseModel):

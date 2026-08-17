@@ -217,7 +217,11 @@
     "saving": "Lagrer...",
     "save": "Lagre",
     "loading": "Laster...",
-    "back_to_profile": "Tilbake til Profil"
+    "back_to_profile": "Tilbake til Profil",
+    "subscription_title": "Abonnement",
+    "subscription_active": "Du har et aktivt abonnement",
+    "subscription_renews": "Fornyes {{date}}",
+    "subscription_manage": "Administrer abonnement"
   },
   "profile": {
     "title": "Profil",

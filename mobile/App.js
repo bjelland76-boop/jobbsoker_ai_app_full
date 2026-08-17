@@ -97,6 +97,7 @@ function AppContent() {
     uiLanguage, setUiLanguage,
     activeTab, setActiveTab,
     showOnboarding, setShowOnboarding,
+    showInactivityReminder,
     showFaq, setShowFaq,
     faqOpenIndex, setFaqOpenIndex,
     paymentModalLimitType, showPaymentModal, closePaymentModal,
@@ -111,6 +112,8 @@ function AppContent() {
   const {
     profileId,
     jobCredits, refreshJobCredits,
+    subscriptionStatus, subscriptionEnd,
+    dismissInactivityReminder,
     profileEmail,
     profilePhotoData,
     includePhotoInPdf, setIncludePhotoInPdf,
@@ -519,6 +522,24 @@ function AppContent() {
     loadSettings();
   }, [activeTab]);
 
+  async function manageSubscription() {
+    try {
+      const res = await apiFetch('/create-portal-session', { method: 'POST' });
+      if (res?.portal_url) Linking.openURL(res.portal_url);
+    } catch (e) {
+      console.error('[Assistant] create-portal-session failed', e);
+    }
+  }
+
+  useEffect(() => {
+    if (!showInactivityReminder) return;
+    Alert.alert(
+      'Vi savner deg!',
+      'Du har ikke brukt Ærlig på en stund — husk at du kan avslutte abonnementet når som helst under Profil → Innstillinger',
+      [{ text: 'OK', onPress: dismissInactivityReminder }],
+    );
+  }, [showInactivityReminder]);
+
   const actionButtons = [
     {
       key: 'cv',
@@ -910,6 +931,8 @@ function AppContent() {
             autoEmail={autoEmail} setAutoEmail={setAutoEmail}
             settingsLoading={settingsLoading} settingsSaving={settingsSaving}
             saveSettings={saveSettings}
+            subscriptionStatus={subscriptionStatus} subscriptionEnd={subscriptionEnd}
+            onManageSubscription={manageSubscription}
           />}
           {activeTab === 'profile' && <ProfileScreen />}
         </ScrollView>

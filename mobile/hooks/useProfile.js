@@ -45,13 +45,15 @@ export function serializeCvGaps(list) {
 
 // Accepts optional { onProfileSaved } callback for cross-hook notifications
 export default function useProfile({ onProfileSaved } = {}) {
-  const { authTokenState, logEvent, errText, t, setShowOnboarding } = useApp();
+  const { authTokenState, logEvent, errText, t, setShowOnboarding, setShowInactivityReminder } = useApp();
 
   // ---------------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------------
   const [profileId, setProfileId] = useState(null);
   const [jobCredits, setJobCredits] = useState(0);
+  const [subscriptionStatus, setSubscriptionStatus] = useState(null);
+  const [subscriptionEnd, setSubscriptionEnd] = useState(null);
   const [name, setName] = useState('Ærlig JobbCoach');
   const [profileEmail, setProfileEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -184,6 +186,9 @@ export default function useProfile({ onProfileSaved } = {}) {
           const profile = data[0];
           setProfileId(profile.id);
           setJobCredits(profile.job_credits || 0);
+          setSubscriptionStatus(profile.subscription_status || null);
+          setSubscriptionEnd(profile.subscription_end || null);
+          if (profile.show_inactivity_reminder) setShowInactivityReminder(true);
           setName(profile.name || 'Ærlig JobbCoach');
           setProfileEmail(profile.email || '');
           setPhone(profile.phone || '');
@@ -291,6 +296,18 @@ export default function useProfile({ onProfileSaved } = {}) {
     return null;
   }
 
+  async function refreshSubscription() {
+    try {
+      const data = await apiFetch('/profiles');
+      if (Array.isArray(data) && data.length > 0) {
+        setSubscriptionStatus(data[0].subscription_status || null);
+        setSubscriptionEnd(data[0].subscription_end || null);
+      }
+    } catch (e) {
+      if (__DEV__) console.log('Kunne ikke oppdatere abonnementsstatus:', e);
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Profile documents
   // ---------------------------------------------------------------------------
@@ -316,6 +333,13 @@ export default function useProfile({ onProfileSaved } = {}) {
     if (profileId) {
       try { await apiFetch(`/profiles/${profileId}/onboarding`, { method: 'PATCH' }); } catch (_) {}
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Inactivity reminder (subscribers who haven't used the app in 60+ days)
+  // ---------------------------------------------------------------------------
+  function dismissInactivityReminder() {
+    setShowInactivityReminder(false);
   }
 
   // ---------------------------------------------------------------------------
@@ -813,6 +837,7 @@ export default function useProfile({ onProfileSaved } = {}) {
     // Identity
     profileId, setProfileId,
     jobCredits, refreshJobCredits,
+    subscriptionStatus, subscriptionEnd, refreshSubscription,
     name, setName,
     profileEmail, setProfileEmail,
     phone, setPhone,
@@ -889,6 +914,7 @@ export default function useProfile({ onProfileSaved } = {}) {
     // Functions
     loadProfileDocuments,
     dismissOnboarding,
+    dismissInactivityReminder,
     importCvFromFile,
     importCvFromCamera,
     importCvFromGallery,

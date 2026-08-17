@@ -54,6 +54,11 @@ class Profile(Base):
     interview_count: Mapped[int] = mapped_column(Integer, default=0)
     job_credits: Mapped[int] = mapped_column(Integer, default=0)
 
+    subscription_status: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None)
+    subscription_end: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
+    stripe_customer_id: Mapped[str | None] = mapped_column(String(120), nullable=True, default=None)
+    last_active_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
+
 class Job(Base):
     __tablename__ = "jobs"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

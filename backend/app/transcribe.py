@@ -25,8 +25,13 @@ ALLOWED_MIME_TYPES: set[str] = {
 # Keep this conservative. Whisper also has its own limits.
 MAX_AUDIO_BYTES = 25 * 1024 * 1024  # 25 MB
 
+# UI language code -> Whisper ISO-639-1 language hint. Without this, Whisper
+# auto-detects the language per request, which is unreliable for short
+# answers and was producing random wrong-language transcriptions.
+WHISPER_LANGUAGE_CODES: set[str] = {"no", "en", "vi", "pl", "lt", "ar", "so"}
 
-def transcribe_path(file_path: str | Path) -> str:
+
+def transcribe_path(file_path: str | Path, language: str | None = None) -> str:
     """Transcribe an audio file using OpenAI audio transcription.
 
     The caller is responsible for deleting the file.
@@ -36,10 +41,15 @@ def transcribe_path(file_path: str | Path) -> str:
 
     client = OpenAI()
 
+    kwargs = {}
+    if language in WHISPER_LANGUAGE_CODES:
+        kwargs["language"] = language
+
     with open(str(file_path), "rb") as f:
         res = client.audio.transcriptions.create(
             model=model,
             file=f,
+            **kwargs,
         )
 
     # openai==1.x returns an object with `.text`
