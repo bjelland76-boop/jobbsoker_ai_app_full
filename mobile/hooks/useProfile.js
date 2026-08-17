@@ -300,12 +300,15 @@ export default function useProfile({ onProfileSaved } = {}) {
     try {
       const data = await apiFetch('/profiles');
       if (Array.isArray(data) && data.length > 0) {
-        setSubscriptionStatus(data[0].subscription_status || null);
+        const status = data[0].subscription_status || null;
+        setSubscriptionStatus(status);
         setSubscriptionEnd(data[0].subscription_end || null);
+        return status;
       }
     } catch (e) {
       if (__DEV__) console.log('Kunne ikke oppdatere abonnementsstatus:', e);
     }
+    return null;
   }
 
   // ---------------------------------------------------------------------------

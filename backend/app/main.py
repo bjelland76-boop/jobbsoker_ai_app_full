@@ -2390,10 +2390,15 @@ def create_checkout(
             session = stripe.checkout.Session.create(
                 mode="subscription",
                 line_items=[{"price": price_id, "quantity": 1}],
-                success_url="https://app.aerlig.no/betalt",
+                success_url="https://app.aerlig.no/betalt?type=subscription&session_id={CHECKOUT_SESSION_ID}",
                 cancel_url="https://app.aerlig.no",
                 customer_email=data.email or current_user.email,
                 metadata={"user_id": str(current_user.id)},
+                # Checkout Session metadata is NOT copied onto the Subscription
+                # object Stripe creates — without this, customer.subscription.*
+                # webhook events carry no user_id and we can never look up which
+                # profile to mark as active.
+                subscription_data={"metadata": {"user_id": str(current_user.id)}},
             )
         except Exception as e:
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Stripe-feil: {e}")

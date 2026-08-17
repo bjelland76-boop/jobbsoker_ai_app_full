@@ -112,7 +112,7 @@ function AppContent() {
   const {
     profileId,
     jobCredits, refreshJobCredits,
-    subscriptionStatus, subscriptionEnd,
+    subscriptionStatus, subscriptionEnd, refreshSubscription,
     dismissInactivityReminder,
     profileEmail,
     profilePhotoData,
@@ -206,9 +206,11 @@ function AppContent() {
   }, []);
 
   // Returning from Stripe Checkout (web): https://app.aerlig.no/betalt?credits=X&user_id=Y&session_id=Z
-  // Crediting itself happens server-side via the Stripe webhook (authoritative,
-  // works even if the user never returns here) — this just polls the balance
-  // for a few seconds so the UI reflects it without requiring a manual refresh.
+  // (or ?type=subscription&session_id=Z for the subscription flow). Crediting/
+  // activation itself happens server-side via the Stripe webhook (authoritative,
+  // works even if the user never returns here) — this just polls for a few
+  // seconds so the UI reflects it without requiring a manual refresh, and
+  // closes the payment modal / inactivity reminder once confirmed.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!authReady || !authTokenState) return;
@@ -217,6 +219,7 @@ function AppContent() {
     const sessionId = params.get('session_id');
     if (!sessionId) return;
 
+    const isSubscription = params.get('type') === 'subscription';
     const expectedCredits = parseInt(params.get('credits'), 10) || 0;
 
     try {
@@ -224,6 +227,29 @@ function AppContent() {
     } catch (_) { /* ignore */ }
 
     (async () => {
+      if (isSubscription) {
+        let confirmed = false;
+        for (let attempt = 0; attempt < 6; attempt += 1) {
+          const status = await refreshSubscription();
+          if (status === 'active') {
+            confirmed = true;
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+        if (confirmed) {
+          closePaymentModal();
+          dismissInactivityReminder();
+          Alert.alert('Abonnement aktivert', 'Du har nå fri bruk av alle funksjoner.');
+        } else {
+          Alert.alert(
+            'Betaling mottatt',
+            'Vi venter fortsatt på bekreftelse fra Stripe. Abonnementet aktiveres om kort tid — sjekk gjerne på nytt om litt.'
+          );
+        }
+        return;
+      }
+
       const before = await refreshJobCredits();
       let confirmed = false;
       for (let attempt = 0; attempt < 6; attempt += 1) {
@@ -235,6 +261,7 @@ function AppContent() {
         }
       }
       if (confirmed) {
+        closePaymentModal();
         Alert.alert('Betaling bekreftet', `${expectedCredits > 0 ? expectedCredits : ''} credits er lagt til kontoen din.`.trim());
       } else {
         Alert.alert(
