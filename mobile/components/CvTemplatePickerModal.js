@@ -5,6 +5,7 @@ import { useApp } from '../context/AppContext';
 import { styles as sharedStyles } from '../styles/styles';
 
 const ORANGE = '#E8501A';
+const RED = '#DA020E';
 
 const TEMPLATES = [
   { key: 'kreativ', name: 'Kreativ' },
@@ -12,6 +13,7 @@ const TEMPLATES = [
   { key: 'klassisk', name: 'Klassisk' },
   { key: 'moderne', name: 'Moderne' },
   { key: 'skandinavisk', name: 'Skandinavisk' },
+  { key: 'vietnamesisk', name: 'Vietnamesisk', flag: '🇻🇳', desc: 'Tilpasset vietnamesisk arbeidsmarked' },
 ];
 
 const TEMPLATE_NAME_BY_KEY = TEMPLATES.reduce((acc, t) => {
@@ -121,12 +123,26 @@ function MiniSkandinavisk() {
   );
 }
 
+function MiniVietnamesisk() {
+  return (
+    <View style={[st.miniBox, { backgroundColor: '#fff', padding: 8, alignItems: 'center' }]}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: RED }} />
+      <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: RED, marginTop: 10 }} />
+      <MiniLine w="55%" h={3} color="#111827" mt={8} />
+      <MiniLine w="90%" h={1} color={RED} mt={6} />
+      <MiniLine w="40%" h={2} color={RED} mt={8} />
+      <MiniLine w="70%" h={2} color="#6b7280" mt={5} />
+    </View>
+  );
+}
+
 const MINI_BY_KEY = {
   kreativ: MiniKreativ,
   profesjonell: MiniProfesjonell,
   klassisk: MiniKlassisk,
   moderne: MiniModerne,
   skandinavisk: MiniSkandinavisk,
+  vietnamesisk: MiniVietnamesisk,
 };
 
 // --- Enlarged previews with example content ---
@@ -251,12 +267,37 @@ function FullSkandinavisk() {
   );
 }
 
+function FullVietnamesisk() {
+  return (
+    <View style={[st.fullBox, { alignItems: 'center' }]}>
+      <View style={[st.fullAvatar, { width: 56, height: 56, borderRadius: 28, backgroundColor: RED }]}>
+        <Text style={st.fullAvatarText}>{EXAMPLE.initials}</Text>
+      </View>
+      <Text style={[st.fullName, { marginTop: 10 }]}>{EXAMPLE.name}</Text>
+      <Text style={st.fullContact}>{EXAMPLE.contact}</Text>
+      <View style={{ width: '100%', height: 1.5, backgroundColor: RED, marginTop: 10, marginBottom: 12 }} />
+      <View style={{ width: '100%' }}>
+        <FullSectionLabel text="THÔNG TIN CÁ NHÂN" color={RED} />
+        <Text style={[st.fullEntryMeta, { marginTop: 4 }]}>Chiều cao: 160 cm  ·  Giới tính: Nữ</Text>
+        <FullSectionLabel text="ERFARING" color={RED} style={{ marginTop: 14 }} />
+        {EXAMPLE.experience.map((e) => (
+          <View key={e.role} style={{ marginTop: 6 }}>
+            <Text style={st.fullEntryTitle}>{e.role}</Text>
+            <Text style={st.fullEntryMeta}>{e.employer} · {e.period}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 const FULL_BY_KEY = {
   kreativ: FullKreativ,
   profesjonell: FullProfesjonell,
   klassisk: FullKlassisk,
   moderne: FullModerne,
   skandinavisk: FullSkandinavisk,
+  vietnamesisk: FullVietnamesisk,
 };
 
 export default function CvTemplatePickerModal({ visible, onClose, onConfirm, recommendedTemplate }) {
@@ -329,7 +370,7 @@ export default function CvTemplatePickerModal({ visible, onClose, onConfirm, rec
               <ScrollView style={{ maxHeight: 480 }} showsVerticalScrollIndicator={false}>
                 <View style={st.grid}>
                   {TEMPLATES.map((tpl) => {
-                    const isFullWidth = tpl.key === 'skandinavisk';
+                    const isFullWidth = tpl.key === 'skandinavisk' || tpl.key === 'vietnamesisk';
                     const Mini = MINI_BY_KEY[tpl.key];
                     const selected = pendingSelection === tpl.key;
                     return (
@@ -339,7 +380,8 @@ export default function CvTemplatePickerModal({ visible, onClose, onConfirm, rec
                         onPress={() => setExpandedTemplate(tpl.key)}
                       >
                         <Mini />
-                        <Text style={st.thumbName}>{tpl.name}</Text>
+                        <Text style={st.thumbName}>{tpl.flag ? `${tpl.flag} ${tpl.name}` : tpl.name}</Text>
+                        {tpl.desc ? <Text style={st.thumbDesc}>{tpl.desc}</Text> : null}
                         <View style={st.thumbRadioRow}>
                           <Radio selected={selected} />
                           <Text style={st.thumbRadioLabel}>{selected ? t('cv_template.selected') : t('cv_template.choose_this')}</Text>
@@ -403,6 +445,7 @@ const st = StyleSheet.create({
   thumbCardSelected: { borderColor: ORANGE, backgroundColor: '#FFF8F5' },
   miniBox: { height: 90, borderRadius: 6, overflow: 'hidden', flexDirection: 'row', backgroundColor: '#fff' },
   thumbName: { fontSize: 14, fontWeight: '700', color: '#111827', marginTop: 8 },
+  thumbDesc: { fontSize: 11, color: '#6B7280', marginTop: 2 },
   thumbRadioRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   thumbRadioLabel: { fontSize: 12, color: '#6B7280', marginLeft: 6 },
   radio: {

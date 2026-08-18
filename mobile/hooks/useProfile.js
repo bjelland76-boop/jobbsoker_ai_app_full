@@ -63,6 +63,12 @@ export default function useProfile({ onProfileSaved } = {}) {
   const [profilePhotoData, setProfilePhotoData] = useState('');
   const [includePhotoDefault, setIncludePhotoDefault] = useState(true);
   const [includePhotoInPdf, setIncludePhotoInPdf] = useState(true);
+  // Optional fields used only when generating a Vietnamese CV.
+  const [heightCm, setHeightCm] = useState('');
+  const [civilStatus, setCivilStatus] = useState('');
+  const [gender, setGender] = useState('');
+  const [nationality, setNationality] = useState('');
+  const [militaryService, setMilitaryService] = useState('');
   const [skills, setSkills] = useState('');
   const [skillInput, setSkillInput] = useState('');
   const [consentAnalytics, setConsentAnalytics] = useState(false);
@@ -104,6 +110,7 @@ export default function useProfile({ onProfileSaved } = {}) {
   const [expandRefCard, setExpandRefCard] = useState(false);
   const [expandDocsCard, setExpandDocsCard] = useState(false);
   const [expandSkillsCard, setExpandSkillsCard] = useState(false);
+  const [expandVietnameseCard, setExpandVietnameseCard] = useState(false);
   const [editingLanguageIndex, setEditingLanguageIndex] = useState(-1);
   const [editingGapIndex, setEditingGapIndex] = useState(-1);
   const [editingReferenceIndex, setEditingReferenceIndex] = useState(-1);
@@ -153,6 +160,11 @@ export default function useProfile({ onProfileSaved } = {}) {
     setProfilePhotoData('');
     setIncludePhotoDefault(true);
     setIncludePhotoInPdf(true);
+    setHeightCm('');
+    setCivilStatus('');
+    setGender('');
+    setNationality('');
+    setMilitaryService('');
     setSkills('');
     setSkillInput('');
     setConsentAnalytics(false);
@@ -200,6 +212,11 @@ export default function useProfile({ onProfileSaved } = {}) {
           setIncludePhotoDefault(defInc);
           setIncludePhotoInPdf(defInc);
           setSkills(profile.skills || '');
+          setHeightCm(profile.height_cm != null ? String(profile.height_cm) : '');
+          setCivilStatus(profile.civil_status || '');
+          setGender(profile.gender || '');
+          setNationality(profile.nationality || '');
+          setMilitaryService(profile.military_service || '');
           setConsentAnalytics(!!profile.consent_analytics);
           if (!profile.has_seen_onboarding) setShowOnboarding(true);
           setLanguagesList((Array.isArray(profile.languages) ? profile.languages : (profile.languages ? [profile.languages] : [])).map(normalizeLangEntry));
@@ -555,6 +572,11 @@ export default function useProfile({ onProfileSaved } = {}) {
       languages: override.languages ?? serializeLangList(languagesList),
       references: override.references ?? referenceEntries,
       cv_gaps: override.cv_gaps ?? serializeCvGaps(cvGapsList),
+      height_cm: override.height_cm ?? (heightCm ? parseInt(heightCm, 10) || null : null),
+      civil_status: override.civil_status ?? civilStatus,
+      gender: override.gender ?? gender,
+      nationality: override.nationality ?? nationality,
+      military_service: override.military_service ?? militaryService,
     };
 
     try {
@@ -592,6 +614,8 @@ export default function useProfile({ onProfileSaved } = {}) {
           experience: experienceEntries, education: educationEntries,
           skills, languages: serializeLangList(languagesList),
           references: referenceEntries, cv_gaps: serializeCvGaps(cvGapsList),
+          height_cm: heightCm ? parseInt(heightCm, 10) || null : null,
+          civil_status: civilStatus, gender, nationality, military_service: militaryService,
         }),
       });
       setProfileId(data.id);
@@ -626,6 +650,7 @@ export default function useProfile({ onProfileSaved } = {}) {
     name, profileEmail, phone, address, postalCode, postalPlace,
     skills, cvGapsList,
     experienceEntries, educationEntries, referenceEntries, languagesList,
+    heightCm, civilStatus, gender, nationality, militaryService,
   ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------------------------------------------------------------------------
@@ -853,6 +878,13 @@ export default function useProfile({ onProfileSaved } = {}) {
     profilePhoto,
     profileStrength,
 
+    // Vietnamese CV fields
+    heightCm, setHeightCm,
+    civilStatus, setCivilStatus,
+    gender, setGender,
+    nationality, setNationality,
+    militaryService, setMilitaryService,
+
     // Skills
     skills, setSkills,
     skillInput, setSkillInput,
@@ -901,6 +933,7 @@ export default function useProfile({ onProfileSaved } = {}) {
     expandRefCard, setExpandRefCard,
     expandDocsCard, setExpandDocsCard,
     expandSkillsCard, setExpandSkillsCard,
+    expandVietnameseCard, setExpandVietnameseCard,
 
     // CV import
     cvImportModalVisible, setCvImportModalVisible,

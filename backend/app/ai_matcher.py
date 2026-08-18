@@ -32,7 +32,7 @@ class MatchResult(TypedDict):
     seniority_match: int
     top_reason: str
     main_risk: str
-    cv_mal: str  # "kreativ" | "profesjonell" | "klassisk" | "moderne" | "skandinavisk"
+    cv_mal: str  # "kreativ" | "profesjonell" | "klassisk" | "moderne" | "skandinavisk" | "vietnamesisk"
 
 
 def _compress_text(text: str, max_len: int = 2500) -> str:
@@ -187,9 +187,9 @@ def _normalize_list(v: Any, *, max_items: int = 3, max_item_chars: int = 60) -> 
     return out
 
 
-def _normalize_result(data: Any) -> MatchResult:
+def _normalize_result(data: Any, *, lang: str = "no") -> MatchResult:
     # Output contract: always return these fields, no extras.
-    _CV_MAL_VALID = {"kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk"}
+    _CV_MAL_VALID = {"kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk", "vietnamesisk"}
 
     out: MatchResult = {
         "score": 0,
@@ -233,6 +233,11 @@ def _normalize_result(data: Any) -> MatchResult:
 
     cv_mal_raw = str(data.get("cv_mal") or "").strip().lower()
     out["cv_mal"] = cv_mal_raw if cv_mal_raw in _CV_MAL_VALID else "profesjonell"
+
+    # Vietnamese UI users always get the Vietnamese CV template, regardless of
+    # what the model picked based on job title.
+    if lang == "vi":
+        out["cv_mal"] = "vietnamesisk"
 
     return out
 
@@ -367,7 +372,7 @@ def analyze_job_match(
     if use_cache:
         cached = MATCH_CACHE.get(key)
         if isinstance(cached, dict):
-            return _normalize_result(cached)
+            return _normalize_result(cached, lang=lang)
 
     lang_rule = _LANG_OUTPUT_RULE[lang]
     system_prompt = (
@@ -406,7 +411,7 @@ def analyze_job_match(
         '"missing":["max 3; only genuine gaps not inferable from stated experience"],'
         '"recommended_cv_changes":["max 3; actionable CV edits addressing missing requirements; <=120 chars; no generic"],'
         '"advice":"1 short sentence",'
-        '"cv_mal":"profesjonell (DEFAULT for de fleste stillinger: salg/kontor/service/logistikk/bygg/HR generelt) | kreativ (KUN for: designer/UX/grafisk/animasjon/reklame/media/innhold) | klassisk (KUN for: advokat/jurist/revisor/forsker/akademiker/offentlig forvaltning) | moderne (KUN for: tech/IT/startup/utvikler/data/produkt) | skandinavisk (KUN for: helse/omsorg/offentlig sektor/konservative bransjer — alternativ til klassisk) — velg basert på stillingstittelen i JOB-seksjonen"'
+        '"cv_mal":"profesjonell (DEFAULT for de fleste stillinger: salg/kontor/service/logistikk/bygg/HR generelt) | kreativ (KUN for: designer/UX/grafisk/animasjon/reklame/media/innhold) | klassisk (KUN for: advokat/jurist/revisor/forsker/akademiker/offentlig forvaltning) | moderne (KUN for: tech/IT/startup/utvikler/data/produkt) | skandinavisk (KUN for: helse/omsorg/offentlig sektor/konservative bransjer — alternativ til klassisk) — velg basert på stillingstittelen i JOB-seksjonen (ignorer vietnamesisk — den velges automatisk basert på språk, ikke av deg)"'
         "}"
         f"\n{lang_rule}"
     )
@@ -431,7 +436,7 @@ def analyze_job_match(
             # Claude sometimes appends trailing text after the JSON object.
             # raw_decode stops at the first complete value and ignores the rest.
             data, _ = json.JSONDecoder().raw_decode(raw.lstrip())
-        normalized = _normalize_result(data)
+        normalized = _normalize_result(data, lang=lang)
 
         MATCH_CACHE.set(key, dict(normalized))
         return normalized
@@ -441,5 +446,5 @@ def analyze_job_match(
         # Do NOT cache failures so retries can succeed after transient errors.
         logger.error("analyze_job_match failed — returning score=0. model=%s error=%s\n%s",
                      model_id, exc, traceback.format_exc())
-        normalized = _normalize_result({})
+        normalized = _normalize_result({}, lang=lang)
         return normalized

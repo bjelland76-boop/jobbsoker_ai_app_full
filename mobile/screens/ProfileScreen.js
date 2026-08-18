@@ -28,6 +28,11 @@ export default function ProfileScreen({ onManageSubscription }) {
     profilePhotoData, setProfilePhotoData,
     includePhotoDefault, setIncludePhotoDefault,
     includePhotoInPdf, setIncludePhotoInPdf,
+    heightCm, setHeightCm,
+    civilStatus, setCivilStatus,
+    gender, setGender,
+    nationality, setNationality,
+    militaryService, setMilitaryService,
     skills,
     skillInput, setSkillInput,
     skillsItems, setSkillsItems,
@@ -57,6 +62,7 @@ export default function ProfileScreen({ onManageSubscription }) {
     expandRefCard, setExpandRefCard,
     expandDocsCard, setExpandDocsCard,
     expandSkillsCard, setExpandSkillsCard,
+    expandVietnameseCard, setExpandVietnameseCard,
     cvImportModalVisible, setCvImportModalVisible,
     cvImportLoading,
     cvImportPreview, setCvImportPreview,
@@ -373,6 +379,115 @@ export default function ProfileScreen({ onManageSubscription }) {
             </View>
           )}
         </View>
+
+        {/* Vietnamesisk CV accordion card — only shown when the app UI language is Vietnamese */}
+        {uiLanguage === 'vi' && (
+          <View style={[styles.profileSummaryCardFull, { marginBottom: 12 }]}>
+            <TouchableOpacity
+              onPress={() => setExpandVietnameseCard((v) => !v)}
+              style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+              activeOpacity={0.7}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={[styles.profileCardIcon, { marginBottom: 0 }]}>🇻🇳</Text>
+                <View>
+                  <Text style={styles.profileCardLabel}>{t('profile.vietnamese_cv_title')}</Text>
+                  <Text style={styles.profileCardValue} numberOfLines={1}>
+                    {(heightCm || civilStatus || gender || nationality || militaryService) ? t('profile.filled_label') : t('profile.not_filled')}
+                  </Text>
+                </View>
+              </View>
+              <Text style={{ color: '#6B7280', fontSize: 14 }}>{expandVietnameseCard ? '▲' : '▼'}</Text>
+            </TouchableOpacity>
+
+            {expandVietnameseCard && (
+              <View style={{ marginTop: 12 }}>
+                <View style={{ height: 1, backgroundColor: '#E8E6E0', marginBottom: 12 }} />
+
+                <Text style={[styles.helpText, styles.aerligHelpText, { marginBottom: 12 }]}>
+                  {t('profile.vietnamese_cv_info')}
+                </Text>
+
+                <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('profile.height_cm_label')}</Text>
+                <TextInput
+                  style={[styles.input, styles.aerligInput]}
+                  value={heightCm}
+                  onChangeText={(v) => setHeightCm(v.replace(/[^0-9]/g, ''))}
+                  placeholder={t('profile.height_cm_label')}
+                  keyboardType="numeric"
+                />
+
+                <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('profile.civil_status_label')}</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                  {[
+                    ['Ugift', t('profile.civil_status_ugift')],
+                    ['Gift', t('profile.civil_status_gift')],
+                    ['Skilt', t('profile.civil_status_skilt')],
+                    ['Enke/Enkemann', t('profile.civil_status_enke')],
+                  ].map(([value, label]) => (
+                    <TouchableOpacity
+                      key={value}
+                      style={[styles.filterChip, styles.aerligFilterChip, civilStatus === value && styles.aerligFilterChipActive]}
+                      onPress={() => setCivilStatus(civilStatus === value ? '' : value)}
+                    >
+                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, civilStatus === value && styles.aerligFilterChipTextActive]}>{label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('profile.gender_label')}</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                  {[
+                    ['Mann', t('profile.gender_mann')],
+                    ['Kvinne', t('profile.gender_kvinne')],
+                    ['Annet', t('profile.gender_annet')],
+                  ].map(([value, label]) => (
+                    <TouchableOpacity
+                      key={value}
+                      style={[styles.filterChip, styles.aerligFilterChip, gender === value && styles.aerligFilterChipActive]}
+                      onPress={() => setGender(gender === value ? '' : value)}
+                    >
+                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, gender === value && styles.aerligFilterChipTextActive]}>{label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('profile.nationality_label')}</Text>
+                <TextInput
+                  style={[styles.input, styles.aerligInput]}
+                  value={nationality}
+                  onChangeText={setNationality}
+                  placeholder={t('profile.nationality_label')}
+                  autoCapitalize="words"
+                />
+
+                <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('profile.military_service_label')}</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  {[
+                    ['Fullført', t('profile.military_service_completed')],
+                    ['Ikke aktuelt', t('profile.military_service_na')],
+                    ['Pågående', t('profile.military_service_ongoing')],
+                  ].map(([value, label]) => (
+                    <TouchableOpacity
+                      key={value}
+                      style={[styles.filterChip, styles.aerligFilterChip, militaryService === value && styles.aerligFilterChipActive]}
+                      onPress={() => setMilitaryService(militaryService === value ? '' : value)}
+                    >
+                      <Text style={[styles.filterChipText, styles.aerligFilterChipText, militaryService === value && styles.aerligFilterChipTextActive]}>{label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.aerligPrimaryButton, { marginTop: 16 }]}
+                  onPress={() => { setExpandVietnameseCard(false); saveProfile(); }}
+                >
+                  <Text style={styles.aerligPrimaryButtonText}>{t('profile.save_btn')}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Experience accordion card */}
         <View style={[styles.profileSummaryCardFull, { marginBottom: 12 }]}>

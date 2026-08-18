@@ -13,7 +13,24 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
+
+# Base-14 PDF fonts (Helvetica/Times) lack the combining diacritics used in
+# Vietnamese text, so the "vietnamesisk" template needs a bundled Unicode font.
+_FONTS_DIR = Path(__file__).resolve().parent / "fonts"
+FONT_NOTO_SANS = "NotoSans"
+FONT_NOTO_SANS_BOLD = "NotoSans-Bold"
+try:
+    pdfmetrics.registerFont(TTFont(FONT_NOTO_SANS, str(_FONTS_DIR / "NotoSans-Regular.ttf")))
+    pdfmetrics.registerFont(TTFont(FONT_NOTO_SANS_BOLD, str(_FONTS_DIR / "NotoSans-Bold.ttf")))
+except Exception:
+    # Fall back to base-14 Helvetica if the font files are missing for some
+    # reason; Vietnamese diacritics will render as tofu boxes, but PDF
+    # generation must never hard-fail because of a missing font asset.
+    FONT_NOTO_SANS = "Helvetica"
+    FONT_NOTO_SANS_BOLD = "Helvetica-Bold"
+
 
 def _default_data_dir() -> Path | None:
     v = (os.getenv("APP_DATA_DIR") or os.getenv("DATA_DIR") or "").strip()
@@ -1803,6 +1820,194 @@ class _SkandinaviskPdfDoc(_ClassicPdfDoc):
         self.y -= 0.55 * cm
 
 
+_VN_CIVIL_STATUS = {
+    "ugift": "Độc thân",
+    "gift": "Đã kết hôn",
+    "skilt": "Đã ly hôn",
+    "enke/enkemann": "Góa",
+}
+_VN_GENDER = {
+    "mann": "Nam",
+    "kvinne": "Nữ",
+    "annet": "Khác",
+}
+_VN_MILITARY_SERVICE = {
+    "fullført": "Đã hoàn thành",
+    "ikke aktuelt": "Không áp dụng",
+    "pågående": "Đang thực hiện",
+}
+
+
+class _VietnamesiskPdfDoc(_ClassicPdfDoc):
+    """Full-width, single-column layout for the 'Vietnamesisk' template.
+
+    - Large circular profile photo, centred at the top
+    - Red accent (#DA020E), matching the Vietnamese flag
+    - Extra "personal details" block (height, civil status, gender,
+      nationality, military service) — common on Vietnamese CVs — shown
+      only for the fields the profile actually has filled in
+    """
+
+    _MARGIN_X = 2.2 * cm
+    _FONT_BODY = FONT_NOTO_SANS
+    _FONT_HEAD = FONT_NOTO_SANS_BOLD
+    _COLOR_BLACK = colors.HexColor("#1a1a1a")
+    _COLOR_DARK = colors.HexColor("#1a1a1a")
+    _COLOR_MID = colors.HexColor("#333333")
+    _COLOR_MUTED = colors.HexColor("#555555")
+    _COLOR_RULE = colors.HexColor("#e5b3b8")
+    _COLOR_ACCENT = colors.HexColor("#DA020E")
+    _PHOTO_D = 3.6 * cm
+
+    def _new_page(self) -> None:
+        if self.page_no > 0:
+            self.c.showPage()
+        self.page_no += 1
+        self.y = self.height - self._MARGIN_TOP
+        c = self.c
+        c.setFillColor(self._COLOR_ACCENT)
+        c.rect(0, self.height - 0.25 * cm, self.width, 0.25 * cm, fill=1, stroke=0)
+        c.setFillColor(self._COLOR_MUTED)
+        c.setFont(self._FONT_BODY, 8)
+        c.drawRightString(self.right, 0.9 * cm, f"Trang {self.page_no}")
+
+    def _draw_header(self) -> None:
+        c = self.c
+        d = self._PHOTO_D
+        cx = self.width / 2
+        cy_top = self.y
+
+        raw = (getattr(self.profile, "photo_data", "") or "").strip() if self.include_photo else ""
+        photo_bytes = _photo_bytes_from_data_uri(raw) if raw else None
+
+        c.saveState()
+        p = c.beginPath()
+        p.circle(cx, cy_top - d / 2, d / 2)
+        c.clipPath(p, stroke=0)
+        if photo_bytes:
+            try:
+                img = ImageReader(io.BytesIO(photo_bytes))
+                c.drawImage(
+                    img, cx - d / 2, cy_top - d,
+                    width=d, height=d, mask="auto", preserveAspectRatio=True, anchor="c",
+                )
+            except Exception:
+                photo_bytes = None
+        if not photo_bytes:
+            c.setFillColor(self._COLOR_ACCENT)
+            c.rect(cx - d / 2, cy_top - d, d, d, fill=1, stroke=0)
+        c.restoreState()
+
+        c.setStrokeColor(self._COLOR_ACCENT)
+        c.setLineWidth(1.5)
+        c.circle(cx, cy_top - d / 2, d / 2, fill=0, stroke=1)
+
+        if not photo_bytes:
+            c.setFillColor(colors.white)
+            c.setFont(self._FONT_HEAD, 20)
+            initials = "".join([p[:1] for p in (getattr(self.profile, "name", "") or "").split()[:2]]).upper()
+            c.drawCentredString(cx, cy_top - d / 2 - 7, initials or "CV")
+
+        self.y = cy_top - d - 0.5 * cm
+
+        name = (getattr(self.profile, "name", "") or "").strip()
+        c.setFillColor(self._COLOR_BLACK)
+        c.setFont(self._FONT_HEAD, 22)
+        c.drawCentredString(cx, self.y, name or "CV")
+        self.y -= 0.8 * cm
+
+        parts: list[str] = []
+        phone = (getattr(self.profile, "phone", "") or "").strip()
+        email = (getattr(self.profile, "email", "") or "").strip()
+        addr = (getattr(self.profile, "address", "") or "").strip()
+        postal_code = (getattr(self.profile, "postal_code", "") or "").strip()
+        postal_place = (getattr(self.profile, "postal_place", "") or "").strip()
+        location = " ".join([x for x in [postal_code, postal_place] if x]) or addr
+        if phone:
+            parts.append(phone)
+        if email:
+            parts.append(email)
+        if location:
+            parts.append(location)
+
+        if parts:
+            c.setFillColor(self._COLOR_MUTED)
+            c.setFont(self._FONT_BODY, 9.5)
+            c.drawCentredString(cx, self.y, "  |  ".join(parts))
+            self.y -= 0.55 * cm
+
+        c.setStrokeColor(self._COLOR_ACCENT)
+        c.setLineWidth(1.5)
+        c.line(self.left, self.y, self.right, self.y)
+        self.y -= 0.65 * cm
+
+    def _section_header(self, title: str) -> None:
+        self._ensure_space(1.3 * cm)
+        self.y -= 0.25 * cm
+        c = self.c
+        c.setFillColor(self._COLOR_ACCENT)
+        c.setFont(self._FONT_HEAD, 12)
+        c.drawString(self.left, self.y, title.upper())
+        c.setStrokeColor(self._COLOR_RULE)
+        c.setLineWidth(0.8)
+        c.line(self.left, self.y - 0.2 * cm, self.right, self.y - 0.2 * cm)
+        self.y -= 0.75 * cm
+
+    def _draw_personal_details(self) -> None:
+        rows: list[tuple[str, str]] = []
+
+        height_cm = getattr(self.profile, "height_cm", None)
+        if height_cm:
+            rows.append(("Chiều cao", f"{int(height_cm)} cm"))
+
+        civil_status = (getattr(self.profile, "civil_status", "") or "").strip()
+        if civil_status:
+            rows.append(("Tình trạng hôn nhân", _VN_CIVIL_STATUS.get(civil_status.lower(), civil_status)))
+
+        gender = (getattr(self.profile, "gender", "") or "").strip()
+        if gender:
+            rows.append(("Giới tính", _VN_GENDER.get(gender.lower(), gender)))
+
+        nationality = (getattr(self.profile, "nationality", "") or "").strip()
+        if nationality:
+            rows.append(("Quốc tịch", nationality))
+
+        military_service = (getattr(self.profile, "military_service", "") or "").strip()
+        if military_service:
+            rows.append(("Nghĩa vụ quân sự", _VN_MILITARY_SERVICE.get(military_service.lower(), military_service)))
+
+        if not rows:
+            return
+
+        self._section_header("Thông tin cá nhân")
+        c = self.c
+        for label, value in rows:
+            self._ensure_space(0.55 * cm)
+            c.setFillColor(self._COLOR_MID)
+            c.setFont(self._FONT_HEAD, 9.5)
+            c.drawString(self.left, self.y, f"{label}:")
+            c.setFillColor(self._COLOR_DARK)
+            c.setFont(self._FONT_BODY, 9.5)
+            c.drawString(self.left + 4.6 * cm, self.y, value)
+            self.y -= 0.5 * cm
+        self.y -= 0.15 * cm
+
+    def build(self) -> str:
+        self._new_page()
+        self._draw_header()
+        self._draw_personal_details()
+
+        if not self.cv_only and (self.cover_letter or "").strip():
+            self._cover_section(self.cover_letter)
+
+        if (self.cv_text or "").strip():
+            self._section_header("CV")
+            self._draw_cv_text(self.cv_text)
+
+        self.c.save()
+        return str(self.path)
+
+
 class _SidebarCvOnlyDoc(_SidebarPdfDoc):
     """CV-only variant of the sidebar template.
 
@@ -1845,7 +2050,7 @@ class _SidebarCvOnlyDoc(_SidebarPdfDoc):
         return str(self.path)
 
 
-_VALID_TEMPLATES = {"kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk"}
+_VALID_TEMPLATES = {"kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk", "vietnamesisk"}
 
 _SIDEBAR_THEMES = {
     "kreativ": THEME_KREATIV,
@@ -1856,6 +2061,7 @@ _FULL_WIDTH_DOC_CLASSES = {
     "klassisk": _ClassicPdfDoc,
     "moderne": _ModernePdfDoc,
     "skandinavisk": _SkandinaviskPdfDoc,
+    "vietnamesisk": _VietnamesiskPdfDoc,
 }
 
 
@@ -1870,7 +2076,7 @@ def make_application_pdfs(
 ):
     """Generate TWO PDFs — combined (søknad+CV) and CV-only.
 
-    `template` is one of: "kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk".
+    `template` is one of: "kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk", "vietnamesisk".
     Returns (combined_pdf_path, cv_only_pdf_path).
     """
 

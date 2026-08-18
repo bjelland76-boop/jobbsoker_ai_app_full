@@ -59,6 +59,13 @@ class Profile(Base):
     stripe_customer_id: Mapped[str | None] = mapped_column(String(120), nullable=True, default=None)
     last_active_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
 
+    # Optional fields used only when generating a Vietnamese CV.
+    height_cm: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+    civil_status: Mapped[str] = mapped_column(String(30), default="")
+    gender: Mapped[str] = mapped_column(String(30), default="")
+    nationality: Mapped[str] = mapped_column(String(120), default="")
+    military_service: Mapped[str] = mapped_column(String(30), default="")
+
 class Job(Base):
     __tablename__ = "jobs"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

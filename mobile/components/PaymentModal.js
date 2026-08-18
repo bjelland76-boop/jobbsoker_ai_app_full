@@ -1,40 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, View, Text, TouchableOpacity, Linking, ActivityIndicator, StyleSheet } from 'react-native';
 
-import { apiFetch } from '../context/AppContext';
+import { apiFetch, useApp } from '../context/AppContext';
 import { styles as sharedStyles } from '../styles/styles';
 
 const ORANGE = '#E8501A';
 
-const LIMIT_LABELS = {
-  analyse: 'analyser',
-  cv: 'CV-genereringer',
-  cv_analyse: 'CV-analyser',
-  intervju: 'intervjuøkter',
+const LIMIT_LABEL_KEYS = {
+  analyse: 'payment.limit_analyse',
+  cv: 'payment.limit_cv',
+  cv_analyse: 'payment.limit_cv_analyse',
+  intervju: 'payment.limit_intervju',
 };
 
-const PACKAGES = [
-  { id: 1, title: '1 jobbpakke', price: '19 kr', desc: 'CV + søknad + intervju for én jobb' },
-  { id: 5, title: '5 jobbpakker', badge: '⭐ Mest populær', price: '69 kr', desc: 'Spar 27%' },
-  { id: 10, title: '10 jobbpakker', price: '129 kr', desc: 'Spar 32%' },
-];
+// Norway (NOK) vs Vietnam (VND) pricing — country is detected server-side by IP.
+const PRICES_NO = { pkg1: '19 kr', pkg5: '69 kr', pkg10: '129 kr', sub: '79 kr/mnd' };
+const PRICES_VN = { pkg1: '20.000₫', pkg5: '40.000₫', pkg10: '60.000₫', sub: '50.000₫/mnd' };
 
 export default function PaymentModal({ visible, limitType, onClose, userId, userEmail }) {
+  const { t } = useApp();
   const [type, setType] = useState('subscription');
   const [selected, setSelected] = useState(5);
   const [loading, setLoading] = useState(false);
+  const [country, setCountry] = useState('NO');
 
   useEffect(() => {
     if (visible) {
       setType('subscription');
       setSelected(5);
       setLoading(false);
+      apiFetch('/user-country')
+        .then((res) => setCountry(res?.country === 'VN' ? 'VN' : 'NO'))
+        .catch(() => setCountry('NO'));
     }
   }, [visible]);
 
   if (!visible) return null;
 
-  const limitLabel = LIMIT_LABELS[limitType] || 'analyser';
+  const prices = country === 'VN' ? PRICES_VN : PRICES_NO;
+  const PACKAGES = [
+    { id: 1, title: t('payment.package_1_title'), price: prices.pkg1, desc: t('payment.package_1_desc') },
+    { id: 5, title: t('payment.package_5_title'), badge: t('payment.package_5_badge'), price: prices.pkg5, desc: t('payment.package_5_desc') },
+    { id: 10, title: t('payment.package_10_title'), price: prices.pkg10, desc: t('payment.package_10_desc') },
+  ];
+
+  const limitLabel = t(LIMIT_LABEL_KEYS[limitType] || 'payment.limit_analyse');
 
   async function handlePay() {
     if (loading || !userId) return;
@@ -59,8 +69,8 @@ export default function PaymentModal({ visible, limitType, onClose, userId, user
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <View style={sharedStyles.cvModalOverlay}>
         <View style={[sharedStyles.cvModalCard, st.card]}>
-          <Text style={sharedStyles.cvModalTitle}>Fortsett med Ærlig</Text>
-          <Text style={sharedStyles.cvModalSubtitle}>Du har brukt dine 3 gratis {limitLabel}</Text>
+          <Text style={sharedStyles.cvModalTitle}>{t('payment.title')}</Text>
+          <Text style={sharedStyles.cvModalSubtitle}>{t('payment.subtitle', { limitLabel })}</Text>
 
           <View style={{ marginTop: 4 }}>
             <TouchableOpacity
@@ -74,17 +84,17 @@ export default function PaymentModal({ visible, limitType, onClose, userId, user
               </View>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <Text style={st.pkgTitle}>⭐ Månedlig abonnement</Text>
+                  <Text style={st.pkgTitle}>{t('payment.subscription_title')}</Text>
                 </View>
-                <Text style={st.pkgDesc}>Fri bruk av alle funksjoner{'\n'}Avslutt når som helst</Text>
+                <Text style={st.pkgDesc}>{t('payment.subscription_desc')}</Text>
               </View>
-              <Text style={st.pkgPrice}>79 kr/mnd</Text>
+              <Text style={st.pkgPrice}>{prices.sub}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={st.dividerRow}>
             <View style={st.dividerLine} />
-            <Text style={st.dividerText}>eller</Text>
+            <Text style={st.dividerText}>{t('payment.or')}</Text>
             <View style={st.dividerLine} />
           </View>
 
@@ -115,8 +125,8 @@ export default function PaymentModal({ visible, limitType, onClose, userId, user
             })}
           </View>
 
-          <Text style={st.launchNote}>Lanseringspris — begrenset periode 🎉</Text>
-          <Text style={st.stripeNote}>Betaling via Stripe — trygt og enkelt</Text>
+          <Text style={st.launchNote}>{t('payment.launch_note')}</Text>
+          <Text style={st.stripeNote}>{t('payment.stripe_note')}</Text>
 
           <TouchableOpacity
             style={[st.payButton, loading && { opacity: 0.6 }]}
@@ -126,11 +136,11 @@ export default function PaymentModal({ visible, limitType, onClose, userId, user
             {loading ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Text style={st.payButtonText}>{type === 'subscription' ? 'Abonner nå' : 'Betal med kort'}</Text>
+              <Text style={st.payButtonText}>{type === 'subscription' ? t('payment.subscribe_btn') : t('payment.pay_card_btn')}</Text>
             )}
           </TouchableOpacity>
           <TouchableOpacity style={[sharedStyles.aerligDangerButton, { marginTop: 10 }]} onPress={onClose}>
-            <Text style={sharedStyles.aerligDangerButtonText}>Ikke nå</Text>
+            <Text style={sharedStyles.aerligDangerButtonText}>{t('payment.not_now')}</Text>
           </TouchableOpacity>
         </View>
       </View>

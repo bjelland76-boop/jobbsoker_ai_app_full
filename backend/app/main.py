@@ -6,6 +6,7 @@ import re
 import secrets
 import traceback
 
+import requests
 import stripe
 
 logger = logging.getLogger(__name__)
@@ -118,6 +119,13 @@ def ensure_profile_columns() -> None:
         ensure_col("profiles", "subscription_end", "subscription_end DATETIME DEFAULT NULL")
         ensure_col("profiles", "stripe_customer_id", "stripe_customer_id TEXT DEFAULT NULL")
         ensure_col("profiles", "last_active_at", "last_active_at DATETIME DEFAULT NULL")
+
+        # Vietnamese CV fields
+        ensure_col("profiles", "height_cm", "height_cm INTEGER")
+        ensure_col("profiles", "civil_status", "civil_status TEXT DEFAULT ''")
+        ensure_col("profiles", "gender", "gender TEXT DEFAULT ''")
+        ensure_col("profiles", "nationality", "nationality TEXT DEFAULT ''")
+        ensure_col("profiles", "military_service", "military_service TEXT DEFAULT ''")
 
         # jobs
         ensure_col("jobs", "user_id", "user_id INTEGER")
@@ -355,6 +363,11 @@ def profile_to_dict(profile: Profile) -> dict:
         "subscription_end": (
             profile.subscription_end.date().isoformat() if getattr(profile, "subscription_end", None) else None
         ),
+        "height_cm": getattr(profile, "height_cm", None),
+        "civil_status": (getattr(profile, "civil_status", "") or ""),
+        "gender": (getattr(profile, "gender", "") or ""),
+        "nationality": (getattr(profile, "nationality", "") or ""),
+        "military_service": (getattr(profile, "military_service", "") or ""),
     }
 
 
@@ -463,6 +476,13 @@ class ProfileIn(BaseModel):
     cv_text: str = ""
     tone: str = "normal"
 
+    # Optional fields used only when generating a Vietnamese CV.
+    height_cm: int | None = None
+    civil_status: str = ""
+    gender: str = ""
+    nationality: str = ""
+    military_service: str = ""
+
 
 class SettingsIn(BaseModel):
     notification_email: str = ""
@@ -496,7 +516,7 @@ class SendAnalysisIn(BaseModel):
     application_style: str = "vanlig"  # kort | vanlig | profesjonell
     include_photo: bool = True
     language: str = "no"  # "no" | "en"
-    template: str | None = None  # "kreativ"|"profesjonell"|"klassisk"|"moderne"|"skandinavisk"; None = use AI-recommended cv_mal
+    template: str | None = None  # "kreativ"|"profesjonell"|"klassisk"|"moderne"|"skandinavisk"|"vietnamesisk"; None = use AI-recommended cv_mal
 
 
 class ProgressIn(BaseModel):
@@ -646,6 +666,26 @@ def _client_ip(request: Request | None) -> str:
         return (xff.split(",")[0] or "").strip()
 
     return (getattr(getattr(request, "client", None), "host", None) or "").strip()
+
+
+def _lookup_country_by_ip(ip: str) -> str:
+    """Best-effort country lookup via the free ip-api.com geo-IP service.
+
+    Falls back to "NO" (Norway) on any failure, missing IP, or private/local
+    IP (e.g. local dev, or behind a proxy that didn't set X-Forwarded-For) —
+    never blocks checkout on a flaky third-party API.
+    """
+    ip = (ip or "").strip()
+    if not ip or ip.startswith(("127.", "10.", "192.168.", "::1")):
+        return "NO"
+
+    try:
+        resp = requests.get(f"http://ip-api.com/json/{ip}", params={"fields": "countryCode"}, timeout=3)
+        resp.raise_for_status()
+        country = (resp.json() or {}).get("countryCode") or "NO"
+        return str(country).strip().upper() or "NO"
+    except Exception:
+        return "NO"
 
 
 def _code_hash(code: str) -> str:
@@ -1829,7 +1869,7 @@ def generate_tailored_cv(
     profile_id: int = Query(..., ge=1),
     application_style: str = Query(default="vanlig"),
     include_photo: bool = Query(default=True),
-    template: str = Query(default=""),  # "kreativ"|"profesjonell"|"klassisk"|"moderne"|"skandinavisk"; empty = use stored cv_mal
+    template: str = Query(default=""),  # "kreativ"|"profesjonell"|"klassisk"|"moderne"|"skandinavisk"|"vietnamesisk"; empty = use stored cv_mal
     language: str = Query(default="no"),  # "no" | "en"
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -1842,7 +1882,7 @@ def generate_tailored_cv(
     """
     from .job_analyzer import generate_application_texts, fetch_job_text
 
-    _VALID_TEMPLATES = {"kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk"}
+    _VALID_TEMPLATES = {"kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk", "vietnamesisk"}
 
     profile = db.get(Profile, profile_id)
     if not profile or profile.user_id != current_user.id:
@@ -2012,7 +2052,7 @@ def stream_documents(
     application_style: str = Query(default="vanlig"),
     include_photo: bool = Query(default=True),
     language: str = Query(default="no"),
-    template: str = Query(default=""),  # "kreativ"|"profesjonell"|"klassisk"|"moderne"|"skandinavisk"; empty = use stored cv_mal
+    template: str = Query(default=""),  # "kreativ"|"profesjonell"|"klassisk"|"moderne"|"skandinavisk"|"vietnamesisk"; empty = use stored cv_mal
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -2078,7 +2118,7 @@ def stream_documents(
         if d.extracted_text.strip()
     )
 
-    _VALID_TEMPLATES = {"kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk"}
+    _VALID_TEMPLATES = {"kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk", "vietnamesisk"}
     template_norm = (template or "").strip().lower()
     if template_norm not in _VALID_TEMPLATES:
         template_norm = ""
@@ -2304,7 +2344,7 @@ def generateApplicationPackage(
         employer_cover_letter = sanitize_employer_text(cover_letter_raw)
         employer_tailored_cv = sanitize_employer_text(pdf_tailored_cv_raw)
 
-        _VALID_TEMPLATES = {"kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk"}
+        _VALID_TEMPLATES = {"kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk", "vietnamesisk"}
         override_norm = (template_override or "").strip().lower()
         cv_mal = override_norm if override_norm in _VALID_TEMPLATES else str(result.get("cv_mal") or "profesjonell")
         cover_pdf, cv_pdf = make_application_pdfs(
@@ -2375,12 +2415,22 @@ def generateApplicationPackage(
 
 
 _PACKAGE_PRICE_ENV = {1: "STRIPE_PRICE_1", 5: "STRIPE_PRICE_5", 10: "STRIPE_PRICE_10"}
+_PACKAGE_PRICE_ENV_VN = {1: "STRIPE_PRICE_1_VN", 5: "STRIPE_PRICE_5_VN", 10: "STRIPE_PRICE_10_VN"}
 _PACKAGE_CREDITS = {1: 3, 5: 15, 10: 30}
+
+
+@app.get("/user-country", tags=["billing"])
+def user_country(request: Request):
+    """Best-effort country lookup for the requesting client's IP, used by the
+    payment modal to decide which currency/price list to display."""
+    country = _lookup_country_by_ip(_client_ip(request))
+    return {"country": "VN" if country == "VN" else "NO"}
 
 
 @app.post("/create-checkout", tags=["billing"])
 def create_checkout(
     data: CreateCheckoutIn,
+    request: Request,
     current_user: User = Depends(get_current_user),
 ):
     # Never let a client buy credits/subscribe onto an arbitrary user_id —
@@ -2394,10 +2444,13 @@ def create_checkout(
     stripe.api_key = secret_key
     stripe.api_version = "2025-03-31.basil"
 
+    is_vn = _lookup_country_by_ip(_client_ip(request)) == "VN"
+
     if data.type == "subscription":
-        price_id = os.getenv("STRIPE_PRICE_SUB")
+        price_env = "STRIPE_PRICE_SUB_VN" if is_vn else "STRIPE_PRICE_SUB"
+        price_id = os.getenv(price_env)
         if not price_id:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Stripe er ikke konfigurert (STRIPE_PRICE_SUB mangler)")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Stripe er ikke konfigurert ({price_env} mangler)")
 
         try:
             session = stripe.checkout.Session.create(
@@ -2421,7 +2474,7 @@ def create_checkout(
     if data.package not in _PACKAGE_CREDITS:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ugyldig pakke")
 
-    price_env = _PACKAGE_PRICE_ENV[data.package]
+    price_env = (_PACKAGE_PRICE_ENV_VN if is_vn else _PACKAGE_PRICE_ENV)[data.package]
     price_id = os.getenv(price_env)
     if not price_id:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Stripe er ikke konfigurert ({price_env} mangler)")
