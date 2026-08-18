@@ -754,6 +754,17 @@ def request_login_code(
     request: Request,
     db: Session = Depends(get_db),
 ):
+    try:
+        return _request_login_code(data, request, db)
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERROR i request-code: {e}")
+        print(traceback.format_exc())
+        raise
+
+
+def _request_login_code(data: RequestCodeIn, request: Request, db: Session):
     # Keep the table small.
     _cleanup_login_codes(db)
 
@@ -848,13 +859,15 @@ def request_login_code(
 
     email_result = send_email(email, subject, body, html=html)
     if isinstance(email_result, dict) and email_result.get("sent") is False:
+        reason = str(email_result.get("reason") or "Kunne ikke sende e-post")
+        print(f"ERROR i request-code: send_email feilet: {reason}")
         # Best-effort cleanup
         try:
             db.delete(row)
             db.commit()
         except Exception:
             pass
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(email_result.get("reason") or "Kunne ikke sende e-post"))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=reason)
 
     return {"sent": True}
 
