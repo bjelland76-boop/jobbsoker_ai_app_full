@@ -25,18 +25,8 @@ services:
       - key: OPENAI_API_KEY
         sync: false
 
-      # SMTP (set according to provider). Defaults below are Gmail-friendly.
-      - key: SMTP_HOST
-        value: smtp.gmail.com
-      - key: SMTP_PORT
-        value: "587"
-
-      # For Gmail:
-      # - SMTP_USER: your gmail address
-      # - SMTP_PASSWORD: App Password (requires 2FA)
-      - key: SMTP_USER
-        sync: false
-      - key: SMTP_PASSWORD
+      # Email (Resend)
+      - key: RESEND_API_KEY
         sync: false
       - key: FROM_EMAIL
         sync: false
@@ -44,10 +34,6 @@ services:
       # Optional
       - key: REPLY_TO_EMAIL
         sync: false
-      - key: SMTP_USE_TLS
-        value: "true"
-      - key: SMTP_TIMEOUT_SECONDS
-        value: "20"
 
     disk:
       name: app-data

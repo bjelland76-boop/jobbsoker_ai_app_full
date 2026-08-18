@@ -1,98 +1,71 @@
 import os
-import smtplib
-import socket
-from email.message import EmailMessage
 
+import resend
 from dotenv import load_dotenv
 
 load_dotenv(".env")
 
+resend.api_key = os.getenv("RESEND_API_KEY")
 
-def _env_bool(key: str, default: bool) -> bool:
-    v = (os.getenv(key) or "").strip().lower()
-    if not v:
-        return default
-    return v in {"1", "true", "yes", "y", "on"}
+DEFAULT_FROM_EMAIL = "Ærlig Jobbcoach <kode@aerlig.no>"
 
 
-def send_email(to_email: str, subject: str, body: str, attachments=None):
-    """Send an email with optional PDF attachments.
+def _escape_html(text: str) -> str:
+    return (
+        (text or "")
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
 
-    Environment variables (recommended):
-      SMTP_HOST
-      SMTP_PORT (default 587)
-      SMTP_USER
-      SMTP_PASSWORD
-      FROM_EMAIL
 
-    Optional:
-      REPLY_TO_EMAIL (adds a Reply-To header)
-      SMTP_USE_TLS (default true)
-      SMTP_USE_SSL (default false; if true typically use port 465)
-      SMTP_TIMEOUT_SECONDS (default 20)
+def send_email(to_email: str, subject: str, body: str, attachments=None, html: str = None):
+    """Send an email via Resend.
 
-    SendGrid SMTP example:
-      SMTP_HOST=smtp.sendgrid.net
-      SMTP_PORT=587
-      SMTP_USER=apikey
-      SMTP_PASSWORD=<SENDGRID_API_KEY>
-      FROM_EMAIL=<verified sender>
+    Environment variables:
+      RESEND_API_KEY (required)
+      FROM_EMAIL (optional, defaults to "Ærlig Jobbcoach <kode@aerlig.no>")
+      REPLY_TO_EMAIL (optional)
     """
 
     attachments = attachments or []
 
-    host = (os.getenv("SMTP_HOST") or "").strip()
-    user = (os.getenv("SMTP_USER") or "").strip()
-    password = (os.getenv("SMTP_PASSWORD") or "").strip()
-    from_email = (os.getenv("FROM_EMAIL") or user or "").strip()
+    if not resend.api_key:
+        return {"sent": False, "reason": "Resend er ikke konfigurert (RESEND_API_KEY mangler)"}
 
-    port = int((os.getenv("SMTP_PORT") or "587").strip() or "587")
-    use_tls = _env_bool("SMTP_USE_TLS", True)
-    use_ssl = _env_bool("SMTP_USE_SSL", False)
-    timeout_s = int((os.getenv("SMTP_TIMEOUT_SECONDS") or "20").strip() or "20")
+    to_email = (to_email or "").strip()
+    if not to_email:
+        return {"sent": False, "reason": "Mangler mottaker-e-post"}
 
-    if not host or not user or not password or not from_email:
-        return {"sent": False, "reason": "SMTP er ikke konfigurert"}
-
+    from_email = (os.getenv("FROM_EMAIL") or DEFAULT_FROM_EMAIL).strip()
     reply_to = (os.getenv("REPLY_TO_EMAIL") or "").strip()
 
-    msg = EmailMessage()
-    msg["From"] = from_email
-    msg["To"] = (to_email or "").strip()
-    msg["Subject"] = subject
+    params = {
+        "from": from_email,
+        "to": [to_email],
+        "subject": subject,
+        "text": body or "",
+        "html": html or f"<p>{_escape_html(body).replace(chr(10), '<br>')}</p>",
+    }
     if reply_to:
-        msg["Reply-To"] = reply_to
-    msg.set_content(body)
+        params["reply_to"] = reply_to
 
+    email_attachments = []
     for file_path in attachments:
         try:
             with open(file_path, "rb") as f:
                 data = f.read()
-            filename = os.path.basename(file_path)
-            msg.add_attachment(
-                data,
-                maintype="application",
-                subtype="pdf",
-                filename=filename,
-            )
+            email_attachments.append({
+                "filename": os.path.basename(file_path),
+                "content": list(data),
+            })
         except Exception as e:
             return {"sent": False, "reason": f"Kunne ikke lese vedlegg: {e}"}
+    if email_attachments:
+        params["attachments"] = email_attachments
 
     try:
-        if use_ssl:
-            smtp = smtplib.SMTP_SSL(host, port, timeout=timeout_s)
-        else:
-            smtp = smtplib.SMTP(host, port, timeout=timeout_s)
-
-        with smtp:
-            # STARTTLS if enabled and not already SSL.
-            if use_tls and not use_ssl:
-                smtp.starttls()
-
-            smtp.login(user, password)
-            smtp.send_message(msg)
-
+        resend.Emails.send(params)
         return {"sent": True}
-
-    except (smtplib.SMTPException, socket.timeout, OSError) as e:
-        return {"sent": False, "reason": f"SMTP-feil: {e}"}
+    except Exception as e:
+        return {"sent": False, "reason": f"Resend-feil: {e}"}

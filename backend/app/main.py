@@ -561,12 +561,7 @@ def health(db: Session = Depends(get_db)):
     checks["jwt_secret_present"] = bool(os.getenv("JWT_SECRET"))
     checks["anthropic_key_present"] = bool(os.getenv("ANTHROPIC_API_KEY"))
 
-    smtp_host = os.getenv("SMTP_HOST")
-    smtp_user = os.getenv("SMTP_USER")
-    smtp_password = os.getenv("SMTP_PASSWORD")
-    from_email = os.getenv("FROM_EMAIL") or smtp_user
-
-    checks["smtp_configured"] = bool(smtp_host and smtp_user and smtp_password and from_email)
+    checks["resend_configured"] = bool(os.getenv("RESEND_API_KEY"))
 
     required_ok = bool(checks["database"] and checks["jwt_secret_present"])
     status_text = "ok" if required_ok else "degraded"
@@ -845,8 +840,13 @@ def request_login_code(
         "Koden er gyldig i 10 minutter.\n"
         "Når du logger inn vil du være innlogget i 14 dager.\n"
     )
+    html = (
+        f"<p>Din engangskode for innlogging er: <strong>{code}</strong></p>"
+        "<p>Koden er gyldig i 10 minutter.<br>"
+        "Når du logger inn vil du være innlogget i 14 dager.</p>"
+    )
 
-    email_result = send_email(email, subject, body)
+    email_result = send_email(email, subject, body, html=html)
     if isinstance(email_result, dict) and email_result.get("sent") is False:
         # Best-effort cleanup
         try:
