@@ -130,6 +130,8 @@ function AppContent() {
 
   const {
     jobUrl, setJobUrl,
+    jobText, setJobText,
+    jobInputMode, setJobInputMode,
     analysis, setAnalysis,
     tailoredCvJobTitle, setTailoredCvJobTitle,
     cvTemplate, setCvTemplate,
@@ -946,6 +948,8 @@ function AppContent() {
           />}
           {activeTab === 'new' && <NewJobScreen
             jobUrl={jobUrl} setJobUrl={setJobUrl}
+            jobText={jobText} setJobText={setJobText}
+            jobInputMode={jobInputMode} setJobInputMode={setJobInputMode}
             loading={loading} analyzeJob={analyzeJob}
           />}
           {activeTab === 'applications' && <ApplicationsScreen

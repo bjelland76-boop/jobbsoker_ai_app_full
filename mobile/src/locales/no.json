@@ -88,7 +88,10 @@
     "analyzing": "Analyserer...",
     "start_analysis": "Start analyse",
     "what_happens_title": "Hva skjer nå?",
-    "what_happens_body": "Du får oversikt over krav, match og hva du bør fremheve i søknaden."
+    "what_happens_body": "Du får oversikt over krav, match og hva du bør fremheve i søknaden.",
+    "tab_url": "🔗 Lim inn URL",
+    "tab_text": "📋 Lim inn tekst",
+    "text_placeholder": "Lim inn jobbannonsen her..."
   },
   "analysis": {
     "title": "Analyser jobbannonse",

@@ -19,6 +19,9 @@ export default function useJobAnalysis({
   // State
   // ---------------------------------------------------------------------------
   const [jobUrl, setJobUrl] = useState('');
+  // Alternative to jobUrl for job ads with no stable URL (pasted text).
+  const [jobText, setJobText] = useState('');
+  const [jobInputMode, setJobInputMode] = useState('url'); // 'url' | 'text'
   const [analysis, setAnalysis] = useState(null);
   const [tailoredCvJobTitle, setTailoredCvJobTitle] = useState('');
   const [cvTemplate, setCvTemplate] = useState('profesjonell');
@@ -61,6 +64,8 @@ export default function useJobAnalysis({
   useEffect(() => {
     if (authTokenState !== null) return;
     setJobUrl('');
+    setJobText('');
+    setJobInputMode('url');
     setAnalysis(null);
     setJobAnalyses([]);
     setCvAnalysis(null);
@@ -291,7 +296,8 @@ export default function useJobAnalysis({
         missingProfileBody: 'Lagre profilen før du kjører analyse.',
       };
 
-    if (!jobUrl) {
+    const hasJobInput = jobInputMode === 'text' ? !!jobText.trim() : !!jobUrl.trim();
+    if (!hasJobInput) {
       Alert.alert(copy.missingUrlTitle, copy.missingUrlBody);
       return;
     }
@@ -329,7 +335,7 @@ export default function useJobAnalysis({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           profile_id: profileId,
-          url: jobUrl,
+          ...(jobInputMode === 'text' ? { job_text: jobText } : { url: jobUrl }),
           application_style: applicationStyle,
           language: uiLanguage,
         }),
@@ -379,8 +385,8 @@ export default function useJobAnalysis({
       setGenerationBanner('Skriv inn e-postadressen din for å sende søknaden.');
       return;
     }
-    if (!jobUrl) {
-      setGenerationBanner('Lim inn en jobbannonse-URL først.');
+    if (jobInputMode === 'text' ? !jobText.trim() : !jobUrl.trim()) {
+      setGenerationBanner('Lim inn en jobbannonse først.');
       return;
     }
 
@@ -405,7 +411,7 @@ export default function useJobAnalysis({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           profile_id: profileId,
-          url: jobUrl,
+          ...(jobInputMode === 'text' ? { job_text: jobText } : { url: jobUrl }),
           to_email: applicationEmail,
           application_style: applicationStyle,
           include_photo: includePhoto,
@@ -469,7 +475,7 @@ export default function useJobAnalysis({
       return;
     }
 
-    if (!jobUrl) {
+    if (jobInputMode === 'text' ? !jobText.trim() : !jobUrl.trim()) {
       Alert.alert('Feil', 'Lim inn jobbannonse først.');
       return;
     }
@@ -578,7 +584,7 @@ export default function useJobAnalysis({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             profile_id: profileId,
-            url: jobUrl,
+            ...(jobInputMode === 'text' ? { job_text: jobText } : { url: jobUrl }),
             application_style: applicationStyle,
             include_photo: includePhoto,
             language: cvLanguage,
@@ -821,6 +827,8 @@ export default function useJobAnalysis({
   return {
     // Analysis state
     jobUrl, setJobUrl,
+    jobText, setJobText,
+    jobInputMode, setJobInputMode,
     analysis, setAnalysis,
     tailoredCvJobTitle, setTailoredCvJobTitle,
     cvTemplate, setCvTemplate,

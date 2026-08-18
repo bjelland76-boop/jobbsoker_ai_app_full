@@ -88,7 +88,10 @@
     "analyzing": "Analyzing...",
     "start_analysis": "Start analysis",
     "what_happens_title": "What happens now?",
-    "what_happens_body": "You get an overview of requirements, match score, and what to highlight in your application."
+    "what_happens_body": "You get an overview of requirements, match score, and what to highlight in your application.",
+    "tab_url": "🔗 Paste URL",
+    "tab_text": "📋 Paste text",
+    "text_placeholder": "Paste the job ad here..."
   },
   "analysis": {
     "title": "Analyze job ad",

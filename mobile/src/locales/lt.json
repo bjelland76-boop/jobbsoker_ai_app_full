@@ -88,7 +88,10 @@
     "analyzing": "Analizuojama...",
     "start_analysis": "Pradėti analizę",
     "what_happens_title": "Kas dabar vyks?",
-    "what_happens_body": "Gausite reikalavimų, atitikimo ir to, ką turėtumėte pabrėžti paraiškoje, apžvalgą."
+    "what_happens_body": "Gausite reikalavimų, atitikimo ir to, ką turėtumėte pabrėžti paraiškoje, apžvalgą.",
+    "tab_url": "🔗 Įklijuoti URL",
+    "tab_text": "📋 Įklijuoti tekstą",
+    "text_placeholder": "Įklijuokite darbo skelbimą čia..."
   },
   "analysis": {
     "title": "Analizuoti darbo skelbimą",

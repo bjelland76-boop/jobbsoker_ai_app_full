@@ -88,7 +88,10 @@
     "analyzing": "Waa la falanqaynayaa...",
     "start_analysis": "Bilow falanqaynta",
     "what_happens_title": "Maxaa dhici doona hadda?",
-    "what_happens_body": "Waxaad heli doontaa guudmar shuruudaha, isku-dheelitirka, iyo waxa aad ku xoojin karto codsigaaga."
+    "what_happens_body": "Waxaad heli doontaa guudmar shuruudaha, isku-dheelitirka, iyo waxa aad ku xoojin karto codsigaaga.",
+    "tab_url": "🔗 Ku dheji URL-ka",
+    "tab_text": "📋 Ku dheji qoraalka",
+    "text_placeholder": "Ku dheji xayeysiiska shaqada halkan..."
   },
   "analysis": {
     "title": "Falanqee xayeysiiska shaqada",

@@ -88,7 +88,10 @@
     "analyzing": "Đang phân tích...",
     "start_analysis": "Bắt đầu phân tích",
     "what_happens_title": "Điều gì xảy ra tiếp theo?",
-    "what_happens_body": "Bạn sẽ nhận được tổng quan về yêu cầu, điểm phù hợp và những gì cần nhấn mạnh trong đơn xin việc."
+    "what_happens_body": "Bạn sẽ nhận được tổng quan về yêu cầu, điểm phù hợp và những gì cần nhấn mạnh trong đơn xin việc.",
+    "tab_url": "🔗 Dán URL",
+    "tab_text": "📋 Dán văn bản",
+    "text_placeholder": "Dán tin tuyển dụng vào đây..."
   },
   "analysis": {
     "title": "Phân tích tin tuyển dụng",

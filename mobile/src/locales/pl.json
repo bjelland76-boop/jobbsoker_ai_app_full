@@ -88,7 +88,10 @@
     "analyzing": "Analizowanie...",
     "start_analysis": "Rozpocznij analizę",
     "what_happens_title": "Co się teraz dzieje?",
-    "what_happens_body": "Otrzymasz przegląd wymagań, wynik dopasowania i wskazówki, co podkreślić w podaniu."
+    "what_happens_body": "Otrzymasz przegląd wymagań, wynik dopasowania i wskazówki, co podkreślić w podaniu.",
+    "tab_url": "🔗 Wklej URL",
+    "tab_text": "📋 Wklej tekst",
+    "text_placeholder": "Wklej ogłoszenie o pracę tutaj..."
   },
   "analysis": {
     "title": "Analizuj ogłoszenie o pracę",

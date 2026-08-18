@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import os
@@ -491,7 +492,10 @@ class SettingsIn(BaseModel):
 
 class AnalyzeUrlIn(BaseModel):
     profile_id: int
-    url: str
+    url: str = ""
+    # Pasted job ad text, used instead of `url` when the job posting has no
+    # stable URL. At least one of `url` / `job_text` must be non-empty.
+    job_text: str = ""
     application_style: str = "vanlig"  # kort | vanlig | profesjonell
     language: str = "no"
 
@@ -510,7 +514,10 @@ class CreateCheckoutIn(BaseModel):
 
 class SendAnalysisIn(BaseModel):
     profile_id: int
-    url: str
+    url: str = ""
+    # Pasted job ad text, used instead of `url` when the job posting has no
+    # stable URL. At least one of `url` / `job_text` must be non-empty.
+    job_text: str = ""
     # Optional: when missing/empty, we only generate the package (no email send).
     to_email: str | None = None
     application_style: str = "vanlig"  # kort | vanlig | profesjonell
@@ -654,6 +661,20 @@ def register(data: RegisterIn, db: Session = Depends(get_db)):
 
 def _normalize_email(email: str) -> str:
     return (email or "").strip().lower()
+
+
+def _job_lookup_key(url: str, job_text: str) -> str:
+    """Stable identifier for a Job row.
+
+    Pasted-text submissions have no real URL, so we derive a pseudo-URL from
+    a hash of the pasted text — re-analyzing identical pasted text updates
+    the same Job row (mirrors the URL-based dedup for scraped job ads)
+    instead of creating a new row every time.
+    """
+    url = (url or "").strip()
+    if url:
+        return url
+    return f"pasted-text:{hashlib.sha256((job_text or '').strip().encode('utf-8')).hexdigest()[:24]}"
 
 
 def _client_ip(request: Request | None) -> str:
@@ -2248,6 +2269,7 @@ def generateApplicationPackage(
     profile: Profile,
     url: str,
     *,
+    job_text: str = "",
     application_style: str = "vanlig",
     include_photo: bool = True,
     language: str = "no",
@@ -2273,25 +2295,30 @@ def generateApplicationPackage(
 
     from .job_analyzer import analyze_job_url
 
+    url = (url or "").strip()
+    job_text = (job_text or "").strip()
+    job_key = _job_lookup_key(url, job_text)
+
     result = analyze_job_url(
         profile,
         url,
         application_style=application_style,
         generate_documents=True,
         language=language,
+        job_text_override=job_text or None,
     )
 
     job_desc = (result.pop("__job_text", "") or "").strip()
 
     # Persist job so it can be tracked in the app.
-    job = db.scalars(select(Job).where(Job.url == url, Job.user_id == current_user.id)).first()
+    job = db.scalars(select(Job).where(Job.url == job_key, Job.user_id == current_user.id)).first()
     if not job:
         job = Job(
             user_id=current_user.id,
             title=result.get("job_title") or "Ukjent stilling",
             company=result.get("company") or "",
             location="",
-            url=url,
+            url=job_key,
             description=job_desc,
             match_score=float(result.get("match_score") or 0),
             status="analyzed",
@@ -2646,6 +2673,12 @@ def analyze_url(
     if not profile or profile.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
 
+    url = (data.url or "").strip()
+    job_text = (data.job_text or "").strip()
+    if not url and not job_text:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mangler URL eller jobbtekst")
+    job_key = _job_lookup_key(url, job_text)
+
     blocked = _check_free_limit(profile, "analyse")
     if blocked is not None:
         return blocked
@@ -2653,22 +2686,23 @@ def analyze_url(
     try:
         result = analyze_job_url(
             profile,
-            data.url,
+            url,
             application_style=data.application_style,
             generate_documents=False,
             language=data.language,
+            job_text_override=job_text or None,
         )
         job_desc = (result.pop("__job_text", "") or "").strip()
 
         # Persist job so it can be tracked in the app later.
-        job = db.scalars(select(Job).where(Job.url == data.url, Job.user_id == current_user.id)).first()
+        job = db.scalars(select(Job).where(Job.url == job_key, Job.user_id == current_user.id)).first()
         if not job:
             job = Job(
                 user_id=current_user.id,
                 title=result.get("job_title") or "Ukjent stilling",
                 company=result.get("company") or "",
                 location="",
-                url=data.url,
+                url=job_key,
                 description=job_desc,
                 match_score=float(result.get("match_score") or 0),
                 status="analyzed",
@@ -2729,6 +2763,9 @@ def analyze_url_and_send(
     if not profile or profile.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
 
+    if not (data.url or "").strip() and not (data.job_text or "").strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mangler URL eller jobbtekst")
+
     blocked = _check_free_limit(profile, "cv")
     if blocked is not None:
         return blocked
@@ -2741,6 +2778,7 @@ def analyze_url_and_send(
         result, email_meta = generateApplicationPackage(
             profile,
             data.url,
+            job_text=data.job_text,
             application_style=data.application_style,
             include_photo=bool(data.include_photo),
             language=data.language,

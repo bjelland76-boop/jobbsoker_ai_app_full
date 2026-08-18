@@ -837,17 +837,22 @@ def analyze_job_url(
     *,
     generate_documents: bool = False,
     language: str = "no",
+    job_text_override: str | None = None,
 ) -> dict:
-    """Analyze a job ad URL.
+    """Analyze a job ad, either by fetching `url` or using pasted text directly.
 
     Default behavior is low-token matching only. Full document generation is
     optional and can be enabled by the caller.
+
+    `job_text_override`: when given (non-empty), used as the job ad content
+    as-is instead of fetching/scraping `url` — lets callers support pasting
+    a job ad's text directly for postings that have no stable URL.
 
     NOTE: We include an internal field "__job_text" for persistence, which the
     API layer should pop before returning/saving analysis JSON.
     """
 
-    job_text = fetch_job_text(url)
+    job_text = (job_text_override or "").strip() or fetch_job_text(url)
     cv_text = _build_cv_text_for_match(profile)
 
     match = analyze_job_match(job_text, cv_text, language=language)
