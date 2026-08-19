@@ -42,6 +42,9 @@ ANTI-HALLUCINATION / FACTS:
 - Do NOT invent experience, employers, roles, responsibilities, education, courses, certificates,
   driving licences, forklift licences, machine licences, authorisations or other qualifications.
 - Use ONLY information actually found in: user profile, CV text, job text or job analysis.
+- Translating a title/degree name into the target language is REQUIRED and is NOT considered
+  altering a fact. Always translate job titles and education degrees to the target language
+  (e.g. "Butikkmedarbeider" -> "Retail Assistant"); this is translation, not invention.
 
 CLEAR DISTINCTION (when describing qualifications):
 - Documented experience/qualification: explicitly stated in the sources.

@@ -315,6 +315,56 @@ def _clean_job_title_for_pdf(title: str) -> str:
     return s
 
 
+# Labels for the sidebar templates' profile-fallback rendering path (used
+# only when the AI-generated CV text is missing). CV content generation
+# itself currently only supports "no"/"en", so these only cover those two.
+_SIDEBAR_LABELS = {
+    "no": {
+        "experience": "Erfaring",
+        "education": "Utdanning",
+        "skills": "Ferdigheter",
+        "gaps": "Hull i CV",
+        "references": "Referanser",
+        "present": "Nå",
+        "ongoing": "pågående",
+    },
+    "en": {
+        "experience": "Experience",
+        "education": "Education",
+        "skills": "Skills",
+        "gaps": "Employment Gaps",
+        "references": "References",
+        "present": "Present",
+        "ongoing": "ongoing",
+    },
+}
+
+# References-section fallback text (shown when the profile has no references
+# filled in), keyed by CV/document language. Shared between pdfgen.py's PDF
+# rendering and main.py's tailored_cv text injection so both stay in sync.
+REFERENCES_FALLBACK_TEXT = {
+    "no": "Referanser oppgis ved forespørsel.",
+    "en": "References available upon request.",
+    "vi": "Tham khảo được cung cấp theo yêu cầu.",
+}
+
+REFERENCES_HEADER_TEXT = {
+    "no": "Referanser:",
+    "en": "References:",
+    "vi": "Người tham khảo:",
+}
+
+
+def _references_fallback_text(language: str) -> str:
+    lang = (language or "no").strip().lower()
+    return REFERENCES_FALLBACK_TEXT.get(lang, REFERENCES_FALLBACK_TEXT["no"])
+
+
+def _references_header_text(language: str) -> str:
+    lang = (language or "no").strip().lower()
+    return REFERENCES_HEADER_TEXT.get(lang, REFERENCES_HEADER_TEXT["no"])
+
+
 class _SidebarPdfDoc:
     def __init__(
         self,
@@ -326,6 +376,7 @@ class _SidebarPdfDoc:
         *,
         include_photo: bool = True,
         theme: _Theme | None = None,
+        language: str = "no",
     ):
         self.path = OUT / filename
         self.c = canvas.Canvas(str(self.path), pagesize=A4)
@@ -337,6 +388,8 @@ class _SidebarPdfDoc:
         self.cover_letter = cover_letter
         self.cv_text = cv_text
         self.include_photo = include_photo
+        self.language = language if (language or "").strip().lower() == "en" else "no"
+        self.labels = _SIDEBAR_LABELS[self.language]
 
         # Layout
         self.sidebar_w = 6.6 * cm
@@ -1056,7 +1109,7 @@ class _SidebarPdfDoc:
             title = str(it.get("title") or "").strip()
             company = str(it.get("company") or "").strip()
             _from = str(it.get("from") or "").strip()
-            _to = "Nå" if bool(it.get("current")) else str(it.get("to") or "").strip()
+            _to = self.labels["present"] if bool(it.get("current")) else str(it.get("to") or "").strip()
 
             head = " – ".join([x for x in [title, company] if x])
             period = " ".join([x for x in [_from, "–", _to] if x and x != "–"])
@@ -1065,7 +1118,7 @@ class _SidebarPdfDoc:
 
             c.setFillColor(self.theme.text)
             c.setFont("Helvetica-Bold", 10.6)
-            c.drawString(self.main_left, self.y, head or "Erfaring")
+            c.drawString(self.main_left, self.y, head or self.labels["experience"])
 
             if period:
                 c.setFillColor(colors.HexColor("#64748b"))
@@ -1100,7 +1153,7 @@ class _SidebarPdfDoc:
 
             head = " – ".join([x for x in [degree, school] if x])
             if status == "pagaende":
-                period = (_from + " –" if _from else "") + " pågående"
+                period = (_from + " –" if _from else "") + " " + self.labels["ongoing"]
             else:
                 period = " ".join([x for x in [_from, "–", _to] if x and x != "–"])
 
@@ -1108,7 +1161,7 @@ class _SidebarPdfDoc:
 
             c.setFillColor(self.theme.text)
             c.setFont("Helvetica-Bold", 10.6)
-            c.drawString(self.main_left, self.y, head or "Utdanning")
+            c.drawString(self.main_left, self.y, head or self.labels["education"])
 
             if period:
                 c.setFillColor(colors.HexColor("#64748b"))
@@ -1122,7 +1175,7 @@ class _SidebarPdfDoc:
     def _draw_references(self) -> None:
         items = _parse_json_list(getattr(self.profile, "references_json", ""))
         if not items:
-            self._paragraph("Referanser oppgis ved forespørsel.")
+            self._paragraph(_references_fallback_text(self.language))
             return
 
         lines: list[str] = []
@@ -1144,7 +1197,7 @@ class _SidebarPdfDoc:
                 lines.append(f"• {main}")
 
         if not lines:
-            self._paragraph("Referanser oppgis ved forespørsel.")
+            self._paragraph(_references_fallback_text(self.language))
         else:
             self._paragraph("\n".join(lines))
 
@@ -1171,23 +1224,23 @@ class _SidebarPdfDoc:
             self._draw_cv_text(self.cv_text)
         else:
             # Fallback: render from profile if AI CV text is missing.
-            self._section_header("Erfaring")
+            self._section_header(self.labels["experience"])
             self._draw_experience()
 
-            self._section_header("Utdanning")
+            self._section_header(self.labels["education"])
             self._draw_education()
 
             skills = (getattr(self.profile, "skills", "") or "").strip()
             if skills:
-                self._section_header("Ferdigheter")
+                self._section_header(self.labels["skills"])
                 self._paragraph(skills)
 
             gaps = (getattr(self.profile, "cv_gaps", "") or "").strip()
             if gaps:
-                self._section_header("Hull i CV")
+                self._section_header(self.labels["gaps"])
                 self._paragraph(gaps)
 
-            self._section_header("Referanser")
+            self._section_header(self.labels["references"])
             self._draw_references()
 
         self.c.save()
@@ -2027,23 +2080,23 @@ class _SidebarCvOnlyDoc(_SidebarPdfDoc):
             self._draw_cv_text(self.cv_text)
         else:
             # Fallback: render from profile if AI CV text is missing.
-            self._section_header("Erfaring")
+            self._section_header(self.labels["experience"])
             self._draw_experience()
 
-            self._section_header("Utdanning")
+            self._section_header(self.labels["education"])
             self._draw_education()
 
             skills = (getattr(self.profile, "skills", "") or "").strip()
             if skills:
-                self._section_header("Ferdigheter")
+                self._section_header(self.labels["skills"])
                 self._paragraph(skills)
 
             gaps = (getattr(self.profile, "cv_gaps", "") or "").strip()
             if gaps:
-                self._section_header("Hull i CV")
+                self._section_header(self.labels["gaps"])
                 self._paragraph(gaps)
 
-            self._section_header("Referanser")
+            self._section_header(self.labels["references"])
             self._draw_references()
 
         self.c.save()
@@ -2073,10 +2126,13 @@ def make_application_pdfs(
     *,
     include_photo: bool = True,
     template: str = "profesjonell",
+    language: str = "no",
 ):
     """Generate TWO PDFs — combined (søknad+CV) and CV-only.
 
     `template` is one of: "kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk", "vietnamesisk".
+    `language` ("no" | "en") only affects the sidebar templates' (kreativ/profesjonell)
+    profile-fallback section labels, used when the AI-generated CV text is missing.
     Returns (combined_pdf_path, cv_only_pdf_path).
     """
 
@@ -2108,12 +2164,12 @@ def make_application_pdfs(
         combined_doc = _SidebarPdfDoc(
             combined_filename, profile, job,
             cover_letter=cover_letter, cv_text=tailored_cv,
-            include_photo=include_photo, theme=theme,
+            include_photo=include_photo, theme=theme, language=language,
         )
         cv_doc = _SidebarCvOnlyDoc(
             cv_filename, profile, job,
             cover_letter="", cv_text=tailored_cv,
-            include_photo=include_photo, theme=theme,
+            include_photo=include_photo, theme=theme, language=language,
         )
 
     combined_path = combined_doc.build()

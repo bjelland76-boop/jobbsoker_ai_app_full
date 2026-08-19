@@ -59,7 +59,12 @@ from .models import (
     User,
 )
 from .pdf_dedupe import compute_pdf_content_hash
-from .pdfgen import OUT as GENERATED_PDFS_DIR, make_application_pdfs
+from .pdfgen import (
+    OUT as GENERATED_PDFS_DIR,
+    make_application_pdfs,
+    _references_fallback_text,
+    _references_header_text,
+)
 from .text_sanitize import sanitize_employer_text
 from .transcribe import suffix_from_mime, transcribe_path, validate_upload
 from .schemas import (
@@ -271,14 +276,17 @@ def _to_text(value) -> str:
         return str(value)
 
 
-def _format_references_block(profile: Profile) -> str:
+def _format_references_block(profile: Profile, language: str = "no") -> str:
     """Return a CV-ready references section based on profile.references_json."""
+
+    header = _references_header_text(language)
+    fallback = _references_fallback_text(language)
 
     items = _parse_json_field(getattr(profile, "references_json", ""))
     if not items:
-        return "Referanser:\nReferanser oppgis ved forespørsel."
+        return f"{header}\n{fallback}"
 
-    lines: list[str] = ["Referanser:"]
+    lines: list[str] = [header]
     for it in items:
         if isinstance(it, str):
             name = it.strip()
@@ -305,22 +313,23 @@ def _format_references_block(profile: Profile) -> str:
             lines.append(f"• {main}")
 
     if len(lines) == 1:
-        return "Referanser:\nReferanser oppgis ved forespørsel."
+        return f"{header}\n{fallback}"
 
     return "\n".join(lines)
 
 
-def _inject_references_into_cv(profile: Profile, tailored_cv: str) -> str:
+def _inject_references_into_cv(profile: Profile, tailored_cv: str, language: str = "no") -> str:
     """Ensure references are present in CV text.
 
     We only inject references into the CV content used for PDF generation.
     (We do NOT inject into cover letter or email body.)
     """
 
-    ref_block = _format_references_block(profile)
+    ref_block = _format_references_block(profile, language)
 
     cv_out = tailored_cv or ""
-    if "referanser" not in (cv_out or "").casefold():
+    lower = cv_out.casefold()
+    if "referanser" not in lower and "references" not in lower:
         cv_out = (cv_out.rstrip() + "\n\n" + ref_block + "\n").lstrip("\n")
 
     return cv_out
@@ -2020,7 +2029,7 @@ def generate_tailored_cv(
     row.analysis_json = json.dumps(stored, ensure_ascii=False)
     row.updated_at = datetime.utcnow()
 
-    pdf_tailored_cv = _inject_references_into_cv(profile, tailored_cv)
+    pdf_tailored_cv = _inject_references_into_cv(profile, tailored_cv, lang)
     include_photo_bool = bool(include_photo) and bool(getattr(profile, "photo_data", ""))
 
     pdf_url = ""
@@ -2038,6 +2047,7 @@ def generate_tailored_cv(
             profile, job, cover_letter, pdf_tailored_cv,
             include_photo=include_photo_bool,
             template=effective_template,
+            language=lang,
         )
         approw = GeneratedApplication(
             job_id=job.id,
@@ -2202,7 +2212,7 @@ def stream_documents(
                     hist.analysis_json = json.dumps(stored, ensure_ascii=False)
                     hist.updated_at = datetime.utcnow()
 
-                pdf_tailored_cv = _inject_references_into_cv(profile, tailored_cv)
+                pdf_tailored_cv = _inject_references_into_cv(profile, tailored_cv, lang)
                 content_hash = compute_pdf_content_hash(
                     template_id=f"{effective_template}_v1",
                     include_photo=include_photo_bool,
@@ -2225,6 +2235,7 @@ def stream_documents(
                         pdf_tailored_cv,
                         include_photo=include_photo_bool,
                         template=effective_template,
+                        language=lang,
                     )
                     approw = GeneratedApplication(
                         job_id=job_id_val,
@@ -2366,7 +2377,7 @@ def generateApplicationPackage(
     cv_pdf = ""
     if cover_letter_raw.strip() and tailored_cv_raw.strip():
         # Inject references first (still employer-safe). Then sanitize for employer-facing outputs.
-        pdf_tailored_cv_raw = _inject_references_into_cv(profile, tailored_cv_raw)
+        pdf_tailored_cv_raw = _inject_references_into_cv(profile, tailored_cv_raw, language)
 
         employer_cover_letter = sanitize_employer_text(cover_letter_raw)
         employer_tailored_cv = sanitize_employer_text(pdf_tailored_cv_raw)
@@ -2381,6 +2392,7 @@ def generateApplicationPackage(
             employer_tailored_cv,
             include_photo=bool(include_photo),
             template=cv_mal,
+            language=language,
         )
 
         # Persist generated content.
