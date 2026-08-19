@@ -400,5 +400,10 @@
     "end_confirm_body": "Ma hubtaa? Wareysigu ma keydsami doono.",
     "end_confirm_action": "Haa, dhammee",
     "back_to_jobs": "Ku noqo liiska shaqooyinka"
+  },
+  "onboarding_intro": {
+    "skip": "Bood",
+    "next": "Xiga",
+    "get_started": "Bilow"
   }
 }

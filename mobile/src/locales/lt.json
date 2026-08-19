@@ -399,5 +399,10 @@
     "end_confirm_body": "Ar tikrai? Interviu nebus išsaugotas.",
     "end_confirm_action": "Taip, baigti",
     "back_to_jobs": "Grįžti į darbų sąrašą"
+  },
+  "onboarding_intro": {
+    "skip": "Praleisti",
+    "next": "Kitas",
+    "get_started": "Pradėti"
   }
 }

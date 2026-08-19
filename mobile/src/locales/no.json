@@ -402,5 +402,10 @@
     "end_confirm_body": "Er du sikker? Intervjuet vil ikke lagres.",
     "end_confirm_action": "Ja, avslutt",
     "back_to_jobs": "Tilbake til jobbliste"
+  },
+  "onboarding_intro": {
+    "skip": "Hopp over",
+    "next": "Neste",
+    "get_started": "Kom i gang"
   }
 }

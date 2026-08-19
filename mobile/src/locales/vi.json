@@ -399,5 +399,10 @@
     "end_confirm_body": "Bạn có chắc không? Cuộc phỏng vấn sẽ không được lưu.",
     "end_confirm_action": "Có, kết thúc",
     "back_to_jobs": "Quay lại danh sách công việc"
+  },
+  "onboarding_intro": {
+    "skip": "Bỏ qua",
+    "next": "Tiếp theo",
+    "get_started": "Bắt đầu"
   }
 }

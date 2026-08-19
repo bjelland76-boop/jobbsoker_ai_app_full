@@ -23,6 +23,7 @@ import { AppProvider, useApp, apiFetch, API } from './context/AppContext';
 import useProfile from './hooks/useProfile';
 import useJobAnalysis from './hooks/useJobAnalysis';
 import AuthScreen from './screens/AuthScreen';
+import OnboardingSlidesScreen from './screens/OnboardingSlidesScreen';
 import HomeScreen from './screens/HomeScreen';
 import ApplicationsScreen from './screens/ApplicationsScreen';
 import DocumentsScreen from './screens/DocumentsScreen';
@@ -94,6 +95,7 @@ function AppContent() {
     codeSent, setCodeSent,
     resendCooldown, setResendCooldown,
     authLoading,
+    introSlidesSeen, markIntroSlidesSeen,
     uiLanguage, setUiLanguage,
     activeTab, setActiveTab,
     showOnboarding, setShowOnboarding,
@@ -874,6 +876,14 @@ function AppContent() {
             <Text style={styles.pageTitle}>{t('common.loading')}</Text>
           </View>
         </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (!authTokenState && !introSlidesSeen) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: '#FFFFFF' }]}>
+        <OnboardingSlidesScreen onDone={markIntroSlidesSeen} />
       </SafeAreaView>
     );
   }

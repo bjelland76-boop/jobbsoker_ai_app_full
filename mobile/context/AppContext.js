@@ -123,6 +123,9 @@ export function AppProvider({ children }) {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [authLoading, setAuthLoading] = useState(false);
 
+  // Pre-login intro slides (3-slide welcome carousel, shown once ever, before AuthScreen).
+  const [introSlidesSeen, setIntroSlidesSeen] = useState(false);
+
   // App-wide UI state
   const [uiLanguage, setUiLanguage] = useState('no');
   const [activeTab, setActiveTab] = useState('home');
@@ -156,6 +159,9 @@ export function AppProvider({ children }) {
         const resolved = SUPPORTED.includes(lang) ? lang : 'no';
         setUiLanguage(resolved);
         loadSavedLanguage(resolved);
+
+        const introSeen = await AsyncStorage.getItem('onboarding_shown');
+        setIntroSlidesSeen(introSeen === 'true');
 
         const t = await AsyncStorage.getItem('authToken');
         if (t) {
@@ -202,6 +208,11 @@ export function AppProvider({ children }) {
     setAuthCode('');
     setCodeSent(false);
     setResendCooldown(0);
+  }
+
+  async function markIntroSlidesSeen() {
+    setIntroSlidesSeen(true);
+    try { await AsyncStorage.setItem('onboarding_shown', 'true'); } catch (e) { /* ignore */ }
   }
 
   async function doAuth() {
@@ -315,6 +326,7 @@ export function AppProvider({ children }) {
       codeSent, setCodeSent,
       resendCooldown, setResendCooldown,
       authLoading,
+      introSlidesSeen, markIntroSlidesSeen,
       // UI state
       uiLanguage, setUiLanguage,
       activeTab, setActiveTab,

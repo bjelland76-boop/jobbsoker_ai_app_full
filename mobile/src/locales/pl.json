@@ -399,5 +399,10 @@
     "end_confirm_body": "Czy na pewno? Rozmowa nie zostanie zapisana.",
     "end_confirm_action": "Tak, zakończ",
     "back_to_jobs": "Powrót do listy ofert"
+  },
+  "onboarding_intro": {
+    "skip": "Pomiń",
+    "next": "Dalej",
+    "get_started": "Zaczynamy"
   }
 }

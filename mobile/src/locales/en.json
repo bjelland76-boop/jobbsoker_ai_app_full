@@ -399,5 +399,10 @@
     "end_confirm_body": "Are you sure? The interview will not be saved.",
     "end_confirm_action": "Yes, end it",
     "back_to_jobs": "Back to job list"
+  },
+  "onboarding_intro": {
+    "skip": "Skip",
+    "next": "Next",
+    "get_started": "Get started"
   }
 }

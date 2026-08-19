@@ -399,5 +399,10 @@
     "end_confirm_body": "هل أنت متأكد؟ لن يتم حفظ المقابلة.",
     "end_confirm_action": "نعم، إنهاء",
     "back_to_jobs": "العودة إلى قائمة الوظائف"
+  },
+  "onboarding_intro": {
+    "skip": "تخطي",
+    "next": "التالي",
+    "get_started": "ابدأ"
   }
 }
