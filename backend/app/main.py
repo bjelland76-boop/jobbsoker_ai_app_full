@@ -31,6 +31,8 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from google.auth.transport import requests as google_auth_requests
+from google.oauth2 import id_token as google_id_token
 from pydantic import BaseModel
 from sqlalchemy import delete, func, inspect, select, text
 from sqlalchemy.orm import Session
@@ -577,6 +579,10 @@ class EmailExistsOut(BaseModel):
     exists: bool
 
 
+class GoogleSignInIn(BaseModel):
+    id_token: str
+
+
 @app.get("/", tags=["meta"])
 def root():
     return {"status": "ok", "app": "AI Jobbsøker"}
@@ -999,6 +1005,44 @@ def verify_login_code(data: VerifyCodeIn, request: Request, db: Session = Depend
 
     existed = bool(get_user_by_email(db, email))
     wanted_name = (data.name or "").strip() if not existed else None
+
+    user = _ensure_user_and_profile(db, email, display_name=wanted_name)
+
+    return {"access_token": create_access_token(user_id=user.id), "user_id": user.id, "token_type": "bearer"}
+
+
+@app.post("/auth/google", response_model=TokenOut, tags=["auth"])
+def google_sign_in(data: GoogleSignInIn, db: Session = Depends(get_db)):
+    client_id = os.getenv("GOOGLE_CLIENT_ID_WEB")
+    if not client_id:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="GOOGLE_CLIENT_ID_WEB mangler i backend-konfigurasjonen",
+        )
+
+    token = (data.id_token or "").strip()
+    if not token:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mangler id_token")
+
+    try:
+        idinfo = google_id_token.verify_oauth2_token(
+            token, google_auth_requests.Request(), client_id
+        )
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Ugyldig Google-token")
+
+    if not idinfo.get("email_verified"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Google-kontoen din har ikke en bekreftet e-postadresse",
+        )
+
+    email = _normalize_email(idinfo.get("email") or "")
+    if not email or "@" not in email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ugyldig e-post fra Google")
+
+    existed = bool(get_user_by_email(db, email))
+    wanted_name = (idinfo.get("name") or "").strip() if not existed else None
 
     user = _ensure_user_and_profile(db, email, display_name=wanted_name)
 
