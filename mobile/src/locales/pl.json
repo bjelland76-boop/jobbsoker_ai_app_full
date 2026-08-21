@@ -32,6 +32,9 @@
   },
   "auth": {
     "tagline": "Twój szczery coach kariery — podania i trening rozmów kwalifikacyjnych, które naprawdę działają",
+    "google_signin": "Kontynuuj z Google",
+    "or_divider": "lub",
+    "google_signin_failed": "Nie udało się otworzyć logowania Google. Spróbuj ponownie lub użyj e-maila.",
     "email_label": "E-mail",
     "email_placeholder": "imie@email.pl",
     "code_label": "Kod jednorazowy",

@@ -32,6 +32,9 @@
   },
   "auth": {
     "tagline": "Din ærlige jobbcoach — søknader og intervjutrening som faktisk funker",
+    "google_signin": "Fortsett med Google",
+    "or_divider": "eller",
+    "google_signin_failed": "Kunne ikke åpne Google-innlogging. Prøv igjen eller bruk e-post.",
     "email_label": "E-post",
     "email_placeholder": "navn@epost.no",
     "code_label": "Engangskode",

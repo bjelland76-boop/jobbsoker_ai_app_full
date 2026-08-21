@@ -32,6 +32,9 @@
   },
   "auth": {
     "tagline": "مدربك المهني الصادق — طلبات وتدريب على المقابلات يعمل فعلاً",
+    "google_signin": "المتابعة باستخدام Google",
+    "or_divider": "أو",
+    "google_signin_failed": "تعذر فتح تسجيل الدخول عبر Google. حاول مرة أخرى أو استخدم البريد الإلكتروني.",
     "email_label": "البريد الإلكتروني",
     "email_placeholder": "الاسم@example.com",
     "code_label": "رمز لمرة واحدة",

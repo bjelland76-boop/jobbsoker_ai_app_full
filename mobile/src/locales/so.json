@@ -32,6 +32,9 @@
   },
   "auth": {
     "tagline": "Tababaraha shaqo-doonista ee daacadda ah — codsiyo iyo tababar wareysi oo runtii shaqeeya",
+    "google_signin": "Ku sii wad Google",
+    "or_divider": "ama",
+    "google_signin_failed": "Lama furi karin gelitaanka Google. Isku day mar kale ama isticmaal iimaylka.",
     "email_label": "Iimeel",
     "email_placeholder": "magac@iimeel.com",
     "code_label": "Koodka hal-mar ah",

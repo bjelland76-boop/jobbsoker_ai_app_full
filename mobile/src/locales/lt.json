@@ -32,6 +32,9 @@
   },
   "auth": {
     "tagline": "Jūsų sąžiningas karjeros treneris — paraiškos ir interviu treniruotės, kurios tikrai veikia",
+    "google_signin": "Tęsti su Google",
+    "or_divider": "arba",
+    "google_signin_failed": "Nepavyko atidaryti prisijungimo per Google. Bandykite dar kartą arba naudokite el. paštą.",
     "email_label": "El. paštas",
     "email_placeholder": "vardas@pastas.lt",
     "code_label": "Vienkartinis kodas",

@@ -32,6 +32,9 @@
   },
   "auth": {
     "tagline": "Huấn luyện viên việc làm trung thực — đơn xin việc và luyện phỏng vấn thực sự hiệu quả",
+    "google_signin": "Tiếp tục với Google",
+    "or_divider": "hoặc",
+    "google_signin_failed": "Không thể mở đăng nhập Google. Vui lòng thử lại hoặc dùng email.",
     "email_label": "Email",
     "email_placeholder": "ten@email.com",
     "code_label": "Mã một lần",

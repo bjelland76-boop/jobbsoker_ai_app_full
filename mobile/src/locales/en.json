@@ -32,6 +32,9 @@
   },
   "auth": {
     "tagline": "Your honest job coach — applications and interview practice that actually work",
+    "google_signin": "Continue with Google",
+    "or_divider": "or",
+    "google_signin_failed": "Couldn't open Google Sign-In. Try again or use email.",
     "email_label": "Email",
     "email_placeholder": "name@email.com",
     "code_label": "One-time code",

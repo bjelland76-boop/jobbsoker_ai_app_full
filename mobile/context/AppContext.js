@@ -122,6 +122,7 @@ export function AppProvider({ children }) {
   const [codeSent, setCodeSent] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [authLoading, setAuthLoading] = useState(false);
+  const [googleAuthLoading, setGoogleAuthLoading] = useState(false);
 
   // Pre-login intro slides (3-slide welcome carousel, shown once ever, before AuthScreen).
   const [introSlidesSeen, setIntroSlidesSeen] = useState(false);
@@ -257,6 +258,30 @@ export function AppProvider({ children }) {
     setAuthLoading(false);
   }
 
+  async function doGoogleAuth(googleIdToken) {
+    if (!googleIdToken) return;
+    setGoogleAuthLoading(true);
+    try {
+      const res = await apiFetch('/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_token: googleIdToken }),
+      });
+      const token = res?.access_token;
+      if (!token) throw new Error('Mangler token fra server');
+      setAuthToken(token);
+      setAuthTokenState(token);
+      await AsyncStorage.setItem('authToken', token);
+      setCodeSent(false);
+      setResendCooldown(0);
+      setAuthCode('');
+      setActiveTab('home');
+    } catch (e) {
+      Alert.alert(i18n.t('common.error'), errText(e));
+    }
+    setGoogleAuthLoading(false);
+  }
+
   async function logout() {
     try { await AsyncStorage.removeItem('authToken'); } catch (e) { /* ignore */ }
     setAuthToken(null);
@@ -326,6 +351,7 @@ export function AppProvider({ children }) {
       codeSent, setCodeSent,
       resendCooldown, setResendCooldown,
       authLoading,
+      googleAuthLoading,
       introSlidesSeen, markIntroSlidesSeen,
       // UI state
       uiLanguage, setUiLanguage,
@@ -337,6 +363,7 @@ export function AppProvider({ children }) {
       paymentModalLimitType, showPaymentModal, closePaymentModal,
       // Functions
       doAuth,
+      doGoogleAuth,
       logout,
       deleteAccount,
       logEvent,

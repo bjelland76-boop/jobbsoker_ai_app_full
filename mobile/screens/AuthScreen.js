@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, Alert,
+  View, Text, TextInput, TouchableOpacity, Alert, Platform,
 } from 'react-native';
 import { useApp, apiFetch } from '../context/AppContext';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 
 export default function AuthScreen() {
   const {
@@ -118,6 +119,22 @@ export default function AuthScreen() {
         <Text style={{ fontSize: 14, color: '#888', marginTop: 4, marginBottom: 28, lineHeight: 20 }}>
           {t('auth.tagline')}
         </Text>
+
+        {/* Google Sign-In — web only (see components/GoogleSignInButton.js for why:
+            the shipped Android app is a Capacitor WebView, not an Expo-native
+            build, so the web SDK is what actually works there). */}
+        {Platform.OS === 'web' && (
+          <>
+            <GoogleSignInButton />
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 18 }}>
+              <View style={{ flex: 1, height: 1, backgroundColor: '#e5e7eb' }} />
+              <Text style={{ fontSize: 12, color: '#aaa', marginHorizontal: 10 }}>
+                {t('auth.or_divider')}
+              </Text>
+              <View style={{ flex: 1, height: 1, backgroundColor: '#e5e7eb' }} />
+            </View>
+          </>
+        )}
 
         {/* Email label + input */}
         <Text style={{ fontSize: 12, fontWeight: '500', color: '#555', marginBottom: 6 }}>
