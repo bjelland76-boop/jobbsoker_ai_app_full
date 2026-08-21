@@ -216,6 +216,16 @@ export function AppProvider({ children }) {
     try { await AsyncStorage.setItem('onboarding_shown', 'true'); } catch (e) { /* ignore */ }
   }
 
+  async function applyAuthToken(token) {
+    setAuthToken(token);
+    setAuthTokenState(token);
+    await AsyncStorage.setItem('authToken', token);
+    setCodeSent(false);
+    setResendCooldown(0);
+    setAuthCode('');
+    setActiveTab('home');
+  }
+
   async function doAuth() {
     if (!authEmail) { Alert.alert(i18n.t('common.error'), i18n.t('auth.error_no_email')); return; }
     setAuthLoading(true);
@@ -243,13 +253,7 @@ export function AppProvider({ children }) {
         });
         const token = res?.access_token;
         if (!token) throw new Error('Mangler token fra server');
-        setAuthToken(token);
-        setAuthTokenState(token);
-        await AsyncStorage.setItem('authToken', token);
-        setCodeSent(false);
-        setResendCooldown(0);
-        setAuthCode('');
-        setActiveTab('home');
+        await applyAuthToken(token);
       }
     } catch (e) {
       if (e.status === 429) Alert.alert(i18n.t('common.too_many_attempts_title'), i18n.t('common.too_many_attempts_body'));
@@ -269,13 +273,7 @@ export function AppProvider({ children }) {
       });
       const token = res?.access_token;
       if (!token) throw new Error('Mangler token fra server');
-      setAuthToken(token);
-      setAuthTokenState(token);
-      await AsyncStorage.setItem('authToken', token);
-      setCodeSent(false);
-      setResendCooldown(0);
-      setAuthCode('');
-      setActiveTab('home');
+      await applyAuthToken(token);
     } catch (e) {
       Alert.alert(i18n.t('common.error'), errText(e));
     }
@@ -364,6 +362,7 @@ export function AppProvider({ children }) {
       // Functions
       doAuth,
       doGoogleAuth,
+      applyAuthToken,
       logout,
       deleteAccount,
       logEvent,

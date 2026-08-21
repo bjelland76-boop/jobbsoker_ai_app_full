@@ -16,6 +16,7 @@ from unittest.mock import patch
 
 os.environ["JWT_SECRET"] = "test-secret-for-google-auth-test"
 os.environ["GOOGLE_CLIENT_ID_WEB"] = "test-client-id.apps.googleusercontent.com"
+os.environ["GOOGLE_CLIENT_SECRET"] = "test-client-secret"
 
 _db_fd, _db_path = tempfile.mkstemp(suffix=".db")
 os.close(_db_fd)
@@ -80,6 +81,58 @@ def main() -> int:
             mock_verify.side_effect = ValueError("bad token")
             r4 = client.post("/auth/google", json={"id_token": "garbage"})
         _assert(r4.status_code == 401, f"invalid token must be rejected, got {r4.status_code}")
+
+        # 6) /auth/google/callback (Android Custom Tab flow): successful code
+        #    exchange -> HTML page whose deep link carries our own JWT.
+        class _FakeTokenResp:
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return {"id_token": "fake-id-token-from-google"}
+
+        with patch("app.main.requests.post", return_value=_FakeTokenResp()) as mock_post, \
+                patch("app.main.google_id_token.verify_oauth2_token") as mock_verify:
+            mock_verify.return_value = {
+                "email": "callback.user@example.com",
+                "email_verified": True,
+                "name": "Callback Bruker",
+            }
+            r6 = client.get("/auth/google/callback", params={"code": "fake-auth-code", "state": "xyz"}, follow_redirects=False)
+        _assert(r6.status_code == 200, f"callback should render an HTML page, got {r6.status_code}")
+        _assert(mock_post.called, "callback must exchange the code with Google's token endpoint")
+        _assert("com.aerlig.app://auth-callback?token=" in r6.text, "success page must deep-link back with a token")
+        _assert("state=xyz" in r6.text, "state must be echoed back to the app for CSRF verification")
+
+        # 7) Missing `code` (e.g. user cancelled) -> error deep link, not a crash.
+        r7 = client.get("/auth/google/callback", params={"error": "access_denied", "state": "xyz"})
+        _assert(r7.status_code == 200, f"cancelled callback should still render OK, got {r7.status_code}")
+        _assert("error=access_denied" in r7.text, "cancellation reason must be forwarded to the app")
+
+        # 8) email_verified == False on the callback path too.
+        with patch("app.main.requests.post", return_value=_FakeTokenResp()), \
+                patch("app.main.google_id_token.verify_oauth2_token") as mock_verify:
+            mock_verify.return_value = {"email": "unverified2@example.com", "email_verified": False}
+            r8 = client.get("/auth/google/callback", params={"code": "fake-auth-code"})
+        _assert("error=email_not_verified" in r8.text, "unverified email must surface as an error deep link")
+
+        # 9) Token-exchange failure (e.g. Google 400s the code) must not crash the server.
+        with patch("app.main.requests.post", side_effect=Exception("boom")):
+            r9 = client.get("/auth/google/callback", params={"code": "bad-code"})
+        _assert(r9.status_code == 200, f"exchange failure should still render OK, got {r9.status_code}")
+        _assert("error=exchange_failed" in r9.text, "exchange failure must surface as an error deep link")
+
+        # 10) Same case-insensitive email match as /auth/google: a callback login
+        #     for the user created in step 1 must not create a second account.
+        with patch("app.main.requests.post", return_value=_FakeTokenResp()), \
+                patch("app.main.google_id_token.verify_oauth2_token") as mock_verify:
+            mock_verify.return_value = {"email": "NEW.USER@example.com", "email_verified": True, "name": "Ny Bruker"}
+            r10 = client.get("/auth/google/callback", params={"code": "fake-auth-code"})
+        me_token = r10.text.split("token=")[1].split("&")[0].split('"')[0]
+        from urllib.parse import unquote
+        me_resp = client.get("/auth/me", headers={"Authorization": f"Bearer {unquote(me_token)}"})
+        _assert(me_resp.status_code == 200, "token minted by the callback must be a valid JWT")
+        _assert(me_resp.json()["id"] == user_id_1, "callback login must match the same existing user, not create a new one")
 
         # 5) Existing /auth/request-code flow must still work unmodified.
         with patch("app.main.send_email") as mock_send:

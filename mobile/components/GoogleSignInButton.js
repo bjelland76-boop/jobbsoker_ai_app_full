@@ -1,22 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Platform, Text, TouchableOpacity } from 'react-native';
-import { useApp } from '../context/AppContext';
+import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
+import { API, useApp } from '../context/AppContext';
 
-// Loaded via Google's official "Sign In With Google" web SDK (Google Identity
-// Services), NOT the @react-native-google-signin/google-signin native module.
-//
-// Why: this app's real Android build is a Capacitor WebView wrapping the Expo
-// web export (see mobile/android/, mobile/capacitor.config.json) — there is no
-// Expo-prebuilt native project for a RN native module to link into, and Expo
-// Go (used for local `expo start`) can't load native modules at all. The GIS
-// web SDK runs identically in `expo start --web` (for local testing) and in
-// the shipped Capacitor WebView (both are just browser contexts), so it's the
-// only approach that actually works end-to-end without a native rebuild.
-const GSI_SCRIPT_SRC = 'https://accounts.google.com/gsi/client';
-
-// The audience this must match is backend/app/main.py's GOOGLE_CLIENT_ID_WEB
-// (verified server-side in POST /auth/google) — same value, different name
-// because Expo only exposes env vars prefixed EXPO_PUBLIC_ to client code.
+// The audience/client this must match is backend/app/main.py's GOOGLE_CLIENT_ID_WEB.
 const GOOGLE_CLIENT_ID_WEB = (process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB || '').trim();
 
 // Official Google "G" logo (4-color), inlined so no extra asset file/dependency is needed.
@@ -32,6 +21,15 @@ const GOOGLE_G_LOGO_URI = 'data:image/svg+xml;base64,' + (
     )
     : ''
 );
+
+// --- Plain web / browser preview: inline Google Identity Services --------------
+// This is the ONLY path that works inside the packaged Android app's WebView too
+// would be nice, but it isn't: Google's servers deliberately 403-reject Sign-In
+// requests whose User-Agent identifies them as an embedded WebView (phishing
+// prevention — confirmed via live traffic inspection on-device, not something any
+// client-side config can work around). So this path only runs when NOT inside the
+// native Capacitor shell; see the native path below for the packaged app.
+const GSI_SCRIPT_SRC = 'https://accounts.google.com/gsi/client';
 
 let gsiScriptPromise = null;
 function loadGsiScript() {
@@ -55,18 +53,67 @@ function loadGsiScript() {
   return gsiScriptPromise;
 }
 
+// --- Packaged Android app: Chrome Custom Tab + OAuth authorization-code flow ---
+// Opens the real Google login in an actual browser (Custom Tab), which Google is
+// happy to serve. Google redirects the Custom Tab to backend /auth/google/callback,
+// which exchanges the code server-side and hands our own JWT back to the app via a
+// com.aerlig.app://auth-callback deep link, caught below.
+const DEEP_LINK_PREFIX = 'com.aerlig.app://auth-callback';
+
+let pendingState = null;
+let deepLinkListenerAttached = false;
+
+function randomState() {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+function attachDeepLinkListener(onToken, onError) {
+  if (deepLinkListenerAttached) return;
+  deepLinkListenerAttached = true;
+  CapacitorApp.addListener('appUrlOpen', ({ url }) => {
+    if (!url || !url.startsWith(DEEP_LINK_PREFIX)) return;
+    Browser.close().catch(() => {});
+
+    let parsed;
+    try { parsed = new URL(url); } catch (e) { onError('bad_url'); return; }
+
+    const token = parsed.searchParams.get('token');
+    const error = parsed.searchParams.get('error');
+    const returnedState = parsed.searchParams.get('state');
+    // Only enforce the state check if we still have it in memory — the app process
+    // may have been backgrounded/killed while the Custom Tab was open, in which case
+    // there's nothing to compare against. The JWT itself is already a trusted,
+    // backend-issued credential at this point either way.
+    const expected = pendingState;
+    pendingState = null;
+    if (expected && returnedState && expected !== returnedState) { onError('state_mismatch'); return; }
+
+    if (token) onToken(token);
+    else onError(error || 'unknown');
+  });
+}
+
 export default function GoogleSignInButton() {
-  const { doGoogleAuth, googleAuthLoading, t, errText } = useApp();
-  const [ready, setReady] = useState(false);
+  const { doGoogleAuth, applyAuthToken, googleAuthLoading, t, errText } = useApp();
+  const isNative = Capacitor.isNativePlatform();
+
+  // The native Custom Tab flow has no script to wait for — it's ready immediately.
+  const [ready, setReady] = useState(isNative);
   const initialized = useRef(false);
   const callbackRef = useRef(doGoogleAuth);
   callbackRef.current = doGoogleAuth;
 
   useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (!GOOGLE_CLIENT_ID_WEB) {
-      // eslint-disable-next-line no-console
-      console.warn('EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB mangler — Google-innloggingsknappen er skjult');
+    if (Platform.OS !== 'web' || !GOOGLE_CLIENT_ID_WEB) return;
+
+    if (isNative) {
+      attachDeepLinkListener(
+        (token) => { applyAuthToken(token); },
+        (reason) => {
+          if (reason === 'access_denied') return; // user cancelled — not an error
+          Alert.alert(t('common.error'), t('auth.google_signin_failed'));
+        },
+      );
       return;
     }
 
@@ -82,17 +129,37 @@ export default function GoogleSignInButton() {
         setReady(true);
       })
       .catch(() => {
-        // Best-effort: button stays hidden (ready=false never flips true) if the
-        // script can't load (e.g. offline, blocked by an ad-blocker).
+        // Best-effort: button stays disabled if the script can't load
+        // (e.g. offline, blocked by an ad-blocker).
       });
 
     return () => { cancelled = true; };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNative]);
 
   if (Platform.OS !== 'web' || !GOOGLE_CLIENT_ID_WEB) return null;
 
-  function handlePress() {
+  async function handlePress() {
     if (!ready || googleAuthLoading) return;
+
+    if (isNative) {
+      try {
+        const state = randomState();
+        pendingState = state;
+        const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
+          client_id: GOOGLE_CLIENT_ID_WEB,
+          redirect_uri: `${API}/auth/google/callback`,
+          response_type: 'code',
+          scope: 'openid email profile',
+          state,
+        }).toString();
+        await Browser.open({ url: authUrl });
+      } catch (e) {
+        Alert.alert(t('common.error'), errText(e));
+      }
+      return;
+    }
+
     try {
       window.google.accounts.id.prompt((notification) => {
         const skipped = notification?.isNotDisplayed?.() || notification?.isSkippedMoment?.();

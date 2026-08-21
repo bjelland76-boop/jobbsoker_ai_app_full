@@ -15,6 +15,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Union
+from urllib.parse import quote
 
 from fastapi import (
     BackgroundTasks,
@@ -30,7 +31,7 @@ from fastapi import (
     status,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from google.auth.transport import requests as google_auth_requests
 from google.oauth2 import id_token as google_id_token
 from pydantic import BaseModel
@@ -1011,6 +1012,20 @@ def verify_login_code(data: VerifyCodeIn, request: Request, db: Session = Depend
     return {"access_token": create_access_token(user_id=user.id), "user_id": user.id, "token_type": "bearer"}
 
 
+def _get_or_create_user_from_google(db: Session, idinfo: dict) -> User:
+    """Shared by /auth/google (inline id_token, used by the web preview) and
+    /auth/google/callback (authorization-code exchange, used by the packaged
+    Android app — see that endpoint's docstring for why it needs a separate path).
+    """
+    email = _normalize_email(idinfo.get("email") or "")
+    if not email or "@" not in email:
+        raise ValueError("invalid_email")
+
+    existed = bool(get_user_by_email(db, email))
+    wanted_name = (idinfo.get("name") or "").strip() if not existed else None
+    return _ensure_user_and_profile(db, email, display_name=wanted_name)
+
+
 @app.post("/auth/google", response_model=TokenOut, tags=["auth"])
 def google_sign_in(data: GoogleSignInIn, db: Session = Depends(get_db)):
     client_id = os.getenv("GOOGLE_CLIENT_ID_WEB")
@@ -1037,16 +1052,102 @@ def google_sign_in(data: GoogleSignInIn, db: Session = Depends(get_db)):
             detail="Google-kontoen din har ikke en bekreftet e-postadresse",
         )
 
-    email = _normalize_email(idinfo.get("email") or "")
-    if not email or "@" not in email:
+    try:
+        user = _get_or_create_user_from_google(db, idinfo)
+    except ValueError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ugyldig e-post fra Google")
 
-    existed = bool(get_user_by_email(db, email))
-    wanted_name = (idinfo.get("name") or "").strip() if not existed else None
-
-    user = _ensure_user_and_profile(db, email, display_name=wanted_name)
-
     return {"access_token": create_access_token(user_id=user.id), "user_id": user.id, "token_type": "bearer"}
+
+
+# The packaged Android app is a Capacitor WebView, and Google's servers deliberately
+# 403-reject Sign-In requests whose User-Agent identifies them as an embedded WebView
+# (phishing prevention — confirmed via live traffic inspection, not client-side
+# fixable). So on native Android, sign-in instead opens a real Chrome Custom Tab
+# (see mobile/components/GoogleSignInButton.js) running the standard OAuth
+# authorization-code flow, which redirects here with a `code` to exchange, and this
+# hands the resulting JWT back to the app via a `com.aerlig.app://` deep link.
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_OAUTH_REDIRECT_URI = (os.getenv("GOOGLE_OAUTH_REDIRECT_URI") or "").strip() or (
+    "https://jobbsoker-ai-backend.onrender.com/auth/google/callback"
+)
+MOBILE_DEEP_LINK_SCHEME = "com.aerlig.app"
+
+
+def _google_callback_page(*, deep_link: str, message: str) -> HTMLResponse:
+    html = f"""<!doctype html>
+<html lang="no"><head><meta charset="utf-8">
+<meta http-equiv="refresh" content="0;url={deep_link}">
+<title>Ærlig</title>
+<style>body{{font-family:sans-serif;text-align:center;padding:48px 20px;color:#1a1a1a}}
+a{{display:inline-block;margin-top:16px;background:#E8501A;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none}}</style>
+</head><body>
+<p>{message}</p>
+<a href="{deep_link}">Åpne Ærlig-appen</a>
+<script>window.location.href = {json.dumps(deep_link)};</script>
+</body></html>"""
+    return HTMLResponse(html)
+
+
+@app.get("/auth/google/callback", tags=["auth"])
+def google_oauth_callback(
+    code: str | None = Query(None),
+    state: str | None = Query(None),
+    error: str | None = Query(None),
+    db: Session = Depends(get_db),
+):
+    state_qs = f"&state={quote(state)}" if state else ""
+
+    if error or not code:
+        deep_link = f"{MOBILE_DEEP_LINK_SCHEME}://auth-callback?error={quote(error or 'missing_code')}{state_qs}"
+        return _google_callback_page(deep_link=deep_link, message="Innloggingen ble avbrutt eller feilet.")
+
+    client_id = os.getenv("GOOGLE_CLIENT_ID_WEB")
+    client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        deep_link = f"{MOBILE_DEEP_LINK_SCHEME}://auth-callback?error=server_config{state_qs}"
+        return _google_callback_page(deep_link=deep_link, message="Serverfeil under innlogging.")
+
+    try:
+        token_resp = requests.post(
+            GOOGLE_TOKEN_URL,
+            data={
+                "code": code,
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "redirect_uri": GOOGLE_OAUTH_REDIRECT_URI,
+                "grant_type": "authorization_code",
+            },
+            timeout=10,
+        )
+        token_resp.raise_for_status()
+        id_token_str = token_resp.json().get("id_token")
+        if not id_token_str:
+            raise ValueError("Mangler id_token i svar fra Google")
+
+        idinfo = google_id_token.verify_oauth2_token(
+            id_token_str, google_auth_requests.Request(), client_id
+        )
+    except Exception as e:
+        print(f"ERROR i /auth/google/callback: kode-utveksling feilet: {e}")
+        deep_link = f"{MOBILE_DEEP_LINK_SCHEME}://auth-callback?error=exchange_failed{state_qs}"
+        return _google_callback_page(deep_link=deep_link, message="Kunne ikke fullføre innlogging med Google.")
+
+    if not idinfo.get("email_verified"):
+        deep_link = f"{MOBILE_DEEP_LINK_SCHEME}://auth-callback?error=email_not_verified{state_qs}"
+        return _google_callback_page(
+            deep_link=deep_link, message="Google-kontoen din har ikke en bekreftet e-postadresse."
+        )
+
+    try:
+        user = _get_or_create_user_from_google(db, idinfo)
+    except ValueError:
+        deep_link = f"{MOBILE_DEEP_LINK_SCHEME}://auth-callback?error=invalid_email{state_qs}"
+        return _google_callback_page(deep_link=deep_link, message="Ugyldig e-post fra Google.")
+
+    jwt_token = create_access_token(user_id=user.id)
+    deep_link = f"{MOBILE_DEEP_LINK_SCHEME}://auth-callback?token={quote(jwt_token)}{state_qs}"
+    return _google_callback_page(deep_link=deep_link, message="Innlogging fullført. Åpner appen …")
 
 
 @app.post("/auth/login", response_model=TokenOut, tags=["auth"], deprecated=True)

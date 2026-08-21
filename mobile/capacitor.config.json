@@ -3,6 +3,10 @@
   "appName": "Ærlig",
   "webDir": "dist",
   "backgroundColor": "#F7F5F0",
+  "server": {
+    "hostname": "app.aerlig.no",
+    "androidScheme": "https"
+  },
   "android": {
     "backgroundColor": "#F7F5F0",
     "allowMixedContent": true,

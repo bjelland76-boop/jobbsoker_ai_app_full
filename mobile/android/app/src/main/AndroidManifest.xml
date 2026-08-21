@@ -30,6 +30,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Deep link back from the Google Sign-In Custom Tab flow
+                 (see backend /auth/google/callback and GoogleSignInButton.js). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.aerlig.app" android:host="auth-callback" />
+            </intent-filter>
+
         </activity>
 
         <provider
