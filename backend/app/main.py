@@ -2603,6 +2603,35 @@ _PACKAGE_PRICE_ENV_VN = {1: "STRIPE_PRICE_1_VN", 5: "STRIPE_PRICE_5_VN", 10: "ST
 _PACKAGE_CREDITS = {1: 3, 5: 15, 10: 30}
 
 
+def _grant_credits(db: Session, *, user_id: int, credits: int) -> Profile | None:
+    """Add `credits` job credits to a user's profile.
+
+    Provider-agnostic: called today only by the Stripe webhook, but written
+    so a future Play Billing purchase-verification endpoint can call the
+    exact same function rather than duplicating this mutation. Provider-
+    specific concerns (idempotency keys, webhook signature checks, etc.)
+    stay in the caller — this only does the actual credit grant.
+    """
+    profile = db.scalars(select(Profile).where(Profile.user_id == user_id)).first()
+    if not profile:
+        return None
+    profile.job_credits = int(profile.job_credits or 0) + credits
+    db.commit()
+    return profile
+
+
+def _set_subscription_status(db: Session, *, profile: Profile, subscription_status: str, subscription_end) -> None:
+    """Update subscription_status/subscription_end on a profile.
+
+    Provider-agnostic — see _grant_credits() docstring. Provider-specific
+    identifiers (e.g. Profile.stripe_customer_id) are set by the caller,
+    not here, since they don't generalize across payment providers.
+    """
+    profile.subscription_status = subscription_status
+    profile.subscription_end = subscription_end
+    db.commit()
+
+
 @app.get("/user-country", tags=["billing"])
 def user_country(request: Request):
     """Best-effort country lookup for the requesting client's IP, used by the
@@ -2726,9 +2755,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             select(StripePayment).where(StripePayment.session_id == session_id)
         ).first()
         if not existing and session_id:
-            profile = db.scalars(select(Profile).where(Profile.user_id == meta_user_id)).first()
+            profile = _grant_credits(db, user_id=meta_user_id, credits=credits)
             if profile:
-                profile.job_credits = int(profile.job_credits or 0) + credits
                 db.add(StripePayment(session_id=session_id, user_id=meta_user_id, credits=credits))
                 db.commit()
             else:
@@ -2774,9 +2802,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         if profile:
             if customer_id:
                 profile.stripe_customer_id = customer_id
-            profile.subscription_status = our_status
-            profile.subscription_end = end_dt
-            db.commit()
+            _set_subscription_status(db, profile=profile, subscription_status=our_status, subscription_end=end_dt)
         else:
             logger.error("[stripe-webhook] no profile found for subscription customer %s", customer_id)
 
@@ -2789,8 +2815,9 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             else None
         )
         if profile:
-            profile.subscription_status = "past_due"
-            db.commit()
+            _set_subscription_status(
+                db, profile=profile, subscription_status="past_due", subscription_end=profile.subscription_end
+            )
 
     return {"received": True}
 
