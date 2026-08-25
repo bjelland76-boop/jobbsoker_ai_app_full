@@ -59,6 +59,7 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="com.android.vending.BILLING" />
 
     <!-- Mark camera and microphone as optional so devices without them are not excluded -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />

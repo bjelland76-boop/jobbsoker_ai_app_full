@@ -12,6 +12,12 @@ ext {
     // Pinned below the default 1.9.0 pulled in by @capacitor/browser: that version's
     // AAR metadata requires AGP 8.9.1+, but this project is on AGP 8.7.2.
     androidxBrowserVersion = '1.8.0'
+    // Play Console rejects uploads without a modern Billing Library linked (it reads a bare
+    // com.android.vending.BILLING permission with no recognized library as "legacy AIDL").
+    // Pinned to an exact version (not a "+" range) — see the anthropic==1.0.0 incident
+    // (2026-08-21/22) for why an unpinned dependency silently jumping a major version broke
+    // production; Google requires v8+ by 2026-08-31, 9.1.0 is the actual latest stable.
+    playBillingVersion = '9.1.0'
     junitVersion = '4.13.2'
     androidxJunitVersion = '1.2.1'
     androidxEspressoCoreVersion = '3.6.1'
