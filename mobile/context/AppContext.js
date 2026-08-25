@@ -154,6 +154,10 @@ export function AppProvider({ children }) {
       resetAuthState();
     });
 
+    // Anonymous app-open ping — fires once per launch, before we know whether
+    // the user is logged in, so we can measure opens vs. completed registrations.
+    apiFetch('/events/anonymous-open', { method: 'POST' }).catch(() => {});
+
     async function initAuth() {
       try {
         const lang = await AsyncStorage.getItem('uiLanguage');

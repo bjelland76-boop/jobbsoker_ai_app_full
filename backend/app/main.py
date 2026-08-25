@@ -3267,6 +3267,13 @@ def log_event(
     db.commit()
 
 
+@app.post("/events/anonymous-open", status_code=204, tags=["events"])
+def log_anonymous_open(db: Session = Depends(get_db)):
+    event = UsageEvent(user_id=None, action="app_open_anonymous", event_meta="")
+    db.add(event)
+    db.commit()
+
+
 _ADMIN_EMAIL = "bjelland76@gmail.com"
 
 
