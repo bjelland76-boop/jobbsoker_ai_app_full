@@ -13,7 +13,7 @@ export default function useJobAnalysis({
   isProfileTooEmpty,
   flushAutoSave,
 } = {}) {
-  const { authTokenState, logEvent, errText, uiLanguage, activeTab, setActiveTab, showPaymentModal } = useApp();
+  const { authTokenState, openAuthScreen, logEvent, errText, uiLanguage, activeTab, setActiveTab, showPaymentModal } = useApp();
 
   // ---------------------------------------------------------------------------
   // State
@@ -364,6 +364,19 @@ export default function useJobAnalysis({
   // Send application (email)
   // ---------------------------------------------------------------------------
   async function sendApplication(template = '') {
+    if (!authTokenState) {
+      Alert.alert(
+        uiLanguage === 'en' ? 'Log in' : 'Logg inn',
+        uiLanguage === 'en'
+          ? 'Log in to send your application by email.'
+          : 'Logg inn for å sende søknaden på e-post.',
+        [
+          { text: uiLanguage === 'en' ? 'Cancel' : 'Avbryt', style: 'cancel' },
+          { text: uiLanguage === 'en' ? 'Log in' : 'Logg inn', onPress: () => openAuthScreen?.() },
+        ]
+      );
+      return;
+    }
     if (!profileId) {
       Alert.alert('Feil', 'Lagre profilen før sending');
       return;

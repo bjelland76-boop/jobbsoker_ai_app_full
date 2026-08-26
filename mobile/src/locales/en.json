@@ -48,7 +48,9 @@
     "code_sent_title": "Code sent",
     "code_sent_body": "We have sent a new one-time code to your email.",
     "error_no_email": "Enter your email",
-    "error_no_code": "Enter the one-time code"
+    "error_no_code": "Enter the one-time code",
+    "login_required_title": "Log in",
+    "login_required_interview": "Log in to practice interviews."
   },
   "home": {
     "subtitle": "Overview of analyses and applications — with honest advice.",
@@ -307,6 +309,7 @@
     "language_selector_label": "App language",
     "privacy_link": "GDPR / privacy",
     "logout_btn": "Log out",
+    "login_prompt": "You're using the app without an account. Log in to safely save your profile, send applications by email, and practice interviews.",
     "delete_account_btn": "Delete account",
     "analytics_label": "Anonymous statistics",
     "analytics_help": "Contribute to aggregated statistics (anonymous).",

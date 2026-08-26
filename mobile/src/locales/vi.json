@@ -48,7 +48,9 @@
     "code_sent_title": "Đã gửi mã",
     "code_sent_body": "Chúng tôi đã gửi mã một lần mới đến email của bạn.",
     "error_no_email": "Nhập email của bạn",
-    "error_no_code": "Nhập mã một lần"
+    "error_no_code": "Nhập mã một lần",
+    "login_required_title": "Đăng nhập",
+    "login_required_interview": "Đăng nhập để luyện phỏng vấn."
   },
   "home": {
     "subtitle": "Tổng quan phân tích và đơn xin việc — với lời khuyên trung thực.",
@@ -307,6 +309,7 @@
     "language_selector_label": "Ngôn ngữ ứng dụng",
     "privacy_link": "GDPR / quyền riêng tư",
     "logout_btn": "Đăng xuất",
+    "login_prompt": "Bạn đang dùng ứng dụng mà không có tài khoản. Đăng nhập để lưu hồ sơ của bạn an toàn, gửi đơn xin việc qua email và luyện phỏng vấn.",
     "delete_account_btn": "Xóa tài khoản",
     "analytics_label": "Thống kê ẩn danh",
     "analytics_help": "Đóng góp vào thống kê tổng hợp (ẩn danh).",

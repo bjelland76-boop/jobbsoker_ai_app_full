@@ -48,7 +48,9 @@
     "code_sent_title": "Koodka waa la diray",
     "code_sent_body": "Waxaan iimeelkaaga u dirnay kood cusub oo hal-mar ah.",
     "error_no_email": "Geli iimeelka",
-    "error_no_code": "Geli koodka hal-mar ah"
+    "error_no_code": "Geli koodka hal-mar ah",
+    "login_required_title": "Gal",
+    "login_required_interview": "Gal si aad u tababarto wareysiyada."
   },
   "home": {
     "subtitle": "Guudmar falanqaymo iyo codsiyo — talooyin daacad ah.",
@@ -308,6 +310,7 @@
     "language_selector_label": "Luqadda App-ka",
     "privacy_link": "GDPR / asturnaanta",
     "logout_btn": "Ka bax",
+    "login_prompt": "Waxaad isticmaalaysaa abka iyada oo aan la haysan akoon. Gal si aad si ammaan ah u kaydiso profilkaaga, u dirto codsiyada iimaylka, oo aad u tababarto wareysiyada.",
     "delete_account_btn": "Tirtir akoonka",
     "analytics_label": "Tirakoob qarsoodi ah",
     "analytics_help": "Ka qeyb qaad tirakoobka guud (qarsoodi).",

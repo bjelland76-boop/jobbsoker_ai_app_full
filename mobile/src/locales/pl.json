@@ -48,7 +48,9 @@
     "code_sent_title": "Kod wysłany",
     "code_sent_body": "Wysłaliśmy nowy kod jednorazowy na e-mail.",
     "error_no_email": "Wpisz adres e-mail",
-    "error_no_code": "Wpisz kod jednorazowy"
+    "error_no_code": "Wpisz kod jednorazowy",
+    "login_required_title": "Zaloguj się",
+    "login_required_interview": "Zaloguj się, aby trenować rozmowy kwalifikacyjne."
   },
   "home": {
     "subtitle": "Przegląd analiz i podań — ze szczerymi radami.",
@@ -307,6 +309,7 @@
     "language_selector_label": "Język aplikacji",
     "privacy_link": "RODO / prywatność",
     "logout_btn": "Wyloguj",
+    "login_prompt": "Korzystasz z aplikacji bez konta. Zaloguj się, aby bezpiecznie zapisać swój profil, wysyłać podania e-mailem i trenować rozmowy kwalifikacyjne.",
     "delete_account_btn": "Usuń konto",
     "analytics_label": "Anonimowe statystyki",
     "analytics_help": "Przyczyniaj się do zagregowanych statystyk (anonimowo).",

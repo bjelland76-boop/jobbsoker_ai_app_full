@@ -127,6 +127,12 @@ export function AppProvider({ children }) {
   // Pre-login intro slides (3-slide welcome carousel, shown once ever, before AuthScreen).
   const [introSlidesSeen, setIntroSlidesSeen] = useState(false);
 
+  // Login is optional (anonymous use is allowed) -- this controls whether the
+  // AuthScreen overlay is shown when the user voluntarily taps "Logg inn".
+  const [showAuthScreen, setShowAuthScreen] = useState(false);
+  const openAuthScreen = () => setShowAuthScreen(true);
+  const closeAuthScreen = () => setShowAuthScreen(false);
+
   // App-wide UI state
   const [uiLanguage, setUiLanguage] = useState('no');
   const [activeTab, setActiveTab] = useState('home');
@@ -228,6 +234,7 @@ export function AppProvider({ children }) {
     setResendCooldown(0);
     setAuthCode('');
     setActiveTab('home');
+    setShowAuthScreen(false);
   }
 
   async function doAuth() {
@@ -355,6 +362,7 @@ export function AppProvider({ children }) {
       authLoading,
       googleAuthLoading,
       introSlidesSeen, markIntroSlidesSeen,
+      showAuthScreen, openAuthScreen, closeAuthScreen,
       // UI state
       uiLanguage, setUiLanguage,
       activeTab, setActiveTab,

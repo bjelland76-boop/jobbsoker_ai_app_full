@@ -16,7 +16,7 @@ const FEEDBACK_SUBJECT = 'Tilbakemelding — Ærlig Jobbcoach';
 const FEEDBACK_BODY = 'Hei!\n\nHer er min tilbakemelding:\n\n';
 
 export default function ProfileScreen({ onManageSubscription }) {
-  const { t, logout, deleteAccount, setActiveTab, uiLanguage, setAndPersistUiLanguage } = useApp();
+  const { t, authTokenState, openAuthScreen, logout, deleteAccount, setActiveTab, uiLanguage, setAndPersistUiLanguage } = useApp();
   const {
     profileId,
     name, setName,
@@ -1472,29 +1472,55 @@ export default function ProfileScreen({ onManageSubscription }) {
             <Text style={styles.aerligPrimaryButtonText}>{savingProfile ? t('common.saving') : t('profile.save_btn')}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={{
-              width: '100%',
-              minHeight: 50,
-              paddingVertical: 14,
-              borderRadius: 12,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: '#FFFFFF',
-              borderWidth: 1.5,
-              borderColor: '#E8501A',
-            }}
-            onPress={logout}
-          >
-            <Text style={{ color: '#E8501A', fontSize: 15, fontWeight: '600', letterSpacing: 0.2 }}>{t('profile.logout_btn')}</Text>
-          </TouchableOpacity>
+          {authTokenState ? (
+            <>
+              <TouchableOpacity
+                style={{
+                  width: '100%',
+                  minHeight: 50,
+                  paddingVertical: 14,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#FFFFFF',
+                  borderWidth: 1.5,
+                  borderColor: '#E8501A',
+                }}
+                onPress={logout}
+              >
+                <Text style={{ color: '#E8501A', fontSize: 15, fontWeight: '600', letterSpacing: 0.2 }}>{t('profile.logout_btn')}</Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={{ alignItems: 'center', paddingVertical: 12 }}
-            onPress={deleteAccount}
-          >
-            <Text style={{ color: '#999999', fontSize: 13 }}>{t('profile.delete_account_btn')}</Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={{ alignItems: 'center', paddingVertical: 12 }}
+                onPress={deleteAccount}
+              >
+                <Text style={{ color: '#999999', fontSize: 13 }}>{t('profile.delete_account_btn')}</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', lineHeight: 19, marginBottom: 4 }}>
+                {t('profile.login_prompt')}
+              </Text>
+              <TouchableOpacity
+                style={{
+                  width: '100%',
+                  minHeight: 50,
+                  paddingVertical: 14,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#FFFFFF',
+                  borderWidth: 1.5,
+                  borderColor: '#E8501A',
+                }}
+                onPress={openAuthScreen}
+              >
+                <Text style={{ color: '#E8501A', fontSize: 15, fontWeight: '600', letterSpacing: 0.2 }}>{t('auth.login')}</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
     </View>

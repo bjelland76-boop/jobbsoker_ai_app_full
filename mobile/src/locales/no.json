@@ -48,7 +48,9 @@
     "code_sent_title": "Kode sendt",
     "code_sent_body": "Vi har sendt en ny engangskode på e-post.",
     "error_no_email": "Skriv inn e-post",
-    "error_no_code": "Skriv inn engangskoden"
+    "error_no_code": "Skriv inn engangskoden",
+    "login_required_title": "Logg inn",
+    "login_required_interview": "Logg inn for å trene på intervju."
   },
   "home": {
     "subtitle": "Oversikt over analyser og søknader — med ærlige råd.",
@@ -310,6 +312,7 @@
     "subscription_next_payment": "Neste betaling: {{date}}",
     "subscription_manage": "Administrer abonnement",
     "logout_btn": "Logg ut",
+    "login_prompt": "Du bruker appen uten konto. Logg inn for å lagre profilen din trygt, sende søknader på e-post og trene på intervju.",
     "delete_account_btn": "Slett konto",
     "analytics_label": "Anonym statistikk",
     "analytics_help": "Bidra til aggregert statistikk (anonym).",

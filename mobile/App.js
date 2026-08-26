@@ -96,6 +96,7 @@ function AppContent() {
     resendCooldown, setResendCooldown,
     authLoading,
     introSlidesSeen, markIntroSlidesSeen,
+    showAuthScreen, openAuthScreen, closeAuthScreen,
     uiLanguage, setUiLanguage,
     activeTab, setActiveTab,
     showOnboarding, setShowOnboarding,
@@ -807,6 +808,56 @@ function AppContent() {
     </View>
   );
 
+  // Login is optional: this is only shown when the user voluntarily taps
+  // "Logg inn" somewhere in the app (see openAuthScreen), never forced.
+  const renderAuthOverlay = () => (
+    <View style={{
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: '#F7F5F0', zIndex: 999,
+    }}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <View style={{
+          flexDirection: 'row', justifyContent: 'flex-end',
+          paddingHorizontal: 16, paddingTop: 8,
+        }}>
+          <TouchableOpacity
+            onPress={closeAuthScreen}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={{
+              width: 32, height: 32, borderRadius: 16,
+              backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
+              shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
+            }}
+          >
+            <Text style={{ fontSize: 16, color: '#6B7280' }}>✕</Text>
+          </TouchableOpacity>
+        </View>
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+          <AuthScreen />
+        </ScrollView>
+      </SafeAreaView>
+    </View>
+  );
+
+  // Interview practice requires an account (unlike profile/CV/jobbanalyse,
+  // which now work anonymously) -- shown in place of the interview tab.
+  const renderInterviewLoginRequired = () => (
+    <View style={styles.pageCard}>
+      <Text style={styles.pageTitle}>{t('auth.login_required_title')}</Text>
+      <Text style={[styles.helpText, { marginTop: 8, marginBottom: 20 }]}>
+        {t('auth.login_required_interview')}
+      </Text>
+      <TouchableOpacity style={styles.aerligPrimaryButton} onPress={openAuthScreen}>
+        <Text style={styles.aerligPrimaryButtonText}>{t('auth.login')}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.aerligSecondaryButton, { marginTop: 10 }]}
+        onPress={() => setActiveTab('home')}
+      >
+        <Text style={styles.aerligSecondaryButtonText}>{t('common.back')}</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
 
 
@@ -888,21 +939,17 @@ function AppContent() {
     );
   }
 
-  if (!authTokenState) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: '#F7F5F0' }]}>
-        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-          <AuthScreen />
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
+  // Login is optional from here on: the app is fully usable anonymously
+  // (profile, documents, CV-analyse, CV-generering, jobbanalyse). AuthScreen
+  // is only ever shown when the user voluntarily taps "Logg inn" (see
+  // renderAuthOverlay), or from the interview-practice gate below.
 
   return (
     <ProfileContext.Provider value={profileHook}>
     <SafeAreaView style={styles.container}>
       {showFaq && renderFaq()}
       {showOnboarding && renderOnboarding()}
+      {showAuthScreen && renderAuthOverlay()}
       <PaymentModal
         visible={!!paymentModalLimitType}
         limitType={paymentModalLimitType}
@@ -911,7 +958,11 @@ function AppContent() {
         userEmail={authEmail}
       />
       {activeTab === 'interview' ? (
-        renderInterview()
+        authTokenState ? renderInterview() : (
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            {renderInterviewLoginRequired()}
+          </ScrollView>
+        )
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
           {activeTab === 'home' && <HomeScreen

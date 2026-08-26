@@ -48,7 +48,9 @@
     "code_sent_title": "Kodas išsiųstas",
     "code_sent_body": "Išsiuntėme naują vienkartinį kodą el. paštu.",
     "error_no_email": "Įveskite el. paštą",
-    "error_no_code": "Įveskite vienkartinį kodą"
+    "error_no_code": "Įveskite vienkartinį kodą",
+    "login_required_title": "Prisijungti",
+    "login_required_interview": "Prisijunkite, kad galėtumėte treniruotis interviu."
   },
   "home": {
     "subtitle": "Analizių ir paraiškų apžvalga — su sąžiningais patarimais.",
@@ -307,6 +309,7 @@
     "language_selector_label": "Programos kalba",
     "privacy_link": "GDPR / privatumas",
     "logout_btn": "Atsijungti",
+    "login_prompt": "Naudojatės programėle be paskyros. Prisijunkite, kad saugiai išsaugotumėte savo profilį, siųstumėte paraiškas el. paštu ir treniruotumėtės interviu.",
     "delete_account_btn": "Ištrinti paskyrą",
     "analytics_label": "Anoniminė statistika",
     "analytics_help": "Prisidėkite prie bendros statistikos (anonimiškai).",
