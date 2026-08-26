@@ -29,8 +29,19 @@ os.remove(_db_path)
 os.environ["DATABASE_URL"] = f"sqlite:///{_db_path}"
 
 from fastapi.testclient import TestClient  # noqa: E402
+from sqlalchemy import select  # noqa: E402
 
+from app.db import SessionLocal  # noqa: E402
 from app.main import app  # noqa: E402
+from app.models import UsageEvent  # noqa: E402
+
+
+def _usage_count(action: str, user_id) -> int:
+    with SessionLocal() as db:
+        rows = db.scalars(
+            select(UsageEvent).where(UsageEvent.action == action, UsageEvent.user_id == user_id)
+        ).all()
+        return len(rows)
 
 
 def _assert(cond: bool, msg: str) -> None:
@@ -238,7 +249,32 @@ def main() -> int:
         print("[OK] innlogget bruker: eksisterende 3-gratis-grense fortsatt håndhevet uendret")
 
         # ------------------------------------------------------------------
-        # 10) Untouched endpoints: still require a token
+        # 10) usage_events: logged independently of the free-limit system,
+        #     for both anonymous (user_id=NULL) and logged-in callers.
+        # ------------------------------------------------------------------
+        real_user_id = client.get("/auth/me", headers=headers).json()["id"]
+
+        _assert(
+            _usage_count("cv_analysis_completed", None) == 5,
+            f"expected 5 anonymous cv_analysis_completed rows, got {_usage_count('cv_analysis_completed', None)}",
+        )
+        _assert(
+            _usage_count("job_analysis_completed", None) == 5,
+            f"expected 5 anonymous job_analysis_completed rows, got {_usage_count('job_analysis_completed', None)}",
+        )
+        _assert(
+            _usage_count("cv_generation_completed", None) == 6,
+            f"expected 6 anonymous cv_generation_completed rows (5 generate-tailored-cv + 1 stream), got {_usage_count('cv_generation_completed', None)}",
+        )
+        _assert(
+            _usage_count("cv_analysis_completed", real_user_id) == 3,
+            f"expected 3 logged-in cv_analysis_completed rows (the 4th call was blocked and should not log), got {_usage_count('cv_analysis_completed', real_user_id)}",
+        )
+
+        print("[OK] usage_events logges uavhengig av grense-sjekken, for anonym (user_id=NULL) og innlogget")
+
+        # ------------------------------------------------------------------
+        # 11) Untouched endpoints: still require a token
         # ------------------------------------------------------------------
         r = client.post("/analyze-url-and-send", json={"profile_id": anon_pid, "url": "https://example.com/job-x"})
         _assert(r.status_code == 401, f"/analyze-url-and-send must still require auth, got {r.status_code}")

@@ -242,6 +242,18 @@ def _consume_free_limit(db: Session, profile: Profile, limit_type: str) -> None:
     db.commit()
 
 
+def _log_usage(db: Session, current_user: "User | None", action: str) -> None:
+    """Server-side usage_events log for an action that actually happened.
+
+    Deliberately independent of _check_free_limit/_consume_free_limit --
+    call this for every successful use (anonymous or logged-in), not only
+    when a free limit was actually enforced. Anonymous callers log with
+    user_id=None, same pattern as the existing /events/anonymous-open.
+    """
+    db.add(UsageEvent(user_id=(current_user.id if current_user else None), action=action, event_meta=""))
+    db.commit()
+
+
 def _owns_profile(profile: "Profile | None", current_user: "User | None") -> bool:
     """True if `profile` belongs to `current_user` -- or, for an anonymous
     caller (current_user is None), if `profile` is itself anonymous
@@ -1754,6 +1766,7 @@ def analyze_cv(
 
     if current_user is not None:
         _consume_free_limit(db, profile, "cv_analyse")
+    _log_usage(db, current_user, "cv_analysis_completed")
     return result
 
 
@@ -2228,6 +2241,8 @@ def generate_tailored_cv(
         if current_user is not None:
             _consume_free_limit(db, profile, "cv")
 
+    _log_usage(db, current_user, "cv_generation_completed")
+
     # Always persist effective template
     stored["cv_mal"] = effective_template
     row.analysis_json = json.dumps(stored, ensure_ascii=False)
@@ -2371,6 +2386,12 @@ def stream_documents(
     job_title_val = job.title or ""
     company_val = job.company or ""
     include_photo_bool = bool(include_photo) and bool(getattr(profile, "photo_data", ""))
+    # Captured now (not read from `current_user` inside the closure below):
+    # by the time event_generator() runs, the request's `db` session -- which
+    # `current_user` is bound to -- may already be closed, and touching an
+    # expired ORM attribute on a detached instance raises. Same reason
+    # job_id_val/profile_id_val above are plain values instead of ORM objects.
+    current_user_id_val = current_user.id if current_user else None
 
     def event_generator():
         cover_letter = ""
@@ -2403,6 +2424,10 @@ def stream_documents(
                 _p = _consume_db.get(Profile, profile_id_val)
                 if _p:
                     _consume_free_limit(_consume_db, _p, "cv")
+
+        with _SessionLocal() as _log_db:
+            _log_db.add(UsageEvent(user_id=current_user_id_val, action="cv_generation_completed", event_meta=""))
+            _log_db.commit()
 
         # Persist text + generate PDFs with a fresh session (original db may be closed)
         pdf_url = ""
@@ -2989,6 +3014,7 @@ def analyze_url(
 
         if current_user is not None:
             _consume_free_limit(db, profile, "analyse")
+        _log_usage(db, current_user, "job_analysis_completed")
 
         return result
     except Exception as e:
