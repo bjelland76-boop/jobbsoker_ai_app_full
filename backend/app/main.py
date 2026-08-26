@@ -41,6 +41,7 @@ from sqlalchemy.orm import Session
 from .auth import (
     create_access_token,
     get_current_user,
+    get_current_user_optional,
     get_user_by_email,
     get_user_from_token,
     hash_password,
@@ -239,6 +240,27 @@ def _consume_free_limit(db: Session, profile: Profile, limit_type: str) -> None:
     else:
         profile.job_credits = max(0, int(profile.job_credits or 0) - 1)
     db.commit()
+
+
+def _owns_profile(profile: "Profile | None", current_user: "User | None") -> bool:
+    """True if `profile` belongs to `current_user` -- or, for an anonymous
+    caller (current_user is None), if `profile` is itself anonymous
+    (user_id is None). Temporary anonymous-access support: there is no
+    device-id yet, so an anonymous caller can only reach a profile whose id
+    it already knows (e.g. one it just created)."""
+    if not profile:
+        return False
+    if current_user is None:
+        return profile.user_id is None
+    return profile.user_id == current_user.id
+
+
+def _owns_job(job: "Job | None", current_user: "User | None") -> bool:
+    if not job:
+        return False
+    if current_user is None:
+        return job.user_id is None
+    return job.user_id == current_user.id
 
 
 def _parse_json_field(value):
@@ -792,13 +814,15 @@ def _ensure_user_and_profile(db: Session, email: str, *, display_name: str | Non
         db.commit()
         db.refresh(user)
 
-        # Claim existing demo data (if any) to this user.
-        for table in ["profiles", "jobs", "app_settings"]:
-            try:
-                db.execute(text(f"UPDATE {table} SET user_id=:uid WHERE user_id IS NULL"), {"uid": user.id})
-            except Exception:
-                pass
-        db.commit()
+        # NOTE: this used to also run "UPDATE profiles/jobs/app_settings SET
+        # user_id=:uid WHERE user_id IS NULL" here, to claim legacy pre-auth
+        # demo data for whichever account signed up first. Removed: now that
+        # anonymous (user_id IS NULL) profiles/jobs are a deliberate, ongoing
+        # state -- created continuously by the temporary anonymous-access
+        # mode -- this would silently hand EVERY anonymous user's data to
+        # whichever unrelated stranger happens to create the next account.
+        # If per-device claiming is wanted later, it must be scoped by
+        # device-id, not a blanket "every NULL row" sweep.
 
     # Ensure the user has at least one profile for greeting + profile flow.
     p = Profile(
@@ -1289,7 +1313,12 @@ def education_options(
 
 
 @app.get("/profiles", response_model=list[ProfileOut])
-def get_profiles(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_profiles(current_user: User | None = Depends(get_current_user_optional), db: Session = Depends(get_db)):
+    if current_user is None:
+        # Anonymous: no device-id yet, so there is no identity to list
+        # profiles for -- the anonymous flow creates one via POST /profiles
+        # and then addresses it directly by id.
+        return []
     profiles = db.scalars(select(Profile).where(Profile.user_id == current_user.id)).all()
 
     now = datetime.utcnow()
@@ -1310,15 +1339,15 @@ def get_profiles(current_user: User = Depends(get_current_user), db: Session = D
 
 
 @app.get("/profiles/{profile_id}", response_model=ProfileOut)
-def get_profile(profile_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_profile(profile_id: int, current_user: User | None = Depends(get_current_user_optional), db: Session = Depends(get_db)):
     profile = db.get(Profile, profile_id)
-    if not profile or profile.user_id != current_user.id:
+    if not _owns_profile(profile, current_user):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profil ikke funnet")
     return profile_to_dict(profile)
 
 
 @app.post("/profiles", response_model=ProfileOut)
-def create_profile(data: ProfileIn, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def create_profile(data: ProfileIn, current_user: User | None = Depends(get_current_user_optional), db: Session = Depends(get_db)):
     payload = data.model_dump()
     payload["experience"] = _serialize_profile_field(payload.get("experience"))
     payload["education"] = _serialize_profile_field(payload.get("education"))
@@ -1327,7 +1356,7 @@ def create_profile(data: ProfileIn, current_user: User = Depends(get_current_use
     # Map API field "references" -> DB column "references_json"
     payload["references_json"] = _serialize_profile_field(payload.pop("references", ""))
 
-    payload["user_id"] = current_user.id
+    payload["user_id"] = current_user.id if current_user else None
     profile = Profile(**payload)
     db.add(profile)
     db.commit()
@@ -1337,9 +1366,9 @@ def create_profile(data: ProfileIn, current_user: User = Depends(get_current_use
 
 
 @app.put("/profiles/{profile_id}", response_model=ProfileOut)
-def update_profile(profile_id: int, data: ProfileIn, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def update_profile(profile_id: int, data: ProfileIn, current_user: User | None = Depends(get_current_user_optional), db: Session = Depends(get_db)):
     profile = db.get(Profile, profile_id)
-    if not profile or profile.user_id != current_user.id:
+    if not _owns_profile(profile, current_user):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profil ikke funnet")
 
     for key, value in data.model_dump(exclude_unset=True).items():
@@ -1356,9 +1385,9 @@ def update_profile(profile_id: int, data: ProfileIn, current_user: User = Depend
 
 
 @app.patch("/profiles/{profile_id}/onboarding", response_model=ProfileOut)
-def mark_onboarding_seen(profile_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def mark_onboarding_seen(profile_id: int, current_user: User | None = Depends(get_current_user_optional), db: Session = Depends(get_db)):
     profile = db.get(Profile, profile_id)
-    if not profile or profile.user_id != current_user.id:
+    if not _owns_profile(profile, current_user):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profil ikke funnet")
     profile.has_seen_onboarding = True
     db.commit()
@@ -1369,9 +1398,11 @@ def mark_onboarding_seen(profile_id: int, current_user: User = Depends(get_curre
 @app.post("/profile/import-cv")
 async def import_cv(
     file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
 ):
-    """Extract profile fields from an uploaded CV (PDF, docx, or image)."""
+    """Extract profile fields from an uploaded CV (PDF, docx, or image).
+
+    Stateless (no DB write), so it never needed the caller's identity --
+    open to anonymous callers."""
     from .cv_importer import extract_and_parse
 
     data = await file.read()
@@ -1393,7 +1424,7 @@ async def upload_document(
     file: UploadFile = File(...),
     document_type: str = Form(default="Annet"),
     description: str = Form(default=""),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
     """Upload a document (PDF or image), extract text, and store it."""
@@ -1407,6 +1438,20 @@ async def upload_document(
         extracted = extract_document_text(file.filename or "", file.content_type or "", data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Kunne ikke lese filen: {e}")
+
+    if current_user is None:
+        # Midlertidig anonym modus: ProfileDocument.user_id er NOT NULL og vi
+        # bygger ikke enhets-ID-infrastruktur ennå, så anonyme opplastinger
+        # lagres ikke server-side -- kun den uttrukne teksten returneres, og
+        # klienten må selv holde på den (se rapportens seksjon 2).
+        return {
+            "id": None,
+            "filename": file.filename or "ukjent",
+            "document_type": document_type,
+            "description": description,
+            "extracted_text": extracted,
+            "created_at": datetime.utcnow().isoformat(),
+        }
 
     doc = ProfileDocument(
         user_id=current_user.id,
@@ -1430,9 +1475,13 @@ async def upload_document(
 
 @app.get("/profile/documents")
 def get_documents(
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
+    if current_user is None:
+        # Anonymous uploads are never persisted (see upload_document above),
+        # so there is nothing to list.
+        return []
     docs = db.scalars(
         select(ProfileDocument)
         .where(ProfileDocument.user_id == current_user.id)
@@ -1453,9 +1502,12 @@ def get_documents(
 @app.delete("/profile/documents/{doc_id}")
 def delete_document(
     doc_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
+    if current_user is None:
+        # Nothing is ever persisted anonymously, so there is nothing to delete.
+        raise HTTPException(status_code=404, detail="Dokument ikke funnet")
     doc = db.scalars(
         select(ProfileDocument).where(
             ProfileDocument.id == doc_id,
@@ -1679,18 +1731,20 @@ def download_generated_pdf(
 @app.post("/analyze-cv", response_model=CVAnalysisOut, tags=["cv"])
 def analyze_cv(
     data: AnalyzeCvIn,
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
     from .cv_analyzer import analyze_profile_cv
 
     profile = db.get(Profile, data.profile_id)
-    if not profile or profile.user_id != current_user.id:
+    if not _owns_profile(profile, current_user):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
 
-    blocked = _check_free_limit(profile, "cv_analyse")
-    if blocked is not None:
-        return blocked
+    # Anonym bruk er midlertidig ubegrenset -- se rapportens seksjon 3.
+    if current_user is not None:
+        blocked = _check_free_limit(profile, "cv_analyse")
+        if blocked is not None:
+            return blocked
 
     try:
         result = analyze_profile_cv(profile, language=data.language)
@@ -1698,18 +1752,19 @@ def analyze_cv(
         traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    _consume_free_limit(db, profile, "cv_analyse")
+    if current_user is not None:
+        _consume_free_limit(db, profile, "cv_analyse")
     return result
 
 
 @app.get("/job-analyses", response_model=list[JobAnalysisItemOut], tags=["analysis"])
 def list_job_analyses(
     profile_id: int = Query(..., ge=1),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
     profile = db.get(Profile, profile_id)
-    if not profile or profile.user_id != current_user.id:
+    if not _owns_profile(profile, current_user):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
 
     rows = db.execute(
@@ -1744,15 +1799,15 @@ def list_job_analyses(
 def get_job_analysis(
     job_id: int,
     profile_id: int = Query(..., ge=1),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
     profile = db.get(Profile, profile_id)
-    if not profile or profile.user_id != current_user.id:
+    if not _owns_profile(profile, current_user):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
 
     job = db.get(Job, job_id)
-    if not job or job.user_id != current_user.id:
+    if not _owns_job(job, current_user):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke jobb")
 
     row = db.scalars(
@@ -1978,11 +2033,11 @@ def generate_pdfs_from_saved_analysis(
 def hide_job_analysis(
     job_id: int,
     profile_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
     profile = db.get(Profile, profile_id)
-    if not profile or profile.user_id != current_user.id:
+    if not _owns_profile(profile, current_user):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
 
     row = db.scalars(
@@ -2011,11 +2066,11 @@ def hide_job_analysis(
 def toggle_favorite_analysis(
     job_id: int,
     profile_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
     profile = db.get(Profile, profile_id)
-    if not profile or profile.user_id != current_user.id:
+    if not _owns_profile(profile, current_user):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
 
     row = db.scalars(
@@ -2046,7 +2101,7 @@ def generate_tailored_cv(
     include_photo: bool = Query(default=True),
     template: str = Query(default=""),  # "kreativ"|"profesjonell"|"klassisk"|"moderne"|"skandinavisk"|"vietnamesisk"; empty = use stored cv_mal
     language: str = Query(default="no"),  # "no" | "en"
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
     """Generate a job-tailored CV using the stored match analysis for this job.
@@ -2060,11 +2115,11 @@ def generate_tailored_cv(
     _VALID_TEMPLATES = {"kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk", "vietnamesisk"}
 
     profile = db.get(Profile, profile_id)
-    if not profile or profile.user_id != current_user.id:
+    if not _owns_profile(profile, current_user):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
 
     job = db.get(Job, job_id)
-    if not job or job.user_id != current_user.id:
+    if not _owns_job(job, current_user):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke jobb")
 
     row = db.scalars(
@@ -2103,7 +2158,8 @@ def generate_tailored_cv(
     stored_email = _to_text(stored.get(email_key))
     skip_claude = bool(template_norm) and bool(stored_cv) and bool(stored_letter)
 
-    if not skip_claude:
+    if not skip_claude and current_user is not None:
+        # Anonym bruk er midlertidig ubegrenset -- se rapportens seksjon 3.
         blocked = _check_free_limit(profile, "cv")
         if blocked is not None:
             return blocked
@@ -2134,8 +2190,10 @@ def generate_tailored_cv(
         if style_norm not in {"kort", "vanlig", "profesjonell"}:
             style_norm = "vanlig"
 
+        # Anonymous callers never have persisted documents (see upload_document),
+        # so this naturally comes back empty for them -- no special-casing needed.
         user_docs = db.scalars(
-            select(ProfileDocument).where(ProfileDocument.user_id == current_user.id)
+            select(ProfileDocument).where(ProfileDocument.user_id == (current_user.id if current_user else None))
         ).all()
         doc_context = "\n\n".join(
             f"[{d.document_type}: {d.filename}]\n{d.extracted_text}"
@@ -2167,7 +2225,8 @@ def generate_tailored_cv(
         stored[email_key] = email_text_val
         stored["tailored_for_job"] = True
 
-        _consume_free_limit(db, profile, "cv")
+        if current_user is not None:
+            _consume_free_limit(db, profile, "cv")
 
     # Always persist effective template
     stored["cv_mal"] = effective_template
@@ -2229,7 +2288,7 @@ def stream_documents(
     include_photo: bool = Query(default=True),
     language: str = Query(default="no"),
     template: str = Query(default=""),  # "kreativ"|"profesjonell"|"klassisk"|"moderne"|"skandinavisk"|"vietnamesisk"; empty = use stored cv_mal
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
     """Stream cover letter + CV + email as SSE chunks, then generate PDF and persist."""
@@ -2237,15 +2296,18 @@ def stream_documents(
     from .db import SessionLocal as _SessionLocal
 
     profile = db.get(Profile, profile_id)
-    if not profile or profile.user_id != current_user.id:
+    if not _owns_profile(profile, current_user):
         raise HTTPException(status_code=404, detail="Fant ikke profil")
 
-    blocked = _check_free_limit(profile, "cv")
-    if blocked is not None:
-        return blocked
+    # Anonym bruk er midlertidig ubegrenset -- se rapportens seksjon 3.
+    is_anonymous = current_user is None
+    if not is_anonymous:
+        blocked = _check_free_limit(profile, "cv")
+        if blocked is not None:
+            return blocked
 
     job = db.get(Job, job_id)
-    if not job or job.user_id != current_user.id:
+    if not _owns_job(job, current_user):
         raise HTTPException(status_code=404, detail="Fant ikke jobb")
 
     row = db.scalars(
@@ -2285,8 +2347,10 @@ def stream_documents(
         style_norm = "vanlig"
     lang = (language or "no").strip().lower()
 
+    # Anonymous callers never have persisted documents (see upload_document),
+    # so this naturally comes back empty for them -- no special-casing needed.
     user_docs = db.scalars(
-        select(ProfileDocument).where(ProfileDocument.user_id == current_user.id)
+        select(ProfileDocument).where(ProfileDocument.user_id == (current_user.id if current_user else None))
     ).all()
     doc_context = "\n\n".join(
         f"[{d.document_type}: {d.filename}]\n{d.extracted_text}"
@@ -2334,10 +2398,11 @@ def stream_documents(
             yield f"data: {json.dumps({'t': 'e', 'msg': str(exc)})}\n\n"
             return
 
-        with _SessionLocal() as _consume_db:
-            _p = _consume_db.get(Profile, profile_id_val)
-            if _p:
-                _consume_free_limit(_consume_db, _p, "cv")
+        if not is_anonymous:
+            with _SessionLocal() as _consume_db:
+                _p = _consume_db.get(Profile, profile_id_val)
+                if _p:
+                    _consume_free_limit(_consume_db, _p, "cv")
 
         # Persist text + generate PDFs with a fresh session (original db may be closed)
         pdf_url = ""
@@ -2848,13 +2913,13 @@ def create_portal_session(current_user: User = Depends(get_current_user), db: Se
 @app.post("/analyze-url", response_model=JobAnalysisOut)
 def analyze_url(
     data: AnalyzeUrlIn,
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
     from .job_analyzer import analyze_job_url
 
     profile = db.get(Profile, data.profile_id)
-    if not profile or profile.user_id != current_user.id:
+    if not _owns_profile(profile, current_user):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
 
     url = (data.url or "").strip()
@@ -2863,9 +2928,13 @@ def analyze_url(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mangler URL eller jobbtekst")
     job_key = _job_lookup_key(url, job_text)
 
-    blocked = _check_free_limit(profile, "analyse")
-    if blocked is not None:
-        return blocked
+    # Anonym bruk er midlertidig ubegrenset -- se rapportens seksjon 3.
+    if current_user is not None:
+        blocked = _check_free_limit(profile, "analyse")
+        if blocked is not None:
+            return blocked
+
+    owner_id = current_user.id if current_user else None
 
     try:
         result = analyze_job_url(
@@ -2879,10 +2948,10 @@ def analyze_url(
         job_desc = (result.pop("__job_text", "") or "").strip()
 
         # Persist job so it can be tracked in the app later.
-        job = db.scalars(select(Job).where(Job.url == job_key, Job.user_id == current_user.id)).first()
+        job = db.scalars(select(Job).where(Job.url == job_key, Job.user_id == owner_id)).first()
         if not job:
             job = Job(
-                user_id=current_user.id,
+                user_id=owner_id,
                 title=result.get("job_title") or "Ukjent stilling",
                 company=result.get("company") or "",
                 location="",
@@ -2918,7 +2987,8 @@ def analyze_url(
         result["has_tailored_cv_no"] = bool(_to_text(result.get("tailored_cv")))
         result["has_tailored_cv_en"] = bool(_to_text(result.get("tailored_cv_en")))
 
-        _consume_free_limit(db, profile, "analyse")
+        if current_user is not None:
+            _consume_free_limit(db, profile, "analyse")
 
         return result
     except Exception as e:

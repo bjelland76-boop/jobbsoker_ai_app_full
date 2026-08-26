@@ -77,5 +77,18 @@ def get_current_user(
     return get_user_from_token(creds.credentials, db)
 
 
+def get_current_user_optional(
+    creds: Optional[HTTPAuthorizationCredentials] = Depends(_security),
+    db: Session = Depends(get_db),
+) -> Optional[User]:
+    """Like get_current_user, but a missing token returns None (anonymous)
+    instead of raising 401. A present-but-invalid token still raises 401 --
+    only a genuinely absent token is treated as anonymous, so a logged-in
+    caller with a bad/expired token gets the same error as before."""
+    if not creds or not creds.credentials:
+        return None
+    return get_user_from_token(creds.credentials, db)
+
+
 def get_user_by_email(db: Session, email: str) -> Optional[User]:
     return db.scalars(select(User).where(User.email == email)).first()
