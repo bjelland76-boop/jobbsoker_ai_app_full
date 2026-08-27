@@ -24,6 +24,7 @@ import useProfile from './hooks/useProfile';
 import useJobAnalysis from './hooks/useJobAnalysis';
 import AuthScreen from './screens/AuthScreen';
 import OnboardingSlidesScreen from './screens/OnboardingSlidesScreen';
+import ForceUpdateScreen from './screens/ForceUpdateScreen';
 import HomeScreen from './screens/HomeScreen';
 import ApplicationsScreen from './screens/ApplicationsScreen';
 import DocumentsScreen from './screens/DocumentsScreen';
@@ -89,7 +90,7 @@ function AppContent() {
   const profileSavedCbRef = useRef(null);
 
   const {
-    authReady, authTokenState, userId,
+    authReady, forceUpdateRequired, authTokenState, userId,
     authEmail, setAuthEmail,
     authCode, setAuthCode,
     codeSent, setCodeSent,
@@ -929,6 +930,12 @@ function AppContent() {
         </ScrollView>
       </SafeAreaView>
     );
+  }
+
+  // Takes priority over everything else, including onboarding and the
+  // (optional) login screen -- there is no way past this short of updating.
+  if (forceUpdateRequired) {
+    return <ForceUpdateScreen />;
   }
 
   if (!authTokenState && !introSlidesSeen) {

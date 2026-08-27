@@ -52,6 +52,11 @@
     "login_required_title": "Đăng nhập",
     "login_required_interview": "Đăng nhập để luyện phỏng vấn."
   },
+  "update": {
+    "title": "Cần cập nhật",
+    "body": "Có phiên bản mới hơn của Ærlig. Vui lòng cập nhật ứng dụng để tiếp tục.",
+    "play_store_btn": "Mở Play Store"
+  },
   "home": {
     "subtitle": "Tổng quan phân tích và đơn xin việc — với lời khuyên trung thực.",
     "message_strong_match": "Bạn có một công việc phù hợp {{score}}% đang chờ — {{jobtittel}} có thể sẽ liên hệ với bạn! 🎯",

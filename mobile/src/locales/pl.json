@@ -52,6 +52,11 @@
     "login_required_title": "Zaloguj się",
     "login_required_interview": "Zaloguj się, aby trenować rozmowy kwalifikacyjne."
   },
+  "update": {
+    "title": "Wymagana aktualizacja",
+    "body": "Dostępna jest nowsza wersja Ærlig. Zaktualizuj aplikację, aby kontynuować.",
+    "play_store_btn": "Otwórz Play Store"
+  },
   "home": {
     "subtitle": "Przegląd analiz i podań — ze szczerymi radami.",
     "message_strong_match": "Masz {{score}}% dopasowania, które czeka — {{jobtittel}} może się do Ciebie odezwać! 🎯",

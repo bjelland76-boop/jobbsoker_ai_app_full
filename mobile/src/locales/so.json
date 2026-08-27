@@ -52,6 +52,11 @@
     "login_required_title": "Gal",
     "login_required_interview": "Gal si aad u tababarto wareysiyada."
   },
+  "update": {
+    "title": "Cusboonaysiin ayaa loo baahan yahay",
+    "body": "Nooc cusub oo Ærlig ah ayaa la heli karaa. Fadlan cusboonaysii abka si aad u sii wadato.",
+    "play_store_btn": "Fur Play Store"
+  },
   "home": {
     "subtitle": "Guudmar falanqaymo iyo codsiyo — talooyin daacad ah.",
     "message_strong_match": "Waxaad haysataa isku-dheelitir {{score}}% oo sugaya — {{jobtittel}} ayaa ka maqli doona! 🎯",

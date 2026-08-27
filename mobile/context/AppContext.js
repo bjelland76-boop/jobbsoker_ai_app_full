@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, Platform, NativeModules } from 'react-native';
 
 import i18n, { loadSavedLanguage, changeLanguage as i18nChange, SUPPORTED } from '../src/i18n';
+import { getCurrentVersionCode } from '../constants/appVersion';
 
 // Keep legacy I18N import for backward compat with any remaining direct usages
 import { I18N } from '../i18n/no';
@@ -124,6 +125,11 @@ export function AppProvider({ children }) {
   const [authLoading, setAuthLoading] = useState(false);
   const [googleAuthLoading, setGoogleAuthLoading] = useState(false);
 
+  // Force-update gate: true if the installed app is below the backend's
+  // /app-config min_version. Checked once at startup, before authReady --
+  // see App.js, which renders ForceUpdateScreen instead of the app when set.
+  const [forceUpdateRequired, setForceUpdateRequired] = useState(false);
+
   // Pre-login intro slides (3-slide welcome carousel, shown once ever, before AuthScreen).
   const [introSlidesSeen, setIntroSlidesSeen] = useState(false);
 
@@ -173,6 +179,17 @@ export function AppProvider({ children }) {
 
         const introSeen = await AsyncStorage.getItem('onboarding_shown');
         setIntroSlidesSeen(introSeen === 'true');
+
+        // Force-update check. Fails open (never blocks) on network errors --
+        // only an explicit min_version above the installed build blocks.
+        try {
+          const cfg = await apiFetch('/app-config');
+          const minVersion = Number(cfg?.min_version);
+          if (Number.isFinite(minVersion)) {
+            const current = await getCurrentVersionCode();
+            if (current < minVersion) setForceUpdateRequired(true);
+          }
+        } catch (e) { /* ignore -- fail open */ }
 
         const t = await AsyncStorage.getItem('authToken');
         if (t) {
@@ -353,6 +370,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       // Auth state
       authReady,
+      forceUpdateRequired,
       authTokenState, setAuthTokenState,
       userId,
       authEmail, setAuthEmail,

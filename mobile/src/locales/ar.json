@@ -52,6 +52,11 @@
     "login_required_title": "تسجيل الدخول",
     "login_required_interview": "سجّل الدخول للتدرب على المقابلات."
   },
+  "update": {
+    "title": "التحديث مطلوب",
+    "body": "تتوفر نسخة أحدث من تطبيق Ærlig. يرجى تحديث التطبيق للمتابعة.",
+    "play_store_btn": "افتح متجر Play"
+  },
   "home": {
     "subtitle": "نظرة عامة على التحليلات والطلبات — مع نصائح صادقة.",
     "message_strong_match": "لديك تطابق بنسبة {{score}}% في انتظارك — {{jobtittel}} قد تتواصل معك! 🎯",

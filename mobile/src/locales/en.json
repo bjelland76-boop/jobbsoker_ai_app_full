@@ -52,6 +52,11 @@
     "login_required_title": "Log in",
     "login_required_interview": "Log in to practice interviews."
   },
+  "update": {
+    "title": "Update required",
+    "body": "A newer version of Ærlig is available. Please update the app to continue.",
+    "play_store_btn": "Open Play Store"
+  },
   "home": {
     "subtitle": "Overview of analyses and applications — with honest advice.",
     "message_strong_match": "You have a {{score}}% match waiting — {{jobtittel}} could be hearing from you! 🎯",

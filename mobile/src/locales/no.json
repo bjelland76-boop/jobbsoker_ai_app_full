@@ -52,6 +52,11 @@
     "login_required_title": "Logg inn",
     "login_required_interview": "Logg inn for å trene på intervju."
   },
+  "update": {
+    "title": "Oppdatering nødvendig",
+    "body": "Det finnes en nyere versjon av Ærlig. Oppdater appen for å fortsette.",
+    "play_store_btn": "Åpne Play Store"
+  },
   "home": {
     "subtitle": "Oversikt over analyser og søknader — med ærlige råd.",
     "message_strong_match": "Du har en {{score}}% match som venter — {{jobtittel}} vil høre fra deg! 🎯",

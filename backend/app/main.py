@@ -646,6 +646,24 @@ def health(db: Session = Depends(get_db)):
     return {"status": status_text, "checks": checks}
 
 
+@app.get("/app-config", tags=["meta"])
+def app_config():
+    """Force-update gate, checked by the mobile app on every launch.
+
+    `min_version` is compared against the installed Android app's native
+    versionCode (see mobile/constants/appVersion.js). Below it, the app
+    shows a blocking "please update" screen instead of rendering.
+
+    To require an update later: set the MIN_APP_VERSION env var in Render's
+    dashboard to the new minimum versionCode and restart the service --
+    no code change needed. The fallback below (kept in sync with
+    mobile/android/app/build.gradle's current versionCode) is what's in
+    effect until MIN_APP_VERSION is explicitly set, so nobody is blocked
+    during this rollout.
+    """
+    return {"min_version": int(os.getenv("MIN_APP_VERSION", "31"))}
+
+
 @app.post("/auth/register", response_model=TokenOut, tags=["auth"])
 def register(data: RegisterIn, db: Session = Depends(get_db)):
     email = (data.email or "").strip().lower()

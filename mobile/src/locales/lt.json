@@ -52,6 +52,11 @@
     "login_required_title": "Prisijungti",
     "login_required_interview": "Prisijunkite, kad galėtumėte treniruotis interviu."
   },
+  "update": {
+    "title": "Reikalingas atnaujinimas",
+    "body": "Yra naujesnė Ærlig versija. Atnaujinkite programėlę, kad galėtumėte tęsti.",
+    "play_store_btn": "Atidaryti Play Store"
+  },
   "home": {
     "subtitle": "Analizių ir paraiškų apžvalga — su sąžiningais patarimais.",
     "message_strong_match": "Turite {{score}}% atitikmenį, kuris laukia — {{jobtittel}} gali susisiekti su jumis! 🎯",
