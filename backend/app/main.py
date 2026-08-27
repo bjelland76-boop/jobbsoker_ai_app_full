@@ -204,6 +204,24 @@ _FREE_LIMIT_LABELS = {
 }
 
 
+def _has_active_subscription(profile: Profile) -> bool:
+    """True if the profile has a currently-active, non-expired subscription
+    or time-limited pass.
+
+    subscription_status=="active" alone is NOT enough: a real Stripe
+    subscription stays fresh because Stripe sends customer.subscription.*
+    webhooks that flip the status when a billing period lapses, but a
+    one-time product like the 39kr 7-day pass has no recurring trigger --
+    nothing else ever revisits it. Without checking subscription_end here,
+    a 7-day pass would grant permanent access instead of 7 days.
+    """
+    if profile.subscription_status != "active":
+        return False
+    if profile.subscription_end is not None and profile.subscription_end < datetime.utcnow():
+        return False
+    return True
+
+
 def _check_free_limit(profile: Profile, limit_type: str) -> JSONResponse | None:
     """Read-only check: None if the action is allowed, else a 403 response.
 
@@ -211,7 +229,7 @@ def _check_free_limit(profile: Profile, limit_type: str) -> JSONResponse | None:
     consumes a free slot or a credit. Call `_consume_free_limit` only
     after the work actually succeeds.
     """
-    if bool(profile.is_tester) or profile.subscription_status == "active":
+    if bool(profile.is_tester) or _has_active_subscription(profile):
         return None
     count_attr = _LIMIT_COUNT_ATTR[limit_type]
     if int(getattr(profile, count_attr) or 0) < FREE_LIMIT:
@@ -231,7 +249,7 @@ def _check_free_limit(profile: Profile, limit_type: str) -> JSONResponse | None:
 
 def _consume_free_limit(db: Session, profile: Profile, limit_type: str) -> None:
     """Call once, after the gated action has succeeded. Mirrors _check_free_limit's logic."""
-    if bool(profile.is_tester) or profile.subscription_status == "active":
+    if bool(profile.is_tester) or _has_active_subscription(profile):
         return
     count_attr = _LIMIT_COUNT_ATTR[limit_type]
     count = int(getattr(profile, count_attr) or 0)
@@ -272,7 +290,7 @@ def _check_anon_shared_limit(profile: Profile) -> JSONResponse | None:
     three separate per-type limits. is_tester/subscription_status can't
     actually be set on an anonymous (no user_id) profile today, but the
     check mirrors _check_free_limit for consistency/defensiveness."""
-    if bool(profile.is_tester) or profile.subscription_status == "active":
+    if bool(profile.is_tester) or _has_active_subscription(profile):
         return None
     if _anon_credits_used(profile) < ANON_SHARED_LIMIT:
         return None
@@ -291,7 +309,7 @@ def _consume_anon_shared_limit(db: Session, profile: Profile, limit_type: str) -
     three shared-pool actions was used, on the same per-type columns
     _check_free_limit uses for logged-in users -- the shared-pool check
     itself only cares about their sum (_anon_credits_used)."""
-    if bool(profile.is_tester) or profile.subscription_status == "active":
+    if bool(profile.is_tester) or _has_active_subscription(profile):
         return
     count_attr = _LIMIT_COUNT_ATTR[limit_type]
     setattr(profile, count_attr, int(getattr(profile, count_attr) or 0) + 1)
@@ -596,10 +614,10 @@ class AnalyzeCvIn(BaseModel):
 
 
 class CreateCheckoutIn(BaseModel):
-    package: int = 0  # 1 | 5 | 10 (ignored when type == "subscription")
+    package: int = 0  # 1 | 5 | 10 (ignored unless type == "package")
     user_id: int
     email: str = ""
-    type: str = "package"  # "package" | "subscription"
+    type: str = "package"  # "package" | "subscription" | "7day"
 
 
 class SendAnalysisIn(BaseModel):
@@ -2846,6 +2864,29 @@ def create_checkout(
 
         return {"checkout_url": session.url}
 
+    if data.type == "7day":
+        price_env = "STRIPE_PRICE_7DAY_VN" if is_vn else "STRIPE_PRICE_7DAY"
+        price_id = os.getenv(price_env)
+        if not price_id:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Stripe er ikke konfigurert ({price_env} mangler)")
+
+        try:
+            session = stripe.checkout.Session.create(
+                mode="payment",
+                line_items=[{"price": price_id, "quantity": 1}],
+                success_url="https://app.aerlig.no/betalt?type=7day&session_id={CHECKOUT_SESSION_ID}",
+                cancel_url="https://app.aerlig.no",
+                customer_email=data.email or current_user.email,
+                # "type": "7day_pass" (not "credits") is what tells the webhook
+                # to call _set_subscription_status with a 7-day expiry instead
+                # of _grant_credits -- see stripe_webhook().
+                metadata={"user_id": str(current_user.id), "type": "7day_pass"},
+            )
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Stripe-feil: {e}")
+
+        return {"checkout_url": session.url}
+
     if data.package not in _PACKAGE_CREDITS:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ugyldig pakke")
 
@@ -2905,6 +2946,40 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
 
         session_id = session.get("id") or ""
         meta = session.get("metadata") or {}
+
+        if meta.get("type") == "7day_pass":
+            # One-time 39kr pass -- NOT a credits purchase. Sets
+            # subscription_status/subscription_end directly (7 days from
+            # now), same fields a real Stripe subscription uses, but this
+            # product has no recurring billing to keep them fresh -- see
+            # _has_active_subscription(), which is what actually enforces
+            # the expiry on every limit check.
+            try:
+                meta_user_id = int(meta.get("user_id"))
+            except (TypeError, ValueError):
+                logger.error("[stripe-webhook] invalid metadata on 7day_pass session %s: %r", session_id, meta)
+                return {"received": True}
+
+            existing = db.scalars(
+                select(StripePayment).where(StripePayment.session_id == session_id)
+            ).first()
+            if not existing and session_id:
+                profile = db.scalars(select(Profile).where(Profile.user_id == meta_user_id)).first()
+                if profile:
+                    _set_subscription_status(
+                        db,
+                        profile=profile,
+                        subscription_status="active",
+                        subscription_end=datetime.utcnow() + timedelta(days=7),
+                    )
+                    # credits=0: this row exists purely for the idempotency
+                    # check above (StripePayment.session_id is unique), not
+                    # to record a credit grant.
+                    db.add(StripePayment(session_id=session_id, user_id=meta_user_id, credits=0))
+                    db.commit()
+                else:
+                    logger.error("[stripe-webhook] no profile for user_id %s (session %s)", meta_user_id, session_id)
+            return {"received": True}
 
         try:
             meta_user_id = int(meta.get("user_id"))

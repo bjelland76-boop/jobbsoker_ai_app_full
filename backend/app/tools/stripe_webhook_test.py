@@ -157,7 +157,69 @@ def main() -> int:
         _assert(profile.subscription_status == "past_due", f"expected past_due, got {profile.subscription_status}")
         _assert(profile.subscription_end == end_before, "invoice.payment_failed must not change subscription_end")
 
-        # 8) Invalid signature -> 400, no state change.
+        # 9) 7-day pass (checkout.session.completed, mode=payment, type=7day_pass)
+        #    -> subscription_status="active" + subscription_end ~7 days out via
+        #    _set_subscription_status(), NOT _grant_credits (job_credits untouched).
+        # Fresh profile so the job_credits=18 accumulated by tests 1-3 above can't
+        # mask the assertions below.
+        user2_id, profile2_id = _make_user(db, "sevenday@example.com")
+
+        pass_event = _webhook_event("checkout.session.completed", {
+            "id": "cs_test_7day",
+            "mode": "payment",
+            "metadata": {"user_id": str(user2_id), "type": "7day_pass"},
+        })
+        before = datetime.utcnow()
+        with patch("app.main.stripe.Webhook.construct_event", return_value=pass_event):
+            r9 = client.post("/stripe-webhook", data=b"{}", headers={"stripe-signature": "x"})
+        _assert(r9.status_code == 200, f"expected 200, got {r9.status_code}: {r9.text}")
+        db.expire_all()
+        profile2 = db.get(Profile, profile2_id)
+        _assert(profile2.subscription_status == "active", f"expected active after 7day_pass, got {profile2.subscription_status}")
+        _assert(profile2.job_credits == 0, f"7day_pass must not grant job_credits, got {profile2.job_credits}")
+        expected_min = before + timedelta(days=6, hours=23)
+        expected_max = before + timedelta(days=7, hours=1)
+        _assert(
+            profile2.subscription_end is not None and expected_min <= profile2.subscription_end <= expected_max,
+            f"expected subscription_end ~7 days out, got {profile2.subscription_end}",
+        )
+        payment7 = db.scalars(
+            __import__("sqlalchemy").select(StripePayment).where(StripePayment.session_id == "cs_test_7day")
+        ).first()
+        _assert(payment7 is not None and payment7.credits == 0, "StripePayment row for 7day_pass not recorded correctly")
+
+        # 10) Idempotency: replaying the SAME 7day_pass session must not re-extend subscription_end.
+        end_after_first = profile2.subscription_end
+        with patch("app.main.stripe.Webhook.construct_event", return_value=pass_event):
+            client.post("/stripe-webhook", data=b"{}", headers={"stripe-signature": "x"})
+        db.expire_all()
+        profile2 = db.get(Profile, profile2_id)
+        _assert(profile2.subscription_end == end_after_first, "replayed 7day_pass webhook must not extend subscription_end again")
+
+        print("[OK] 7-dagers-pass: subscription_end satt ~7 dager frem, ingen job_credits, idempotent ved replay")
+
+        # 11) Expiry enforcement: _has_active_subscription/_check_free_limit must treat
+        #     subscription_status="active" as EXPIRED once subscription_end has passed,
+        #     even though the DB literally still says "active" (no recurring Stripe
+        #     webhook exists for a one-time pass to flip it back automatically).
+        from app.main import _check_free_limit, _has_active_subscription  # noqa: E402
+
+        profile2.cv_analysis_count = 3  # already past the normal 3-free limit
+        profile2.subscription_end = datetime.utcnow() + timedelta(days=1)
+        db.commit()
+        _assert(_has_active_subscription(profile2) is True, "subscription ending tomorrow should still be active")
+        _assert(_check_free_limit(profile2, "cv_analyse") is None, "an active, non-expired pass must bypass the free limit")
+
+        profile2.subscription_end = datetime.utcnow() - timedelta(seconds=1)
+        db.commit()
+        _assert(_has_active_subscription(profile2) is False, "subscription_end in the past must be treated as inactive")
+        blocked = _check_free_limit(profile2, "cv_analyse")
+        _assert(blocked is not None, "expired 7-day pass (subscription_status still 'active' in DB) must NOT bypass the free limit")
+        _assert(blocked.status_code == 403, f"expected 403 for expired pass, got {blocked.status_code}")
+
+        print("[OK] Utløpt 7-dagers-pass (subscription_end passert) blokkeres selv om subscription_status fortsatt er 'active'")
+
+        # 12) Invalid signature -> 400, no state change.
         with patch("app.main.stripe.Webhook.construct_event", side_effect=Exception("bad sig")):
             r8 = client.post("/stripe-webhook", data=b"{}", headers={"stripe-signature": "bad"})
         _assert(r8.status_code == 400, f"expected 400 for bad signature, got {r8.status_code}")

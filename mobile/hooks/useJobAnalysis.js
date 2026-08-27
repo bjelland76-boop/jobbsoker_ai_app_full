@@ -552,7 +552,10 @@ export default function useJobAnalysis({
         const streamUrl = `${API}/job-analyses/${analysis.job_id}/stream-documents?profile_id=${profileId}&application_style=${encodeURIComponent(applicationStyle)}&include_photo=${includePhoto}&language=${cvLanguage}${templateParam}`;
         const resp = await fetch(streamUrl, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${authTokenState}` },
+          // Anonymous (authTokenState falsy): omit the header entirely --
+          // sending "Bearer null" here would make the backend treat it as
+          // an invalid token (401) rather than as an anonymous request.
+          headers: authTokenState ? { Authorization: `Bearer ${authTokenState}` } : {},
         });
         if (!resp.ok) {
           let errData = null;
