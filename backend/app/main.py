@@ -254,6 +254,50 @@ def _log_usage(db: Session, current_user: "User | None", action: str) -> None:
     db.commit()
 
 
+# Anonymous callers share ONE pool of ANON_SHARED_LIMIT across jobbanalyse +
+# CV-analyse + CV-generering (limit_types "analyse"/"cv_analyse"/"cv"), unlike
+# logged-in users, who get FREE_LIMIT=3 separately for each. Only these three
+# actions draw from the shared pool -- e-post-sending and intervjutrening
+# stay login-required outright and never call these.
+ANON_SHARED_LIMIT = 6
+_ANON_SHARED_LIMIT_TYPES = ("analyse", "cv_analyse", "cv")
+
+
+def _anon_credits_used(profile: Profile) -> int:
+    return sum(int(getattr(profile, _LIMIT_COUNT_ATTR[t]) or 0) for t in _ANON_SHARED_LIMIT_TYPES)
+
+
+def _check_anon_shared_limit(profile: Profile) -> JSONResponse | None:
+    """Anonymous equivalent of _check_free_limit: one shared pool instead of
+    three separate per-type limits. is_tester/subscription_status can't
+    actually be set on an anonymous (no user_id) profile today, but the
+    check mirrors _check_free_limit for consistency/defensiveness."""
+    if bool(profile.is_tester) or profile.subscription_status == "active":
+        return None
+    if _anon_credits_used(profile) < ANON_SHARED_LIMIT:
+        return None
+    return JSONResponse(
+        status_code=status.HTTP_403_FORBIDDEN,
+        content={
+            "error": "free_limit_reached",
+            "limit_type": "anon_shared",
+            "message": f"Du har brukt dine {ANON_SHARED_LIMIT} gratis handlinger. Logg inn for å fortsette.",
+        },
+    )
+
+
+def _consume_anon_shared_limit(db: Session, profile: Profile, limit_type: str) -> None:
+    """Call once, after the gated action has succeeded. Records which of the
+    three shared-pool actions was used, on the same per-type columns
+    _check_free_limit uses for logged-in users -- the shared-pool check
+    itself only cares about their sum (_anon_credits_used)."""
+    if bool(profile.is_tester) or profile.subscription_status == "active":
+        return
+    count_attr = _LIMIT_COUNT_ATTR[limit_type]
+    setattr(profile, count_attr, int(getattr(profile, count_attr) or 0) + 1)
+    db.commit()
+
+
 def _owns_profile(profile: "Profile | None", current_user: "User | None") -> bool:
     """True if `profile` belongs to `current_user` -- or, for an anonymous
     caller (current_user is None), if `profile` is itself anonymous
@@ -1770,11 +1814,12 @@ def analyze_cv(
     if not _owns_profile(profile, current_user):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
 
-    # Anonym bruk er midlertidig ubegrenset -- se rapportens seksjon 3.
     if current_user is not None:
         blocked = _check_free_limit(profile, "cv_analyse")
-        if blocked is not None:
-            return blocked
+    else:
+        blocked = _check_anon_shared_limit(profile)
+    if blocked is not None:
+        return blocked
 
     try:
         result = analyze_profile_cv(profile, language=data.language)
@@ -1784,6 +1829,8 @@ def analyze_cv(
 
     if current_user is not None:
         _consume_free_limit(db, profile, "cv_analyse")
+    else:
+        _consume_anon_shared_limit(db, profile, "cv_analyse")
     _log_usage(db, current_user, "cv_analysis_completed")
     return result
 
@@ -2189,9 +2236,11 @@ def generate_tailored_cv(
     stored_email = _to_text(stored.get(email_key))
     skip_claude = bool(template_norm) and bool(stored_cv) and bool(stored_letter)
 
-    if not skip_claude and current_user is not None:
-        # Anonym bruk er midlertidig ubegrenset -- se rapportens seksjon 3.
-        blocked = _check_free_limit(profile, "cv")
+    if not skip_claude:
+        if current_user is not None:
+            blocked = _check_free_limit(profile, "cv")
+        else:
+            blocked = _check_anon_shared_limit(profile)
         if blocked is not None:
             return blocked
 
@@ -2258,6 +2307,8 @@ def generate_tailored_cv(
 
         if current_user is not None:
             _consume_free_limit(db, profile, "cv")
+        else:
+            _consume_anon_shared_limit(db, profile, "cv")
 
     _log_usage(db, current_user, "cv_generation_completed")
 
@@ -2332,12 +2383,13 @@ def stream_documents(
     if not _owns_profile(profile, current_user):
         raise HTTPException(status_code=404, detail="Fant ikke profil")
 
-    # Anonym bruk er midlertidig ubegrenset -- se rapportens seksjon 3.
     is_anonymous = current_user is None
     if not is_anonymous:
         blocked = _check_free_limit(profile, "cv")
-        if blocked is not None:
-            return blocked
+    else:
+        blocked = _check_anon_shared_limit(profile)
+    if blocked is not None:
+        return blocked
 
     job = db.get(Job, job_id)
     if not _owns_job(job, current_user):
@@ -2437,11 +2489,13 @@ def stream_documents(
             yield f"data: {json.dumps({'t': 'e', 'msg': str(exc)})}\n\n"
             return
 
-        if not is_anonymous:
-            with _SessionLocal() as _consume_db:
-                _p = _consume_db.get(Profile, profile_id_val)
-                if _p:
+        with _SessionLocal() as _consume_db:
+            _p = _consume_db.get(Profile, profile_id_val)
+            if _p:
+                if not is_anonymous:
                     _consume_free_limit(_consume_db, _p, "cv")
+                else:
+                    _consume_anon_shared_limit(_consume_db, _p, "cv")
 
         with _SessionLocal() as _log_db:
             _log_db.add(UsageEvent(user_id=current_user_id_val, action="cv_generation_completed", event_meta=""))
@@ -2971,11 +3025,12 @@ def analyze_url(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mangler URL eller jobbtekst")
     job_key = _job_lookup_key(url, job_text)
 
-    # Anonym bruk er midlertidig ubegrenset -- se rapportens seksjon 3.
     if current_user is not None:
         blocked = _check_free_limit(profile, "analyse")
-        if blocked is not None:
-            return blocked
+    else:
+        blocked = _check_anon_shared_limit(profile)
+    if blocked is not None:
+        return blocked
 
     owner_id = current_user.id if current_user else None
 
@@ -3032,6 +3087,8 @@ def analyze_url(
 
         if current_user is not None:
             _consume_free_limit(db, profile, "analyse")
+        else:
+            _consume_anon_shared_limit(db, profile, "analyse")
         _log_usage(db, current_user, "job_analysis_completed")
 
         return result

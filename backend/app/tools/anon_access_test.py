@@ -1,11 +1,15 @@
-"""Manual checks for the temporary anonymous-access mode (profil, dokumenter,
-CV-analyse, CV-generering, jobbanalyse -- no token required, no device-id,
-no payment/limit logic for anonymous callers).
+"""Manual checks for the anonymous-access mode (profil, dokumenter,
+CV-analyse, CV-generering, jobbanalyse -- no token required).
+
+Anonymous callers share ONE pool of ANON_SHARED_LIMIT=6 credits across
+jobbanalyse + CV-analyse + CV-generering combined (not three separate
+3-limits like logged-in users get). Once exhausted, all three require
+login + payment.
 
 Uses an isolated on-disk sqlite DB and mocks all LLM calls (no real network
 calls to Claude/OpenAI). Also confirms:
-  - a logged-in user still works exactly as before (including the existing
-    3-free-limit, which anonymous callers bypass but logged-in users do not)
+  - a logged-in user still works exactly as before -- three SEPARATE
+    3-free-limits (analyse/cv_analyse/cv), not the anonymous shared pool
   - /analyze-url-and-send and /interview/* still require a token, untouched
 
 Run manually:
@@ -152,22 +156,16 @@ def main() -> int:
         print("[OK] anonym dokument-opplasting (uttrekk uten lagring)")
 
         # ------------------------------------------------------------------
-        # 5) CV-analyse: unlimited for anonymous (run past the old FREE_LIMIT=3)
+        # 5) Anonymous shared 6-credit pool across analyse + cv_analyse + cv,
+        #    consumed in a mixed order: 2 cv_analyse, 2 analyse, 1 cv
+        #    (generate-tailored-cv), 1 cv (stream-documents) = 6 total.
         # ------------------------------------------------------------------
-        for i in range(5):
+        for i in range(2):
             r = client.post("/analyze-cv", json={"profile_id": anon_pid, "language": "no"})
             _assert(r.status_code == 200, f"anon analyze-cv call {i+1} failed: {r.status_code} {r.text}")
 
-        r = client.get(f"/profiles/{anon_pid}")
-        _assert(r.json()["cv_analysis_count"] == 0, "anonymous cv_analysis_count should stay 0 (no limit logic applied)")
-
-        print("[OK] anonym CV-analyse: 5 kall uten grense, telleren rørt ikke")
-
-        # ------------------------------------------------------------------
-        # 6) Jobbanalyse: unlimited for anonymous, and the created Job is anonymous too
-        # ------------------------------------------------------------------
         job_ids = []
-        for i in range(5):
+        for i in range(2):
             r = client.post(
                 "/analyze-url",
                 json={"profile_id": anon_pid, "url": f"https://example.com/job-{i}", "language": "no"},
@@ -175,48 +173,21 @@ def main() -> int:
             _assert(r.status_code == 200, f"anon analyze-url call {i+1} failed: {r.status_code} {r.text}")
             job_ids.append(r.json()["job_id"])
 
-        r = client.get(f"/profiles/{anon_pid}")
-        _assert(r.json()["analysis_count"] == 0, "anonymous analysis_count should stay 0 (no limit logic applied)")
-
         r = client.get("/job-analyses", params={"profile_id": anon_pid})
-        _assert(r.status_code == 200 and len(r.json()) == 5, f"anon job-analyses list failed: {r.text}")
-
-        job_id = job_ids[-1]
-        r = client.get(f"/job-analyses/{job_id}", params={"profile_id": anon_pid})
-        _assert(r.status_code == 200, f"anon get single job-analysis failed: {r.text}")
-
-        r = client.post(f"/job-analyses/{job_id}/hide/{anon_pid}")
-        _assert(r.status_code == 200, f"anon hide job-analysis failed: {r.text}")
-
-        r = client.patch(f"/job-analyses/{job_ids[0]}/favorite/{anon_pid}")
+        _assert(r.status_code == 200 and len(r.json()) == 2, f"anon job-analyses list failed: {r.text}")
+        r = client.patch(f"/job-analyses/{job_ids[1]}/favorite/{anon_pid}")
         _assert(r.status_code == 200, f"anon favorite job-analysis failed: {r.text}")
-
         # Cross-check: logged-in user cannot reach the anonymous Job either.
         r = client.get(f"/job-analyses/{job_ids[0]}", params={"profile_id": real_pid}, headers=headers)
         _assert(r.status_code == 404, f"logged-in user should not reach anonymous job, got {r.status_code}")
 
-        print("[OK] anonym jobbanalyse: 5 kall uten grense + historikk (liste/hent/skjul/favoritt)")
+        r = client.post(
+            f"/job-analyses/{job_ids[0]}/generate-tailored-cv",
+            params={"profile_id": anon_pid, "language": "no"},
+        )
+        _assert(r.status_code == 200, f"anon generate-tailored-cv failed: {r.status_code} {r.text}")
+        _assert(r.json()["cv"] == _FAKE_GENERATED_TEXTS["tailored_cv"], "unexpected generated cv text")
 
-        # ------------------------------------------------------------------
-        # 7) CV-generering (tailored CV for a job): unlimited for anonymous
-        # ------------------------------------------------------------------
-        gen_job_id = job_ids[1]
-        for i in range(5):
-            r = client.post(
-                f"/job-analyses/{gen_job_id}/generate-tailored-cv",
-                params={"profile_id": anon_pid, "language": "no"},
-            )
-            _assert(r.status_code == 200, f"anon generate-tailored-cv call {i+1} failed: {r.status_code} {r.text}")
-            _assert(r.json()["cv"] == _FAKE_GENERATED_TEXTS["tailored_cv"], "unexpected generated cv text")
-
-        r = client.get(f"/profiles/{anon_pid}")
-        _assert(r.json()["cv_generation_count"] == 0, "anonymous cv_generation_count should stay 0 (no limit logic applied)")
-
-        print("[OK] anonym CV-generering: 5 kall uten grense, telleren rørt ikke")
-
-        # ------------------------------------------------------------------
-        # 8) stream-documents: anonymous SSE path also works and stays unlimited
-        # ------------------------------------------------------------------
         def _fake_stream(*args, **kwargs):
             yield "chunk", "Kjaere "
             yield "chunk", "Test AS"
@@ -224,19 +195,82 @@ def main() -> int:
 
         with patch("app.job_analyzer.stream_application_texts", side_effect=_fake_stream):
             r = client.post(
-                f"/job-analyses/{gen_job_id}/stream-documents",
+                f"/job-analyses/{job_ids[1]}/stream-documents",
                 params={"profile_id": anon_pid, "language": "no"},
             )
         _assert(r.status_code == 200, f"anon stream-documents failed: {r.status_code} {r.text}")
 
+        # 6 credits used (2+2+1+1), spread across the three per-type columns.
         r = client.get(f"/profiles/{anon_pid}")
-        _assert(r.json()["cv_generation_count"] == 0, "anonymous cv_generation_count should stay 0 after streaming too")
+        prof = r.json()
+        _assert(prof["cv_analysis_count"] == 2, f"expected cv_analysis_count=2, got {prof['cv_analysis_count']}")
+        _assert(prof["analysis_count"] == 2, f"expected analysis_count=2, got {prof['analysis_count']}")
+        _assert(prof["cv_generation_count"] == 2, f"expected cv_generation_count=2, got {prof['cv_generation_count']}")
+        _assert(prof["job_credits"] == 0, "anon shared pool must not touch paid job_credits")
 
-        print("[OK] anonym CV-generering (streaming): uten grense")
+        print("[OK] anonym delt 6-kreditt-pott: 2 cv_analyse + 2 analyse + 1 cv (generate) + 1 cv (stream) = 6")
+
+        r = client.post(f"/job-analyses/{job_ids[0]}/hide/{anon_pid}")
+        _assert(r.status_code == 200, f"anon hide job-analysis failed: {r.text}")
+
+        print("[OK] anonym jobbanalyse-historikk: liste/hent/skjul/favoritt fungerer")
 
         # ------------------------------------------------------------------
-        # 9) Regression: logged-in user is still subject to the existing
-        #    3-free-limit for cv_analyse (unaffected by the anonymous changes)
+        # 6) Pool exhausted: further use of all three action types is
+        #    blocked for anonymous, with limit_type="anon_shared".
+        # ------------------------------------------------------------------
+        r = client.post("/analyze-cv", json={"profile_id": anon_pid, "language": "no"})
+        _assert(r.status_code == 403, f"7th anon analyze-cv should be blocked, got {r.status_code}: {r.text}")
+        _assert(r.json().get("limit_type") == "anon_shared", f"expected limit_type=anon_shared, got {r.json()}")
+
+        r = client.post(
+            "/analyze-url",
+            json={"profile_id": anon_pid, "url": "https://example.com/job-overflow", "language": "no"},
+        )
+        _assert(r.status_code == 403, f"7th anon analyze-url should be blocked, got {r.status_code}: {r.text}")
+        _assert(r.json().get("limit_type") == "anon_shared", f"expected limit_type=anon_shared, got {r.json()}")
+
+        # job_ids[1] (not hidden, unlike job_ids[0]); omit `template` so
+        # skip_claude stays False and the request actually reaches the
+        # limit check instead of short-circuiting on cached text.
+        r = client.post(
+            f"/job-analyses/{job_ids[1]}/generate-tailored-cv",
+            params={"profile_id": anon_pid, "language": "no"},
+        )
+        _assert(r.status_code == 403, f"7th anon generate-tailored-cv should be blocked, got {r.status_code}: {r.text}")
+        _assert(r.json().get("limit_type") == "anon_shared", f"expected limit_type=anon_shared, got {r.json()}")
+
+        # Counters must not have moved past 6 despite the blocked attempts.
+        r = client.get(f"/profiles/{anon_pid}")
+        prof = r.json()
+        _assert(
+            prof["cv_analysis_count"] + prof["analysis_count"] + prof["cv_generation_count"] == 6,
+            f"blocked calls must not consume credits, got {prof}",
+        )
+
+        print("[OK] anonym pott tom etter 6: alle tre handlingstyper blokkeres (403, anon_shared)")
+
+        # ------------------------------------------------------------------
+        # 7) "Close and reopen the app": re-fetching the same cached
+        #    profile id later still shows the same profile + remaining
+        #    (zero) credits -- this is exactly what the mobile app does on
+        #    launch with the AsyncStorage-cached id (mobile/hooks/useProfile.js).
+        # ------------------------------------------------------------------
+        r = client.get(f"/profiles/{anon_pid}")
+        _assert(r.status_code == 200, f"re-fetching the cached anon profile failed: {r.status_code}")
+        prof = r.json()
+        _assert(prof["id"] == anon_pid, "re-fetched profile id must match the cached id")
+        _assert(prof["name"] == "Anonym Bruker 2", "profile data must survive across the simulated relaunch")
+        _assert(
+            prof["cv_analysis_count"] == 2 and prof["analysis_count"] == 2 and prof["cv_generation_count"] == 2,
+            "credit counters must survive across the simulated relaunch",
+        )
+
+        print("[OK] samme anonym profil + gjenstående kreditter gjenfinnes etter simulert omstart")
+
+        # ------------------------------------------------------------------
+        # 8) Regression: logged-in users get three SEPARATE 3-free-limits
+        #    (analyse/cv_analyse/cv), NOT the anonymous shared pool of 6.
         # ------------------------------------------------------------------
         for i in range(3):
             r = client.post("/analyze-cv", json={"profile_id": real_pid, "language": "no"}, headers=headers)
@@ -245,36 +279,52 @@ def main() -> int:
         r = client.post("/analyze-cv", json={"profile_id": real_pid, "language": "no"}, headers=headers)
         _assert(r.status_code == 403, f"logged-in 4th analyze-cv call should hit the existing free limit, got {r.status_code}: {r.text}")
         _assert(r.json().get("error") == "free_limit_reached", "expected free_limit_reached error body")
+        _assert(r.json().get("limit_type") == "cv_analyse", f"logged-in limit_type should be per-type, got {r.json()}")
 
-        print("[OK] innlogget bruker: eksisterende 3-gratis-grense fortsatt håndhevet uendret")
+        # cv_analyse is now exhausted for this user, but analyse is a wholly
+        # separate counter -- proves logged-in users are NOT on the shared pool.
+        for i in range(3):
+            r = client.post(
+                "/analyze-url",
+                json={"profile_id": real_pid, "url": f"https://example.com/real-job-{i}", "language": "no"},
+                headers=headers,
+            )
+            _assert(r.status_code == 200, f"logged-in analyze-url call {i+1} failed: {r.status_code} {r.text}")
+
+        print("[OK] innlogget bruker: tre separate 3-gratis-grenser (ikke delt pott) -- upåvirket av anonym-endringene")
 
         # ------------------------------------------------------------------
-        # 10) usage_events: logged independently of the free-limit system,
-        #     for both anonymous (user_id=NULL) and logged-in callers.
+        # 9) usage_events: logged independently of the free-limit system,
+        #    for both anonymous (user_id=NULL) and logged-in callers. Blocked
+        #    (403) attempts must never log, anonymous or logged-in.
         # ------------------------------------------------------------------
         real_user_id = client.get("/auth/me", headers=headers).json()["id"]
 
         _assert(
-            _usage_count("cv_analysis_completed", None) == 5,
-            f"expected 5 anonymous cv_analysis_completed rows, got {_usage_count('cv_analysis_completed', None)}",
+            _usage_count("cv_analysis_completed", None) == 2,
+            f"expected 2 anonymous cv_analysis_completed rows, got {_usage_count('cv_analysis_completed', None)}",
         )
         _assert(
-            _usage_count("job_analysis_completed", None) == 5,
-            f"expected 5 anonymous job_analysis_completed rows, got {_usage_count('job_analysis_completed', None)}",
+            _usage_count("job_analysis_completed", None) == 2,
+            f"expected 2 anonymous job_analysis_completed rows, got {_usage_count('job_analysis_completed', None)}",
         )
         _assert(
-            _usage_count("cv_generation_completed", None) == 6,
-            f"expected 6 anonymous cv_generation_completed rows (5 generate-tailored-cv + 1 stream), got {_usage_count('cv_generation_completed', None)}",
+            _usage_count("cv_generation_completed", None) == 2,
+            f"expected 2 anonymous cv_generation_completed rows (1 generate-tailored-cv + 1 stream), got {_usage_count('cv_generation_completed', None)}",
         )
         _assert(
             _usage_count("cv_analysis_completed", real_user_id) == 3,
             f"expected 3 logged-in cv_analysis_completed rows (the 4th call was blocked and should not log), got {_usage_count('cv_analysis_completed', real_user_id)}",
         )
+        _assert(
+            _usage_count("job_analysis_completed", real_user_id) == 3,
+            f"expected 3 logged-in job_analysis_completed rows, got {_usage_count('job_analysis_completed', real_user_id)}",
+        )
 
         print("[OK] usage_events logges uavhengig av grense-sjekken, for anonym (user_id=NULL) og innlogget")
 
         # ------------------------------------------------------------------
-        # 11) Untouched endpoints: still require a token
+        # 10) Untouched endpoints: still require a token
         # ------------------------------------------------------------------
         r = client.post("/analyze-url-and-send", json={"profile_id": anon_pid, "url": "https://example.com/job-x"})
         _assert(r.status_code == 401, f"/analyze-url-and-send must still require auth, got {r.status_code}")

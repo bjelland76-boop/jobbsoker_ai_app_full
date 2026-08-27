@@ -9,6 +9,12 @@ import { apiFetch, API, useApp } from '../context/AppContext';
 export const PRIVACY_URL = 'https://aerlig.app/personvern';
 export const DOC_TYPES = ['Fagbrev', 'Kursbevis', 'Karakterutskrift', 'Attest', 'Annet'];
 
+// Anonymous (not-logged-in) users have no account to look their profile up
+// by, so the id itself is the only handle we have -- cache it locally so a
+// fresh app launch reattaches to the same profile (and its remaining shared
+// credits) instead of silently creating a new, empty one every time.
+const ANON_PROFILE_ID_KEY = 'anonProfileId';
+
 // Language serialization: {name, level} <-> "Norsk — Morsmål" strings
 export function normalizeLangEntry(l) {
   if (typeof l === 'string') {
@@ -45,7 +51,7 @@ export function serializeCvGaps(list) {
 
 // Accepts optional { onProfileSaved } callback for cross-hook notifications
 export default function useProfile({ onProfileSaved } = {}) {
-  const { authTokenState, logEvent, errText, t, setShowOnboarding, setShowInactivityReminder } = useApp();
+  const { authReady, authTokenState, logEvent, errText, t, setShowOnboarding, setShowInactivityReminder } = useApp();
 
   // ---------------------------------------------------------------------------
   // State
@@ -193,9 +199,29 @@ export default function useProfile({ onProfileSaved } = {}) {
   useEffect(() => {
     async function loadProfile() {
       try {
-        const data = await apiFetch('/profiles');
-        if (Array.isArray(data) && data.length > 0) {
-          const profile = data[0];
+        let profile = null;
+        if (authTokenState) {
+          const data = await apiFetch('/profiles');
+          if (Array.isArray(data) && data.length > 0) profile = data[0];
+        } else {
+          // Anonymous: GET /profiles always returns [] (no identity to list
+          // against) -- the cached id from a previous launch is the only way
+          // to reattach to the same profile instead of creating a new one.
+          const cachedId = await AsyncStorage.getItem(ANON_PROFILE_ID_KEY);
+          if (cachedId) {
+            try {
+              profile = await apiFetch(`/profiles/${cachedId}`);
+            } catch (fetchErr) {
+              if (fetchErr?.status === 404) {
+                // Stale/claimed/deleted -- stop retrying against a dead id.
+                await AsyncStorage.removeItem(ANON_PROFILE_ID_KEY);
+              }
+              throw fetchErr;
+            }
+          }
+        }
+
+        if (profile) {
           setProfileId(profile.id);
           setJobCredits(profile.job_credits || 0);
           setSubscriptionStatus(profile.subscription_status || null);
@@ -291,10 +317,15 @@ export default function useProfile({ onProfileSaved } = {}) {
       }
     }
 
-    if (!authTokenState) return;
+    // Wait for authReady: authTokenState starts as null before the stored
+    // token (if any) has been read, which is indistinguishable from a
+    // genuinely anonymous user -- without this guard, a returning logged-in
+    // user would briefly race an anonymous-profile fetch on every launch.
+    if (!authReady) return;
+
     profileLoadedRef.current = false;
     loadProfile();
-  }, [authTokenState]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [authReady, authTokenState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------------------------------------------------------------------------
   // Job credits (refetched after a Stripe purchase is confirmed)
@@ -588,6 +619,11 @@ export default function useProfile({ onProfileSaved } = {}) {
       });
 
       setProfileId(data.id);
+      if (!authTokenState) {
+        // Anonymous: this id is the only way to find this profile again on
+        // the next launch (GET /profiles returns [] with no identity).
+        try { await AsyncStorage.setItem(ANON_PROFILE_ID_KEY, String(data.id)); } catch (e) { /* ignore */ }
+      }
       if (onProfileSaved) onProfileSaved();
       if (!silent) {
         Alert.alert('Profil lagret', 'Din profil er lagret til backend.');
