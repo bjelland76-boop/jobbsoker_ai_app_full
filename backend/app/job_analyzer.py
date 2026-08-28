@@ -433,7 +433,9 @@ def generate_application_texts(
         6000,
     )
 
-    use_english = (language or "no").strip().lower() == "en"
+    lang = (language or "no").strip().lower()
+    use_english = lang == "en"
+    use_vietnamese = lang == "vi"
 
     match_block = ""
     if match_context and isinstance(match_context, dict):
@@ -457,6 +459,21 @@ def generate_application_texts(
                 lines.append("- These skills should be emphasised in the CV: " + "; ".join(strengths))
             if missing:
                 lines.append("- These requirements are missing — downplay or compensate with transferable experience: " + "; ".join(missing))
+        elif use_vietnamese:
+            lines = [
+                "THÔNG TIN NỀN ĐỂ TÙY CHỈNH (KHÔNG được xuất hiện trong CV hoặc thư xin việc):",
+                "Chỉ dùng thông tin này để biết nên nhấn mạnh điều gì. Không bao giờ xuất các dữ liệu này ra kết quả.",
+            ]
+            if score is not None:
+                lines.append(f"- Điểm phù hợp: {int(score)}% (chỉ để tham khảo nội bộ, không hiển thị trong kết quả)")
+            if top_reason:
+                lines.append(f"- Điểm mạnh nhất của ứng viên cho vị trí này: {top_reason}")
+            if main_risk:
+                lines.append(f"- Điểm thiếu sót quan trọng nhất cần bù đắp: {main_risk}")
+            if strengths:
+                lines.append("- Những kỹ năng này nên được nhấn mạnh trong CV: " + "; ".join(strengths))
+            if missing:
+                lines.append("- Những yêu cầu này còn thiếu — giảm nhẹ hoặc bù đắp bằng kinh nghiệm có thể chuyển đổi: " + "; ".join(missing))
         else:
             lines = [
                 "BAKGRUNNSINFORMASJON FOR TILPASNING (skal IKKE skrives ut i CV eller søknadsbrev):",
@@ -551,6 +568,108 @@ Languages:
 cover_letter:
 - NEVER mention language level (e.g. do not write "fluent in English", "native Norwegian speaker") — omit language proficiency entirely.
 """.strip()
+    elif use_vietnamese:
+        _anti_halluc_vi = """
+CHỐNG BỊA ĐẶT / SỰ THẬT:
+- KHÔNG được bịa đặt hoặc thêm bất kỳ sự thật mới nào về ứng viên.
+- KHÔNG được bịa đặt kinh nghiệm, nhà tuyển dụng, vai trò, trách nhiệm, học vấn, khóa học, chứng chỉ,
+  bằng lái xe, chứng chỉ vận hành xe nâng, chứng chỉ vận hành máy móc, giấy phép hành nghề hoặc bằng cấp khác.
+- CHỈ sử dụng thông tin thực sự có trong: hồ sơ ứng viên, CV, mô tả công việc hoặc phân tích công việc.
+- Dịch chức danh/tên bằng cấp sang ngôn ngữ đích là BẮT BUỘC và KHÔNG bị coi là thay đổi sự thật.
+  Luôn dịch chức danh công việc và bằng cấp sang tiếng Việt (ví dụ: "Butikkmedarbeider" → "Nhân viên bán hàng"); đây là dịch thuật, không phải bịa đặt.
+
+PHÂN BIỆT RÕ RÀNG (khi mô tả trình độ chuyên môn):
+- Kinh nghiệm/trình độ đã ghi nhận: được nêu rõ trong nguồn dữ liệu.
+- Kinh nghiệm có thể chuyển đổi: có thể liên quan, nhưng phải gắn với những gì ứng viên thực sự đã làm (không thêm sự thật mới).
+- Thiếu / chưa ghi nhận: nếu không có trong nguồn dữ liệu, hãy nêu rõ là chưa được ghi nhận.
+
+NẾU THIẾU THÔNG TIN TRONG NGUỒN DỮ LIỆU:
+- Nếu một trình độ (ví dụ chứng chỉ vận hành xe nâng hoặc bằng lái xe hạng B) không được nhắc đến:
+  hãy nêu rõ là chưa được ghi nhận, và có thể gợi ý cách ứng viên trả lời trung thực.
+
+ĐƯỢC PHÉP:
+- Bạn có thể đề xuất cách diễn đạt làm rõ hơn kinh nghiệm hiện có (có thật).
+- Bạn có thể đề xuất câu hỏi làm rõ ("Bạn có bằng lái xe không?", "Bạn có chứng chỉ vận hành xe nâng không?").
+
+NGHIÊM CẤM:
+- Không được viết hoặc ngụ ý rằng ứng viên có một trình độ mà bạn không có bằng chứng.
+""".strip()
+        prompt = f"""
+Trả lời CHỈ bằng JSON hợp lệ với các trường:
+cover_letter, tailored_cv, email_text
+
+Job:
+Title: {job_title}
+Company: {company}
+Text: {job_comp}
+
+Candidate:
+{cand_comp}
+
+{match_block + chr(10) if match_block else ""}Quy tắc:
+- QUAN TRỌNG NHẤT: Dù tin tuyển dụng (mô tả công việc) hay dữ liệu hồ sơ của ứng viên được viết bằng ngôn ngữ nào (tiếng Anh, tiếng Na Uy, hay ngôn ngữ khác), TOÀN BỘ nội dung đầu ra PHẢI được viết bằng tiếng Việt. Dịch mọi thứ sang tiếng Việt — không được để sót bất kỳ từ, cụm từ hay câu nào bằng ngôn ngữ khác trong kết quả.
+- Không được bịa đặt kinh nghiệm/học vấn.
+- Không sử dụng các placeholder như [điện thoại] hoặc [địa chỉ].
+- {style_text}
+- Sử dụng từ khóa từ tin tuyển dụng trong CV ở những nơi ứng viên thực sự có kinh nghiệm liên quan.
+- Nêu bật những điểm mạnh nhất của ứng viên cho vị trí này ở đầu phần Tóm tắt bản thân.
+- QUAN TRỌNG: KHÔNG BAO GIỜ xuất ra điểm phù hợp (match score), siêu dữ liệu phân tích hoặc thông tin nền trong CV hay thư xin việc. Chỉ nội dung CV thông thường mới được phép xuất hiện.
+- KHÔNG đưa thông tin cá nhân (ngày sinh, chiều cao, tình trạng hôn nhân, giới tính, quốc tịch, nghĩa vụ quân sự) vào tailored_cv — những thông tin này đã được hiển thị riêng ở phần đầu CV, không được lặp lại trong nội dung.
+
+{_anti_halluc_vi}
+
+cover_letter:
+- Viết bằng tiếng Việt, văn phong chuyên nghiệp và tự nhiên như người bản xứ viết — không phải văn phong dịch máy.
+- 3–4 đoạn văn. Không dùng gạch đầu dòng.
+- Mở đầu: nêu tên vị trí ứng tuyển và tên công ty, nêu lý do ứng viên phù hợp.
+- Nội dung: nêu bật 2–3 điểm mạnh cụ thể từ kinh nghiệm của ứng viên liên quan đến vị trí.
+- Kết thúc: bày tỏ mong muốn được phỏng vấn, văn phong lịch sự và chuyên nghiệp.
+- KHÔNG đưa thông tin liên hệ hoặc ngày tháng vào nội dung thư xin việc.
+
+tailored_cv:
+- Văn bản thuần (thân thiện với hệ thống ATS): không dùng markdown, không dùng bảng, không dùng emoji.
+- KHÔNG đưa thông tin liên hệ vào tailored_cv.
+- Chỉ sử dụng thông tin từ khối Candidate. Nếu thiếu thông tin: viết trung lập, không phỏng đoán.
+- Cấu trúc (tiêu đề từng mục trên dòng riêng, theo đúng thứ tự này):
+  TÓM TẮT BẢN THÂN\nKỸ NĂNG CHUYÊN MÔN\nKINH NGHIỆM LÀM VIỆC\nHỌC VẤN\nCHỨNG CHỈ (nếu có)\nNGOẠI NGỮ\nNGƯỜI THAM CHIẾU
+
+TÓM TẮT BẢN THÂN (quan trọng):
+- 3–5 câu (không viết dạng gạch đầu dòng).
+- Phải đọc như được viết cho một ứng viên có thật: cụ thể, dựa trên sự thật và liên quan đến công việc.
+- Ưu tiên theo thứ tự sau, khi có đủ dữ liệu trong Candidate:
+  1) số năm kinh nghiệm (dùng "Estimated total years experience" nếu có, nếu không thì bỏ qua số năm)
+  2) ngành nghề/lĩnh vực
+  3) trách nhiệm công việc (vận hành, chăm sóc khách hàng, hậu cần, thu mua, v.v.)
+  4) kết quả/cải tiến đã được ghi nhận (ưu tiên dùng các điểm trong "Evidence")
+  5) cải tiến hệ thống, quy trình, hiệu quả, hậu cần
+  6) lãnh đạo/trách nhiệm đặc biệt (nếu có nêu)
+- Tránh các cụm từ chung chung như "nhiệt tình", "làm việc nhóm tốt", "thái độ tích cực" trừ khi đi kèm ví dụ cụ thể từ dữ liệu Candidate.
+
+KỸ NĂNG CHUYÊN MÔN:
+- 8–12 gạch đầu dòng (•), chủ yếu là kỹ năng/hệ thống chuyên môn cụ thể.
+- Kỹ năng mềm chỉ khi có ví dụ cụ thể đi kèm.
+- Dịch mọi kỹ năng sang tiếng Việt (ví dụ: "journalføring" → "ghi chép hồ sơ lâm sàng", "regnskapsføring" → "kế toán sổ sách"). Không được để sót bất kỳ từ tiếng Na Uy hay tiếng Anh nào trong danh sách kỹ năng.
+
+KINH NGHIỆM LÀM VIỆC:
+- Chỉ những vị trí có trong Candidate Experience.
+- Dịch chức danh công việc sang tiếng Việt tự nhiên (ví dụ: "Butikkmedarbeider" → "Nhân viên bán hàng", "Daglig leder" → "Giám đốc điều hành"). Không được để sót chức danh chưa dịch.
+- Tên công ty: giữ nguyên tên thương hiệu/công ty nổi tiếng (ví dụ: "Rema 1000", "Equinor"). Dịch tên nhà tuyển dụng khu vực công/mô tả chung sang tiếng Việt (ví dụ: "Kristiansand kommune" → "Chính quyền thành phố Kristiansand").
+- Với mỗi vị trí: 2–5 gạch đầu dòng ngắn gọn về trách nhiệm/kết quả (không bịa đặt).
+
+HỌC VẤN:
+- Chỉ những cơ sở đào tạo có trong Candidate Education.
+- Dịch tên bằng cấp/chương trình học sang tiếng Việt (ví dụ: "Bachelor i sykepleie" → "Cử nhân Điều dưỡng").
+- Tên cơ sở đào tạo: dịch nhất quán sang tiếng Việt (ví dụ: "Universitetet i Agder" → "Đại học Agder"). Giữ tên tiếng Anh chính thức của cơ sở nếu đó là tên thường dùng; nếu không, dịch trực tiếp tên tiếng Na Uy thay vì để nguyên chưa dịch.
+- Với thời gian học: dùng CHÍNH XÁC các năm trong dữ liệu (ví dụ: "2022–2025").
+- Nếu STATUS là PÅGÅENDE: viết thời gian dạng ví dụ "2023– (đang học)". Nếu STATUS là FULLFØRT: chỉ viết các năm (ví dụ: "2022–2025"), không thêm "đang học" hay tương tự.
+
+NGOẠI NGỮ:
+- Liệt kê mỗi ngôn ngữ theo dạng "Tên ngôn ngữ (Trình độ)", ví dụ "Tiếng Na Uy (Bản ngữ)", "Tiếng Anh (Thành thạo)".
+- Sử dụng đúng trình độ như trong dữ liệu Candidate (dịch sang tiếng Việt).
+
+cover_letter:
+- KHÔNG BAO GIỜ đề cập đến trình độ ngôn ngữ (ví dụ không viết "thành thạo tiếng Anh", "tiếng mẹ đẻ là tiếng Na Uy") — bỏ qua hoàn toàn phần trình độ ngôn ngữ.
+""".strip()
     else:
         prompt = f"""
 Svar KUN med gyldig JSON med feltene:
@@ -642,10 +761,11 @@ cover_letter:
 
 _MARKERS_NO = ("###SØKNADSBREV", "###CV", "###EPOST")
 _MARKERS_EN = ("###COVER_LETTER", "###TAILORED_CV", "###EMAIL")
+_MARKERS_VI = ("###THU_XIN_VIEC", "###CV", "###EMAIL")
 
 
-def _parse_marker_output(text: str, use_english: bool) -> dict[str, str]:
-    markers = _MARKERS_EN if use_english else _MARKERS_NO
+def _parse_marker_output(text: str, language: str) -> dict[str, str]:
+    markers = {"en": _MARKERS_EN, "vi": _MARKERS_VI}.get(language, _MARKERS_NO)
     fields = ("cover_letter", "tailored_cv", "email_text")
     result: dict[str, str] = {f: "" for f in fields}
     positions = [text.find(m) for m in markers]
@@ -676,7 +796,9 @@ def stream_application_texts(
     """Generator: yields ("chunk", str) for each streaming chunk from Claude,
     then ("done", dict) with cover_letter / tailored_cv / email_text."""
 
-    use_english = (language or "no").strip().lower() == "en"
+    lang = (language or "no").strip().lower()
+    use_english = lang == "en"
+    use_vietnamese = lang == "vi"
     style_text = _style_instructions(application_style)
     job_comp = _compress_text(job_text, 8000)
     years = _estimate_years_experience(profile)
@@ -725,6 +847,18 @@ def stream_application_texts(
                 mb.append("- Emphasise: " + "; ".join(strengths))
             if missing:
                 mb.append("- Downplay/compensate: " + "; ".join(missing))
+        elif use_vietnamese:
+            mb = ["THÔNG TIN NỀN (KHÔNG được xuất hiện trong CV hoặc thư xin việc):"]
+            if score is not None:
+                mb.append(f"- Điểm phù hợp: {int(score)}% (chỉ để tham khảo nội bộ)")
+            if top_reason:
+                mb.append(f"- Điểm mạnh nhất cho vị trí này: {top_reason}")
+            if main_risk:
+                mb.append(f"- Điểm thiếu sót cần bù đắp: {main_risk}")
+            if strengths:
+                mb.append("- Nhấn mạnh: " + "; ".join(strengths))
+            if missing:
+                mb.append("- Giảm nhẹ/bù đắp: " + "; ".join(missing))
         else:
             mb = ["BAKGRUNNSINFORMASJON (skal IKKE skrives ut i CV eller søknadsbrev):"]
             if score is not None:
@@ -739,7 +873,7 @@ def stream_application_texts(
                 mb.append("- Tone ned/kompenser: " + "; ".join(missing))
         match_block = "\n".join(mb)
 
-    m1, m2, m3 = (_MARKERS_EN if use_english else _MARKERS_NO)
+    m1, m2, m3 = {"en": _MARKERS_EN, "vi": _MARKERS_VI}.get(lang, _MARKERS_NO)
 
     if use_english:
         prompt = f"""Output EXACTLY these three sections with their headers and NO other text:
@@ -775,6 +909,56 @@ Candidate:
 {m1}: 3–4 paragraphs, no bullet points. Mention role and company by name. No contact details or date.
 {m2}: Plain text (ATS-friendly), no markdown, no tables. Sections in order: Professional Summary / Core Skills / Work Experience / Education / Languages / References. Professional Summary: 3–5 concrete sentences. Core Skills: 8–12 bullets (•); translate every skill into English (e.g. "journalføring" → "clinical documentation") — never leave a Norwegian word in the skills list. Work Experience: only actual roles from Candidate data, 2–5 bullets each; translate Norwegian job titles into their natural English equivalent (e.g. "Butikkmedarbeider" → "Retail Assistant") — never leave a job title untranslated; keep well-known brand/company names as-is but translate generic public-sector employer names (e.g. "Kristiansand kommune" → "Municipality of Kristiansand"). Education: translate degree/programme titles into English (e.g. "Bachelor i sykepleie" → "Bachelor's Degree in Nursing"); translate institution names consistently into English (e.g. "Universitetet i Agder" → "University of Agder"), using the institution's own official English name where commonly used; periods use EXACT year values from data; if STATUS is PÅGÅENDE write e.g. "2023– (In Progress)"; if STATUS is FULLFØRT write only the years (e.g. "2022–2025"). Languages: format as "Language (Level)" e.g. "Norwegian (Native)".
 {m3}: 3–4 sentences, polite, reference the role and company. NEVER mention language level or language proficiency in the cover letter.""".strip()
+    elif use_vietnamese:
+        _anti_halluc_vi = """
+CHỐNG BỊA ĐẶT / SỰ THẬT:
+- KHÔNG được bịa đặt hoặc thêm bất kỳ sự thật mới nào về ứng viên.
+- KHÔNG được bịa đặt kinh nghiệm, nhà tuyển dụng, vai trò, trách nhiệm, học vấn, khóa học, chứng chỉ,
+  bằng lái xe, chứng chỉ vận hành xe nâng, chứng chỉ vận hành máy móc, giấy phép hành nghề hoặc bằng cấp khác.
+- CHỈ sử dụng thông tin thực sự có trong: hồ sơ ứng viên, CV, mô tả công việc hoặc phân tích công việc.
+- Dịch chức danh/tên bằng cấp sang ngôn ngữ đích là BẮT BUỘC và KHÔNG bị coi là thay đổi sự thật.
+
+PHÂN BIỆT RÕ RÀNG (khi mô tả trình độ chuyên môn):
+- Kinh nghiệm/trình độ đã ghi nhận: được nêu rõ trong nguồn dữ liệu.
+- Kinh nghiệm có thể chuyển đổi: có thể liên quan, nhưng phải gắn với những gì ứng viên thực sự đã làm.
+- Thiếu / chưa ghi nhận: nếu không có trong nguồn dữ liệu, hãy nêu rõ là chưa được ghi nhận.
+
+NGHIÊM CẤM:
+- Không được viết hoặc ngụ ý rằng ứng viên có một trình độ mà bạn không có bằng chứng.
+""".strip()
+        prompt = f"""Xuất ra CHÍNH XÁC ba mục sau đây với tiêu đề tương ứng, không có nội dung nào khác:
+
+{m1}
+[thư xin việc ở đây]
+
+{m2}
+[CV đã tùy chỉnh ở đây]
+
+{m3}
+[email ngắn ở đây]
+
+Job:
+Title: {job_title}
+Company: {company}
+Text: {job_comp}
+
+Candidate:
+{cand_comp}
+
+{match_block + chr(10) if match_block else ""}Quy tắc:
+- QUAN TRỌNG NHẤT: Dù tin tuyển dụng hay dữ liệu hồ sơ ứng viên được viết bằng ngôn ngữ nào (tiếng Anh, tiếng Na Uy, hay ngôn ngữ khác), TOÀN BỘ nội dung đầu ra PHẢI được viết bằng tiếng Việt. Dịch mọi thứ sang tiếng Việt — không được để sót từ, cụm từ hay câu nào bằng ngôn ngữ khác.
+- Không được bịa đặt kinh nghiệm/học vấn.
+- Không sử dụng placeholder như [điện thoại] hoặc [địa chỉ].
+- {style_text}
+- Sử dụng từ khóa từ tin tuyển dụng trong CV ở những nơi ứng viên thực sự có kinh nghiệm liên quan.
+- KHÔNG BAO GIỜ xuất ra điểm phù hợp, siêu dữ liệu phân tích hoặc thông tin nền trong CV hay thư xin việc.
+- KHÔNG đưa thông tin cá nhân (ngày sinh, chiều cao, tình trạng hôn nhân, giới tính, quốc tịch, nghĩa vụ quân sự) vào phần CV — những thông tin này đã được hiển thị riêng ở phần đầu CV.
+
+{_anti_halluc_vi}
+
+{m1}: {style_text} Không dùng gạch đầu dòng. Nêu tên vị trí và tên công ty. Không có thông tin liên hệ hoặc ngày tháng.
+{m2}: Văn bản thuần (thân thiện với ATS), không markdown, không bảng. Các mục theo thứ tự: TÓM TẮT BẢN THÂN / KỸ NĂNG CHUYÊN MÔN / KINH NGHIỆM LÀM VIỆC / HỌC VẤN / NGOẠI NGỮ / NGƯỜI THAM CHIẾU. TÓM TẮT BẢN THÂN: 3–5 câu cụ thể. KỸ NĂNG CHUYÊN MÔN: 8–12 gạch đầu dòng (•); dịch mọi kỹ năng sang tiếng Việt (ví dụ "journalføring" → "ghi chép hồ sơ lâm sàng") — không để sót từ tiếng Na Uy hay tiếng Anh nào. KINH NGHIỆM LÀM VIỆC: chỉ những vị trí có thật trong dữ liệu Candidate, 2–5 gạch đầu dòng mỗi vị trí; dịch chức danh sang tiếng Việt tự nhiên (ví dụ "Butikkmedarbeider" → "Nhân viên bán hàng") — không để sót chức danh chưa dịch; giữ nguyên tên thương hiệu/công ty nổi tiếng nhưng dịch tên nhà tuyển dụng khu vực công chung chung (ví dụ "Kristiansand kommune" → "Chính quyền thành phố Kristiansand"). HỌC VẤN: dịch tên bằng cấp/chương trình sang tiếng Việt (ví dụ "Bachelor i sykepleie" → "Cử nhân Điều dưỡng"); dịch tên cơ sở đào tạo nhất quán sang tiếng Việt (ví dụ "Universitetet i Agder" → "Đại học Agder"); dùng CHÍNH XÁC các năm trong dữ liệu; nếu STATUS là PÅGÅENDE viết ví dụ "2023– (đang học)"; nếu STATUS là FULLFØRT chỉ viết các năm (ví dụ "2022–2025"). NGOẠI NGỮ: định dạng "Tên ngôn ngữ (Trình độ)" ví dụ "Tiếng Na Uy (Bản ngữ)".
+{m3}: 3–4 câu, lịch sự, nhắc đến vị trí và công ty. KHÔNG BAO GIỜ đề cập đến trình độ ngôn ngữ trong thư xin việc.""".strip()
     else:
         prompt = f"""Svar med NØYAKTIG disse tre seksjonene med overskrifter, ingenting annet:
 
@@ -817,6 +1001,8 @@ Candidate:
         system=(
             "You are a professional job application assistant. Output only the requested sections."
             if use_english
+            else "Bạn là trợ lý viết hồ sơ xin việc chuyên nghiệp. Chỉ viết các mục được yêu cầu, bằng tiếng Việt."
+            if use_vietnamese
             else "Du er en profesjonell jobbsøknad-assistent. Skriv kun de forespurte seksjonene."
         ),
         messages=[{"role": "user", "content": prompt}],
@@ -827,7 +1013,7 @@ Candidate:
             full_text += text_chunk
             yield ("chunk", text_chunk)
 
-    yield ("done", _parse_marker_output(full_text, use_english))
+    yield ("done", _parse_marker_output(full_text, lang))
 
 
 def analyze_job_url(
