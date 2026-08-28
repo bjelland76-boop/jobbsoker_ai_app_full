@@ -2061,6 +2061,14 @@ class _VietnamesiskPdfDoc(_ClassicPdfDoc):
             self.y -= 0.5 * cm
         self.y -= 0.15 * cm
 
+    def _cover_section(self, text: str) -> None:
+        """Override _ClassicPdfDoc's hardcoded Norwegian "Søknadstekst" label --
+        this template's content is always Vietnamese (the "vi" prompt branch
+        is the only source of text ever rendered here), so the label must be
+        too, unconditionally rather than based on a language flag."""
+        self._section_header("Thư xin việc")
+        self._paragraph(text)
+
     def build(self) -> str:
         self._new_page()
         self._draw_header()
