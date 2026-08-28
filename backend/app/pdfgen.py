@@ -238,6 +238,18 @@ CV_SECTION_TITLES: list[str] = [
     "Certifications",
     "Languages",
     "References",
+    # Vietnamese equivalents (must exactly match the headings the "vi" prompt
+    # branch in job_analyzer.py's generate_application_texts()/
+    # stream_application_texts() actually generates -- otherwise
+    # _draw_cv_text() finds no recognized heading and falls back to
+    # unstyled paragraph rendering for the whole CV).
+    "TÓM TẮT BẢN THÂN",
+    "KỸ NĂNG CHUYÊN MÔN",
+    "KINH NGHIỆM LÀM VIỆC",
+    "HỌC VẤN",
+    "CHỨNG CHỈ",
+    "NGOẠI NGỮ",
+    "NGƯỜI THAM CHIẾU",
 ]
 CV_SECTION_TITLES_CF = {t.casefold(): t for t in CV_SECTION_TITLES}
 
