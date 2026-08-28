@@ -354,7 +354,45 @@ def main() -> int:
         print("[OK] /events/log er anonym-kapabelt (204, ikke 401) -- innlogget logging uendret")
 
         # ------------------------------------------------------------------
-        # 11) Untouched endpoints: still require a token
+        # 11) /generated-applications (list + pdf download) is now anonymous-
+        #     capable -- this was the REMAINING root cause of BUG 1: even
+        #     after fixing /events/log, generatePdf()'s success path awaits
+        #     loadDocuments() -> GET /generated-applications, which still
+        #     required a mandatory token and 401'd for anonymous callers,
+        #     tripping the same UNAUTHORIZED_HANDLER -> resetAuthState() ->
+        #     setActiveTab('home') bounce via a different endpoint.
+        # ------------------------------------------------------------------
+        r = client.get("/generated-applications", params={"profile_id": anon_pid})
+        _assert(r.status_code == 200, f"anon GET /generated-applications should succeed (200), got {r.status_code}: {r.text}")
+        anon_docs = r.json()
+        _assert(
+            len(anon_docs) >= 1,
+            f"expected at least 1 anon generated application (generate-tailored-cv / stream-documents), got {len(anon_docs)}",
+        )
+
+        # Cross-check: a logged-in user must not see the anonymous profile's documents.
+        r = client.get("/generated-applications", params={"profile_id": anon_pid}, headers=headers)
+        _assert(r.status_code == 404, f"logged-in user should not reach anonymous profile's documents, got {r.status_code}")
+
+        # Anonymous PDF download: no token at all (matches openDocument()'s
+        # window.open()/Linking.openURL() call, which never has a token for
+        # an anonymous caller) must not 401 for the anonymous caller's own document.
+        app_id = anon_docs[0]["id"]
+        r = client.get(f"/generated-applications/{app_id}/pdf/cover")
+        _assert(
+            r.status_code in (200, 404),
+            f"anon PDF download should not 401, got {r.status_code}: {r.text}",
+        )
+        _assert(r.status_code != 401, "anon PDF download must not require a token")
+
+        # Cross-check: a logged-in user's token must not unlock the anonymous document.
+        r = client.get(f"/generated-applications/{app_id}/pdf/cover", params={"token": token})
+        _assert(r.status_code == 404, f"logged-in token should not unlock anonymous document, got {r.status_code}")
+
+        print("[OK] /generated-applications (liste + PDF-nedlasting) er anonym-kapabelt -- eierskap fortsatt håndhevet")
+
+        # ------------------------------------------------------------------
+        # 12) Untouched endpoints: still require a token
         # ------------------------------------------------------------------
         r = client.post("/analyze-url-and-send", json={"profile_id": anon_pid, "url": "https://example.com/job-x"})
         _assert(r.status_code == 401, f"/analyze-url-and-send must still require auth, got {r.status_code}")

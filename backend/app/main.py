@@ -1729,19 +1729,26 @@ def _upsert_progress(db: Session, profile_id: int, job_id: int) -> ApplicationPr
 )
 def list_generated_applications(
     profile_id: int = Query(..., ge=1),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
+    # Anonymous-capable, same pattern as the other redesigned GET endpoints
+    # (e.g. get_job_analysis): a 401 here for an anonymous caller used to
+    # trip apiFetch()'s global UNAUTHORIZED_HANDLER, bouncing the user back
+    # to 'home' right after a CV was generated (loadDocuments() awaits this
+    # call in generatePdf()'s success path).
     profile = db.get(Profile, profile_id)
-    if not profile or profile.user_id != current_user.id:
+    if not _owns_profile(profile, current_user):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
+
+    job_owner_filter = Job.user_id == (current_user.id if current_user else None)
 
     rows = db.execute(
         select(GeneratedApplication, Job)
         .join(Job, GeneratedApplication.job_id == Job.id)
         .where(
             GeneratedApplication.profile_id == profile_id,
-            Job.user_id == current_user.id,
+            job_owner_filter,
         )
         .order_by(GeneratedApplication.created_at.desc())
     ).all()
@@ -1775,16 +1782,19 @@ def download_generated_pdf(
 ):
     # Auth: this endpoint is often opened in a browser where Authorization headers
     # are not easily set. For the demo we also accept a token via query string.
+    # Anonymous-capable (matches list_generated_applications / _owns_profile):
+    # no token at all is treated as an anonymous caller rather than a 401, since
+    # openDocument() opens this URL directly via window.open()/Linking.openURL()
+    # (not apiFetch()) and an anonymous user has no token to send in the first
+    # place -- a hard 401 here previously made anonymous users unable to ever
+    # open a CV they just generated.
     token_str = None
     if authorization and isinstance(authorization, str) and authorization.lower().startswith("bearer "):
         token_str = authorization.split(" ", 1)[1].strip()
     if not token_str:
         token_str = (token or "").strip() or None
 
-    if not token_str:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Ikke innlogget")
-
-    current_user = get_user_from_token(token_str, db)
+    current_user = get_user_from_token(token_str, db) if token_str else None
 
     approw = db.get(GeneratedApplication, application_id)
     if not approw:
@@ -1792,7 +1802,7 @@ def download_generated_pdf(
 
     profile = db.get(Profile, approw.profile_id)
     job = db.get(Job, approw.job_id)
-    if not profile or not job or profile.user_id != current_user.id or job.user_id != current_user.id:
+    if not _owns_profile(profile, current_user) or not _owns_job(job, current_user):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke dokument")
 
     kind_norm = (kind or "").strip().lower()
