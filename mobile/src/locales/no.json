@@ -331,6 +331,7 @@
     "vietnamese_cv_title": "Vietnamesisk CV",
     "filled_label": "Utfylt",
     "vietnamese_cv_info": "Disse opplysningene er valgfrie og brukes kun ved generering av vietnamesisk CV. I Vietnam er det vanlig å inkludere bilde, høyde og sivilstatus i en CV.",
+    "birth_date_label": "Fødselsdato",
     "height_cm_label": "Høyde (cm)",
     "civil_status_label": "Sivilstatus",
     "civil_status_ugift": "Ugift",

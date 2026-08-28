@@ -70,6 +70,7 @@ export default function useProfile({ onProfileSaved } = {}) {
   const [includePhotoDefault, setIncludePhotoDefault] = useState(true);
   const [includePhotoInPdf, setIncludePhotoInPdf] = useState(true);
   // Optional fields used only when generating a Vietnamese CV.
+  const [birthDate, setBirthDate] = useState('');
   const [heightCm, setHeightCm] = useState('');
   const [civilStatus, setCivilStatus] = useState('');
   const [gender, setGender] = useState('');
@@ -166,6 +167,7 @@ export default function useProfile({ onProfileSaved } = {}) {
     setProfilePhotoData('');
     setIncludePhotoDefault(true);
     setIncludePhotoInPdf(true);
+    setBirthDate('');
     setHeightCm('');
     setCivilStatus('');
     setGender('');
@@ -238,6 +240,7 @@ export default function useProfile({ onProfileSaved } = {}) {
           setIncludePhotoDefault(defInc);
           setIncludePhotoInPdf(defInc);
           setSkills(profile.skills || '');
+          setBirthDate(profile.birth_date || '');
           setHeightCm(profile.height_cm != null ? String(profile.height_cm) : '');
           setCivilStatus(profile.civil_status || '');
           setGender(profile.gender || '');
@@ -603,6 +606,7 @@ export default function useProfile({ onProfileSaved } = {}) {
       languages: override.languages ?? serializeLangList(languagesList),
       references: override.references ?? referenceEntries,
       cv_gaps: override.cv_gaps ?? serializeCvGaps(cvGapsList),
+      birth_date: override.birth_date ?? birthDate,
       height_cm: override.height_cm ?? (heightCm ? parseInt(heightCm, 10) || null : null),
       civil_status: override.civil_status ?? civilStatus,
       gender: override.gender ?? gender,
@@ -650,6 +654,7 @@ export default function useProfile({ onProfileSaved } = {}) {
           experience: experienceEntries, education: educationEntries,
           skills, languages: serializeLangList(languagesList),
           references: referenceEntries, cv_gaps: serializeCvGaps(cvGapsList),
+          birth_date: birthDate,
           height_cm: heightCm ? parseInt(heightCm, 10) || null : null,
           civil_status: civilStatus, gender, nationality, military_service: militaryService,
         }),
@@ -686,7 +691,7 @@ export default function useProfile({ onProfileSaved } = {}) {
     name, profileEmail, phone, address, postalCode, postalPlace,
     skills, cvGapsList,
     experienceEntries, educationEntries, referenceEntries, languagesList,
-    heightCm, civilStatus, gender, nationality, militaryService,
+    birthDate, heightCm, civilStatus, gender, nationality, militaryService,
   ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------------------------------------------------------------------------
@@ -915,6 +920,7 @@ export default function useProfile({ onProfileSaved } = {}) {
     profileStrength,
 
     // Vietnamese CV fields
+    birthDate, setBirthDate,
     heightCm, setHeightCm,
     civilStatus, setCivilStatus,
     gender, setGender,

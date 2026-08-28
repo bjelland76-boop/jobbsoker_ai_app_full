@@ -41,6 +41,7 @@ class ProfileOut(BaseModel):
     show_inactivity_reminder: bool = False
 
     # Optional fields used only when generating a Vietnamese CV.
+    birth_date: str = ""
     height_cm: Optional[int] = None
     civil_status: str = ""
     gender: str = ""
@@ -122,6 +123,7 @@ class JobAnalysisOut(BaseModel):
     # Whether a generated CV already exists for each language (used by frontend confirm dialog).
     has_tailored_cv_no: bool = False
     has_tailored_cv_en: bool = False
+    has_tailored_cv_vi: bool = False
 
 
 class AnalyzeAndSendOut(BaseModel):
@@ -141,7 +143,7 @@ class ApplicationPackageOut(BaseModel):
     coverLetter: str
     pdfUrl: str
     cvMal: str = "profesjonell"  # which visual template was used: kreativ|profesjonell|klassisk|moderne|skandinavisk|vietnamesisk
-    language: str = "no"  # "no" | "en"
+    language: str = "no"  # "no" | "en" | "vi"
 
 
 class EducationOptionOut(BaseModel):

@@ -131,6 +131,7 @@ def ensure_profile_columns() -> None:
         ensure_col("profiles", "last_active_at", "last_active_at DATETIME DEFAULT NULL")
 
         # Vietnamese CV fields
+        ensure_col("profiles", "birth_date", "birth_date TEXT DEFAULT ''")
         ensure_col("profiles", "height_cm", "height_cm INTEGER")
         ensure_col("profiles", "civil_status", "civil_status TEXT DEFAULT ''")
         ensure_col("profiles", "gender", "gender TEXT DEFAULT ''")
@@ -472,6 +473,7 @@ def profile_to_dict(profile: Profile) -> dict:
         "subscription_end": (
             profile.subscription_end.date().isoformat() if getattr(profile, "subscription_end", None) else None
         ),
+        "birth_date": (getattr(profile, "birth_date", "") or ""),
         "height_cm": getattr(profile, "height_cm", None),
         "civil_status": (getattr(profile, "civil_status", "") or ""),
         "gender": (getattr(profile, "gender", "") or ""),
@@ -586,6 +588,7 @@ class ProfileIn(BaseModel):
     tone: str = "normal"
 
     # Optional fields used only when generating a Vietnamese CV.
+    birth_date: str = ""
     height_cm: int | None = None
     civil_status: str = ""
     gender: str = ""
@@ -1648,6 +1651,7 @@ def save_settings(data: SettingsIn, current_user: User = Depends(get_current_use
 _CV_PRESERVE_KEYS = (
     "tailored_cv", "cover_letter", "email_text",
     "tailored_cv_en", "cover_letter_en", "email_text_en",
+    "tailored_cv_vi", "cover_letter_vi", "email_text_vi",
     "tailored_for_job", "cv_mal",
 )
 
@@ -1943,6 +1947,7 @@ def get_job_analysis(
     data["job_id"] = job_id
     data["has_tailored_cv_no"] = bool(_to_text(data.get("tailored_cv")))
     data["has_tailored_cv_en"] = bool(_to_text(data.get("tailored_cv_en")))
+    data["has_tailored_cv_vi"] = bool(_to_text(data.get("tailored_cv_vi")))
     return data
 
 
@@ -2211,7 +2216,7 @@ def generate_tailored_cv(
     application_style: str = Query(default="vanlig"),
     include_photo: bool = Query(default=True),
     template: str = Query(default=""),  # "kreativ"|"profesjonell"|"klassisk"|"moderne"|"skandinavisk"|"vietnamesisk"; empty = use stored cv_mal
-    language: str = Query(default="no"),  # "no" | "en"
+    language: str = Query(default="no"),  # "no" | "en" | "vi"
     current_user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
@@ -2219,7 +2224,7 @@ def generate_tailored_cv(
 
     If `template` is provided AND the CV texts are already stored for the requested
     language, skip the Claude call and only regenerate the PDF with the new visual template.
-    Norwegian and English variants are cached separately.
+    Norwegian, English and Vietnamese variants are cached separately.
     """
     from .job_analyzer import generate_application_texts, fetch_job_text
 
@@ -2257,11 +2262,14 @@ def generate_tailored_cv(
     if effective_template not in _VALID_TEMPLATES:
         effective_template = "profesjonell"
 
-    # Language-specific storage keys: Norwegian uses legacy keys, English uses _en suffix
-    lang = "en" if (language or "no").strip().lower() == "en" else "no"
-    cv_key = "tailored_cv" if lang == "no" else "tailored_cv_en"
-    letter_key = "cover_letter" if lang == "no" else "cover_letter_en"
-    email_key = "email_text" if lang == "no" else "email_text_en"
+    # Language-specific storage keys: Norwegian uses legacy keys, English/Vietnamese use _en/_vi suffixes
+    lang = (language or "no").strip().lower()
+    if lang not in ("no", "en", "vi"):
+        lang = "no"
+    _lang_suffix = {"no": "", "en": "_en", "vi": "_vi"}[lang]
+    cv_key = f"tailored_cv{_lang_suffix}"
+    letter_key = f"cover_letter{_lang_suffix}"
+    email_key = f"email_text{_lang_suffix}"
 
     # If a template change is requested AND we have existing texts for this language → skip Claude
     stored_cv = _to_text(stored.get(cv_key))
@@ -2464,6 +2472,8 @@ def stream_documents(
     if style_norm not in {"kort", "vanlig", "profesjonell"}:
         style_norm = "vanlig"
     lang = (language or "no").strip().lower()
+    if lang not in ("no", "en", "vi"):
+        lang = "no"
 
     # Anonymous callers never have persisted documents (see upload_document),
     # so this naturally comes back empty for them -- no special-casing needed.
@@ -2538,9 +2548,10 @@ def stream_documents(
         pdf_url = ""
         with _SessionLocal() as fresh_db:
             try:
-                cv_key = "cover_letter_en" if lang == "en" else "cover_letter"
-                letter_key = "tailored_cv_en" if lang == "en" else "tailored_cv"
-                email_key = "email_text_en" if lang == "en" else "email_text"
+                _lang_suffix = {"no": "", "en": "_en", "vi": "_vi"}[lang]
+                cv_key = f"cover_letter{_lang_suffix}"
+                letter_key = f"tailored_cv{_lang_suffix}"
+                email_key = f"email_text{_lang_suffix}"
                 stored[cv_key] = cover_letter
                 stored[letter_key] = tailored_cv
                 stored[email_key] = email_text_val
@@ -3174,6 +3185,7 @@ def analyze_url(
         result["job_id"] = job.id
         result["has_tailored_cv_no"] = bool(_to_text(result.get("tailored_cv")))
         result["has_tailored_cv_en"] = bool(_to_text(result.get("tailored_cv_en")))
+        result["has_tailored_cv_vi"] = bool(_to_text(result.get("tailored_cv_vi")))
 
         if current_user is not None:
             _consume_free_limit(db, profile, "analyse")

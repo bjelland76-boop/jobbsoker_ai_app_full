@@ -60,6 +60,7 @@ class Profile(Base):
     last_active_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
 
     # Optional fields used only when generating a Vietnamese CV.
+    birth_date: Mapped[str] = mapped_column(String(20), default="")
     height_cm: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
     civil_status: Mapped[str] = mapped_column(String(30), default="")
     gender: Mapped[str] = mapped_column(String(30), default="")

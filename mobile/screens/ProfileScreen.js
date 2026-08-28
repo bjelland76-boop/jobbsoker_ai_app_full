@@ -28,6 +28,7 @@ export default function ProfileScreen({ onManageSubscription }) {
     profilePhotoData, setProfilePhotoData,
     includePhotoDefault, setIncludePhotoDefault,
     includePhotoInPdf, setIncludePhotoInPdf,
+    birthDate, setBirthDate,
     heightCm, setHeightCm,
     civilStatus, setCivilStatus,
     gender, setGender,
@@ -393,7 +394,7 @@ export default function ProfileScreen({ onManageSubscription }) {
                 <View>
                   <Text style={styles.profileCardLabel}>{t('profile.vietnamese_cv_title')}</Text>
                   <Text style={styles.profileCardValue} numberOfLines={1}>
-                    {(heightCm || civilStatus || gender || nationality || militaryService) ? t('profile.filled_label') : t('profile.not_filled')}
+                    {(birthDate || heightCm || civilStatus || gender || nationality || militaryService) ? t('profile.filled_label') : t('profile.not_filled')}
                   </Text>
                 </View>
               </View>
@@ -407,6 +408,14 @@ export default function ProfileScreen({ onManageSubscription }) {
                 <Text style={[styles.helpText, styles.aerligHelpText, { marginBottom: 12 }]}>
                   {t('profile.vietnamese_cv_info')}
                 </Text>
+
+                <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('profile.birth_date_label')}</Text>
+                <TextInput
+                  style={[styles.input, styles.aerligInput]}
+                  value={birthDate}
+                  onChangeText={setBirthDate}
+                  placeholder="DD/MM/YYYY"
+                />
 
                 <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('profile.height_cm_label')}</Text>
                 <TextInput

@@ -2009,6 +2009,10 @@ class _VietnamesiskPdfDoc(_ClassicPdfDoc):
     def _draw_personal_details(self) -> None:
         rows: list[tuple[str, str]] = []
 
+        birth_date = (getattr(self.profile, "birth_date", "") or "").strip()
+        if birth_date:
+            rows.append(("Ngày sinh", birth_date))
+
         height_cm = getattr(self.profile, "height_cm", None)
         if height_cm:
             rows.append(("Chiều cao", f"{int(height_cm)} cm"))
