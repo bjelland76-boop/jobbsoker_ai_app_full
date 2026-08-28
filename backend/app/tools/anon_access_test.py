@@ -324,7 +324,37 @@ def main() -> int:
         print("[OK] usage_events logges uavhengig av grense-sjekken, for anonym (user_id=NULL) og innlogget")
 
         # ------------------------------------------------------------------
-        # 10) Untouched endpoints: still require a token
+        # 10) /events/log is now anonymous-capable (this is the actual fix):
+        #     a 401 here used to trip apiFetch()'s global UNAUTHORIZED_HANDLER
+        #     client-side, which unconditionally reset activeTab to 'home' --
+        #     silently bouncing anonymous users away from jobbanalyse/CV-
+        #     analyse/CV-generering results right after they completed.
+        # ------------------------------------------------------------------
+        r = client.post(
+            "/events/log",
+            json={"action": "anon_ux_event", "metadata": {"foo": "bar"}},
+        )
+        _assert(r.status_code == 204, f"anon /events/log should succeed (204), got {r.status_code}: {r.text}")
+        _assert(
+            _usage_count("anon_ux_event", None) == 1,
+            f"expected 1 anonymous anon_ux_event row (user_id=NULL), got {_usage_count('anon_ux_event', None)}",
+        )
+
+        r = client.post(
+            "/events/log",
+            json={"action": "logged_in_ux_event"},
+            headers=headers,
+        )
+        _assert(r.status_code == 204, f"logged-in /events/log should still succeed (204), got {r.status_code}: {r.text}")
+        _assert(
+            _usage_count("logged_in_ux_event", real_user_id) == 1,
+            f"expected 1 logged_in_ux_event row for the real user_id, got {_usage_count('logged_in_ux_event', real_user_id)}",
+        )
+
+        print("[OK] /events/log er anonym-kapabelt (204, ikke 401) -- innlogget logging uendret")
+
+        # ------------------------------------------------------------------
+        # 11) Untouched endpoints: still require a token
         # ------------------------------------------------------------------
         r = client.post("/analyze-url-and-send", json={"profile_id": anon_pid, "url": "https://example.com/job-x"})
         _assert(r.status_code == 401, f"/analyze-url-and-send must still require auth, got {r.status_code}")

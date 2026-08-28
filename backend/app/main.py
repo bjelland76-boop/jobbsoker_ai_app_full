@@ -3500,9 +3500,15 @@ class EventLogIn(BaseModel):
 @app.post("/events/log", status_code=204, tags=["events"])
 def log_event(
     data: EventLogIn,
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
+    # Anonymous-capable, same pattern as the other redesigned endpoints:
+    # logs with user_id=NULL (like /events/anonymous-open) instead of 401ing.
+    # A 401 here for an anonymous caller used to trip apiFetch()'s global
+    # UNAUTHORIZED_HANDLER, which unconditionally resets activeTab to
+    # 'home' -- silently bouncing anonymous users out of jobbanalyse/
+    # CV-analyse/CV-generering results right after they completed.
     action = (data.action or "").strip()[:100]
     if not action:
         return
@@ -3513,7 +3519,7 @@ def log_event(
             meta_str = _json.dumps(data.metadata, ensure_ascii=False)[:500]
         except Exception:
             pass
-    event = UsageEvent(user_id=current_user.id, action=action, event_meta=meta_str)
+    event = UsageEvent(user_id=(current_user.id if current_user else None), action=action, event_meta=meta_str)
     db.add(event)
     db.commit()
 
