@@ -37,7 +37,7 @@ export default function useJobAnalysis({
   const [appSortOrder, setAppSortOrder] = useState('newest');
   const [applicationStyle, setApplicationStyle] = useState('vanlig');
   const [applicationEmail, setApplicationEmail] = useState('');
-  const [applicationPackageByLang, setApplicationPackageByLang] = useState({ no: null, en: null });
+  const [applicationPackageByLang, setApplicationPackageByLang] = useState({ no: null, en: null, vi: null });
   // Computed: always reflects the package for the currently selected language.
   // Switching cvLanguage automatically swaps displayed content + pdfUrl.
   const applicationPackage = applicationPackageByLang[cvLanguage] ?? null;
@@ -497,11 +497,11 @@ export default function useJobAnalysis({
 
     // Confirm before overwriting an existing CV in the selected language
     if (analysis?.job_id) {
-      const alreadyExists = cvLanguage === 'en'
-        ? analysis?.has_tailored_cv_en
-        : analysis?.has_tailored_cv_no;
+      const alreadyExists = analysis?.[`has_tailored_cv_${cvLanguage}`];
       if (alreadyExists) {
-        const langLabel = cvLanguage === 'en'
+        const langLabel = cvLanguage === 'vi'
+          ? (uiLanguage === 'en' ? 'Vietnamese' : 'vietnamesisk')
+          : cvLanguage === 'en'
           ? (uiLanguage === 'en' ? 'English' : 'engelsk')
           : (uiLanguage === 'en' ? 'Norwegian' : 'norsk');
         const title = uiLanguage === 'en' ? 'Regenerate CV?' : 'Generer ny CV?';
@@ -532,7 +532,7 @@ export default function useJobAnalysis({
     generationLockRef.current = true;
     setIsGenerating(true);
     logEvent('generate_cv_started', { language: cvLanguage, template: cvTemplate });
-    logEvent(cvLanguage === 'en' ? 'cv_language_english' : 'cv_language_norwegian');
+    logEvent(cvLanguage === 'vi' ? 'cv_language_vietnamese' : cvLanguage === 'en' ? 'cv_language_english' : 'cv_language_norwegian');
     logEvent('cv_template_' + cvTemplate);
 
     const prevPackage = applicationPackage;
@@ -625,7 +625,7 @@ export default function useJobAnalysis({
             setTailoredCvJobTitle(analysis?.job_title || 'denne stillingen');
             if (pkg.cvMal) setCvTemplate(pkg.cvMal);
             // Update local analysis flags so badges reflect the new language immediately
-            const flagKey = cvLanguage === 'en' ? 'has_tailored_cv_en' : 'has_tailored_cv_no';
+            const flagKey = `has_tailored_cv_${cvLanguage}`;
             setAnalysis(prev => prev ? { ...prev, [flagKey]: true } : prev);
           }
 

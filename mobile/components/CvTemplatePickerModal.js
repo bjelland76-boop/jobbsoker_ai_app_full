@@ -300,7 +300,7 @@ const FULL_BY_KEY = {
   vietnamesisk: FullVietnamesisk,
 };
 
-export default function CvTemplatePickerModal({ visible, onClose, onConfirm, recommendedTemplate }) {
+export default function CvTemplatePickerModal({ visible, onClose, onConfirm, recommendedTemplate, cvLanguage, setCvLanguage }) {
   const { t } = useApp();
   const [pendingSelection, setPendingSelection] = useState(null);
   const [expandedTemplate, setExpandedTemplate] = useState(null);
@@ -350,6 +350,15 @@ export default function CvTemplatePickerModal({ visible, onClose, onConfirm, rec
                   style={[sharedStyles.aerligSecondaryButton, { flex: 1 }]}
                   onPress={() => {
                     setPendingSelection(expandedTemplate);
+                    // Vietnamese-market CV output is always Vietnamese regardless
+                    // of UI language, so picking this template also picks the
+                    // language -- same action, matches _VietnamesiskPdfDoc/the
+                    // backend's "vi" prompt branch which is always-Vietnamese too.
+                    if (expandedTemplate === 'vietnamesisk') {
+                      setCvLanguage?.('vi');
+                    } else if (cvLanguage === 'vi') {
+                      setCvLanguage?.('no');
+                    }
                     setExpandedTemplate(null);
                   }}
                 >

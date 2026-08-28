@@ -349,22 +349,33 @@ export default function AnalysisScreen({
               </View>
             ) : null}
 
-            <Text style={[styles.inputLabel, styles.aerligLabel, { marginTop: 6 }]}>{t('analysis.language_label')}</Text>
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
-              {[{ key: 'no', label: '🇳🇴 Norsk' }, { key: 'en', label: '🇬🇧 English' }].map(({ key, label }) => {
-                const active = cvLanguage === key;
-                return (
-                  <TouchableOpacity
-                    key={key}
-                    onPress={() => setCvLanguage(key)}
-                    style={[styles.filterChip, styles.aerligFilterChip, active && styles.aerligFilterChipActive]}
-                  >
-                    <Text style={[styles.filterChipText, styles.aerligFilterChipText, active && styles.aerligFilterChipTextActive]}>{label}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            {(analysis?.has_tailored_cv_no || analysis?.has_tailored_cv_en) ? (
+            {(cvTemplate === 'vietnamesisk' || cvLanguage === 'vi') ? (
+              <View style={{ marginTop: 6, marginBottom: 4 }}>
+                <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('analysis.language_label')}</Text>
+                <View style={{ backgroundColor: '#fef2f2', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, alignSelf: 'flex-start' }}>
+                  <Text style={{ fontSize: 12, color: '#991b1b', fontWeight: '700' }}>🇻🇳 Tiếng Việt</Text>
+                </View>
+              </View>
+            ) : (
+              <>
+                <Text style={[styles.inputLabel, styles.aerligLabel, { marginTop: 6 }]}>{t('analysis.language_label')}</Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
+                  {[{ key: 'no', label: '🇳🇴 Norsk' }, { key: 'en', label: '🇬🇧 English' }].map(({ key, label }) => {
+                    const active = cvLanguage === key;
+                    return (
+                      <TouchableOpacity
+                        key={key}
+                        onPress={() => setCvLanguage(key)}
+                        style={[styles.filterChip, styles.aerligFilterChip, active && styles.aerligFilterChipActive]}
+                      >
+                        <Text style={[styles.filterChipText, styles.aerligFilterChipText, active && styles.aerligFilterChipTextActive]}>{label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
+            )}
+            {(analysis?.has_tailored_cv_no || analysis?.has_tailored_cv_en || analysis?.has_tailored_cv_vi) ? (
               <View style={{ flexDirection: 'row', gap: 6, marginBottom: 6 }}>
                 {analysis.has_tailored_cv_no ? (
                   <View style={{ backgroundColor: '#dcfce7', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
@@ -374,6 +385,11 @@ export default function AnalysisScreen({
                 {analysis.has_tailored_cv_en ? (
                   <View style={{ backgroundColor: '#dbeafe', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
                     <Text style={{ fontSize: 11, color: '#1d4ed8', fontWeight: '700' }}>🇬🇧 EN ✓</Text>
+                  </View>
+                ) : null}
+                {analysis.has_tailored_cv_vi ? (
+                  <View style={{ backgroundColor: '#fef2f2', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                    <Text style={{ fontSize: 11, color: '#991b1b', fontWeight: '700' }}>🇻🇳 VI ✓</Text>
                   </View>
                 ) : null}
               </View>
@@ -419,6 +435,8 @@ export default function AnalysisScreen({
               onClose={closeTemplatePicker}
               onConfirm={confirmTemplateAndGenerate}
               recommendedTemplate={analysis?.cv_mal || cvTemplate}
+              cvLanguage={cvLanguage}
+              setCvLanguage={setCvLanguage}
             />
 
             {streamingProgress ? (
