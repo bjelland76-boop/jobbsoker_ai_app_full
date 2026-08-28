@@ -10,6 +10,7 @@ import anthropic
 from dotenv import load_dotenv
 
 from .ai_matcher import analyze_job_match, _compress_text
+from .pdfgen import _is_probably_job_title
 from .prompt_rules import SHARED_ANTI_HALLUCINATION_RULES, SHARED_ANTI_HALLUCINATION_RULES_EN
 
 load_dotenv(".env")
@@ -376,8 +377,19 @@ def _guess_job_title_company(job_text: str) -> tuple[str, str]:
     if m:
         return (m.group(1).strip()[:120], m.group(2).strip()[:120])
 
-    # Fallbacks
-    return (t[:120].strip() or "Ukjent stilling"), ""
+    # Fallback: fetch_job_text() flattens all whitespace (including newlines
+    # between separate page elements) into single spaces, so when no
+    # separator matches above, the raw t[:120] can splice together the real
+    # title with adjacent page noise -- application-count badges, salary
+    # widgets, duplicate/bracketed accessibility text -- with no boundary
+    # between them (observed on VietnamWorks: "Customer Service Associate
+    # [Customer Service Associate] 0 CV Budget: $110"). Only accept it if it
+    # still looks like a plausible short title; otherwise a clean "Ukjent
+    # stilling" beats showing that noise verbatim.
+    fallback = t[:120].strip()
+    if fallback and _is_probably_job_title(fallback):
+        return fallback, ""
+    return "Ukjent stilling", ""
 
 
 def generate_application_texts(

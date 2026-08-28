@@ -247,13 +247,13 @@ export default function AnalysisScreen({
                 <Text style={styles.aerligCardSectionTitle}>{t('analysis.recommended_length')}</Text>
                 <Text style={styles.aerligCardBody}>
                   {analysis.recommended_application_style === 'kort'
-                    ? 'Kort (1 avsnitt)'
+                    ? t('analysis.style_short')
                     : analysis.recommended_application_style === 'profesjonell'
-                      ? 'Profesjonell (4–6 avsnitt)'
-                      : 'Vanlig (2–3 avsnitt)'}
+                      ? t('analysis.style_professional')
+                      : t('analysis.style_normal')}
                 </Text>
                 {analysis.recommended_style_reason ? (
-                  <Text style={[styles.aerligCardBody, { marginTop: 6 }]}>{analysis.recommended_style_reason}</Text>
+                  <Text style={[styles.aerligCardBody, { marginTop: 6 }]}>{t('analysis.recommended_style_reason')}</Text>
                 ) : null}
                 <TouchableOpacity
                   style={[styles.aerligSecondaryButton, { marginTop: 10, paddingVertical: 12 }]}
@@ -311,9 +311,9 @@ export default function AnalysisScreen({
             <Text style={[styles.inputLabel, styles.aerligLabel, { marginTop: 6 }]}>{t('analysis.select_length')}</Text>
             <View style={[styles.filterChipRow, styles.aerligFilterChipRow]}>
               {[
-                { key: 'kort', label: 'Kort (1 avsnitt)' },
-                { key: 'vanlig', label: 'Vanlig (2–3 avsnitt)' },
-                { key: 'profesjonell', label: 'Profesjonell (4–6 avsnitt)' },
+                { key: 'kort', label: t('analysis.style_short') },
+                { key: 'vanlig', label: t('analysis.style_normal') },
+                { key: 'profesjonell', label: t('analysis.style_professional') },
               ].map((opt) => {
                 const active = applicationStyle === opt.key;
                 return (
