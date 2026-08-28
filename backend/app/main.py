@@ -1826,7 +1826,7 @@ def analyze_cv(
     current_user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
-    from .cv_analyzer import analyze_profile_cv
+    from .cv_analyzer import CvAnalysisParseError, analyze_profile_cv
 
     profile = db.get(Profile, data.profile_id)
     if not _owns_profile(profile, current_user):
@@ -1841,6 +1841,11 @@ def analyze_cv(
 
     try:
         result = analyze_profile_cv(profile, language=data.language)
+    except CvAnalysisParseError as e:
+        # Already logged (with the raw response) inside cv_analyzer -- no
+        # need to also dump a full traceback here for this anticipated,
+        # named failure mode. str(e) is already a clear, Norwegian message.
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
