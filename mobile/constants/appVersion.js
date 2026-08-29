@@ -6,7 +6,7 @@ import { App as CapacitorApp } from '@capacitor/app';
 // native App.getInfo() call fails for any reason. Keep in sync with
 // mobile/android/app/build.gradle's `versionCode` on every release bump --
 // this is the only place that requires a manual update alongside it.
-export const WEB_VERSION_CODE = 34;
+export const WEB_VERSION_CODE = 35;
 
 // Resolves the running app's version code: the real native Android
 // versionCode when running inside the packaged Capacitor app (authoritative,
