@@ -41,8 +41,8 @@ export default function useJobAnalysis({
   // Computed: always reflects the package for the currently selected language.
   // Switching cvLanguage automatically swaps displayed content + pdfUrl.
   const applicationPackage = applicationPackageByLang[cvLanguage] ?? null;
-  function setApplicationPackage(pkg) {
-    setApplicationPackageByLang(prev => ({ ...prev, [cvLanguage]: pkg }));
+  function setApplicationPackage(pkg, langKey) {
+    setApplicationPackageByLang(prev => ({ ...prev, [langKey || cvLanguage]: pkg }));
   }
   const [sending, setSending] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
@@ -363,7 +363,8 @@ export default function useJobAnalysis({
   // ---------------------------------------------------------------------------
   // Send application (email)
   // ---------------------------------------------------------------------------
-  async function sendApplication(template = '') {
+  async function sendApplication(template = '', languageOverride = null) {
+    const lang = languageOverride || cvLanguage;
     if (!authTokenState) {
       Alert.alert(
         uiLanguage === 'en' ? 'Log in' : 'Logg inn',
@@ -428,7 +429,7 @@ export default function useJobAnalysis({
           to_email: applicationEmail,
           application_style: applicationStyle,
           include_photo: includePhoto,
-          language: cvLanguage,
+          language: lang,
           ...(template ? { template } : {}),
         }),
       });
@@ -443,7 +444,7 @@ export default function useJobAnalysis({
         };
 
         if ((safePkg.cv || '').trim().length > 0 || (safePkg.coverLetter || '').trim().length > 0) {
-          setApplicationPackage(safePkg);
+          setApplicationPackage(safePkg, lang);
           Alert.alert('OK', 'Søknad + CV er generert. Sjekk e-post hvis utsending er konfigurert.');
           return;
         }
@@ -469,7 +470,12 @@ export default function useJobAnalysis({
   // ---------------------------------------------------------------------------
   // Generate PDF
   // ---------------------------------------------------------------------------
-  async function generatePdf(template = '') {
+  async function generatePdf(template = '', languageOverride = null) {
+    // languageOverride: used instead of cvLanguage state when the caller
+    // (CvTemplatePickerModal) just changed the language in this same
+    // synchronous handler -- setCvLanguage is async/batched, so cvLanguage
+    // here would otherwise still read the value from BEFORE that change.
+    const lang = languageOverride || cvLanguage;
     if (!profileId) {
       Alert.alert('Feil', 'Lagre profilen først');
       return;
@@ -497,11 +503,11 @@ export default function useJobAnalysis({
 
     // Confirm before overwriting an existing CV in the selected language
     if (analysis?.job_id) {
-      const alreadyExists = analysis?.[`has_tailored_cv_${cvLanguage}`];
+      const alreadyExists = analysis?.[`has_tailored_cv_${lang}`];
       if (alreadyExists) {
-        const langLabel = cvLanguage === 'vi'
+        const langLabel = lang === 'vi'
           ? (uiLanguage === 'en' ? 'Vietnamese' : 'vietnamesisk')
-          : cvLanguage === 'en'
+          : lang === 'en'
           ? (uiLanguage === 'en' ? 'English' : 'engelsk')
           : (uiLanguage === 'en' ? 'Norwegian' : 'norsk');
         const title = uiLanguage === 'en' ? 'Regenerate CV?' : 'Generer ny CV?';
@@ -531,8 +537,8 @@ export default function useJobAnalysis({
     await flushAutoSave?.();
     generationLockRef.current = true;
     setIsGenerating(true);
-    logEvent('generate_cv_started', { language: cvLanguage, template: cvTemplate });
-    logEvent(cvLanguage === 'vi' ? 'cv_language_vietnamese' : cvLanguage === 'en' ? 'cv_language_english' : 'cv_language_norwegian');
+    logEvent('generate_cv_started', { language: lang, template: cvTemplate });
+    logEvent(lang === 'vi' ? 'cv_language_vietnamese' : lang === 'en' ? 'cv_language_english' : 'cv_language_norwegian');
     logEvent('cv_template_' + cvTemplate);
 
     const prevPackage = applicationPackage;
@@ -549,7 +555,7 @@ export default function useJobAnalysis({
       let pkg;
       if (analysis?.job_id) {
         const templateParam = template ? `&template=${encodeURIComponent(template)}` : '';
-        const streamUrl = `${API}/job-analyses/${analysis.job_id}/stream-documents?profile_id=${profileId}&application_style=${encodeURIComponent(applicationStyle)}&include_photo=${includePhoto}&language=${cvLanguage}${templateParam}`;
+        const streamUrl = `${API}/job-analyses/${analysis.job_id}/stream-documents?profile_id=${profileId}&application_style=${encodeURIComponent(applicationStyle)}&include_photo=${includePhoto}&language=${lang}${templateParam}`;
         const resp = await fetch(streamUrl, {
           method: 'POST',
           // Anonymous (authTokenState falsy): omit the header entirely --
@@ -603,7 +609,7 @@ export default function useJobAnalysis({
             ...(jobInputMode === 'text' ? { job_text: jobText } : { url: jobUrl }),
             application_style: applicationStyle,
             include_photo: includePhoto,
-            language: cvLanguage,
+            language: lang,
             ...(template ? { template } : {}),
           }),
         });
@@ -619,13 +625,17 @@ export default function useJobAnalysis({
         };
 
         if ((safePkg.cv || '').trim().length > 0 || (safePkg.coverLetter || '').trim().length > 0) {
-          setApplicationPackage(safePkg);
+          // Key the cache by `lang` (the language actually just generated),
+          // not the possibly-stale cvLanguage state -- otherwise a correctly
+          // Vietnamese-generated result could get filed under the "no" slot
+          // and never show up once cvLanguage catches up to 'vi' on re-render.
+          setApplicationPackage(safePkg, lang);
           logEvent('generate_cv_completed');
           if (analysis?.job_id) {
             setTailoredCvJobTitle(analysis?.job_title || 'denne stillingen');
             if (pkg.cvMal) setCvTemplate(pkg.cvMal);
             // Update local analysis flags so badges reflect the new language immediately
-            const flagKey = `has_tailored_cv_${cvLanguage}`;
+            const flagKey = `has_tailored_cv_${lang}`;
             setAnalysis(prev => prev ? { ...prev, [flagKey]: true } : prev);
           }
 
@@ -706,14 +716,14 @@ export default function useJobAnalysis({
     setPendingGenerateKind(null);
   }
 
-  function confirmTemplateAndGenerate(template) {
+  function confirmTemplateAndGenerate(template, languageOverride) {
     const kind = pendingGenerateKind;
     setTemplatePickerVisible(false);
     setPendingGenerateKind(null);
     if (kind === 'send') {
-      sendApplication(template);
+      sendApplication(template, languageOverride);
     } else {
-      generatePdf(template);
+      generatePdf(template, languageOverride);
     }
   }
 

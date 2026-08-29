@@ -318,7 +318,29 @@ export default function CvTemplatePickerModal({ visible, onClose, onConfirm, rec
 
   function handleConfirm() {
     if (!pendingSelection) return;
-    onConfirm(pendingSelection === 'anbefalt' ? '' : pendingSelection);
+    // Resolve what template this confirm will actually use -- "anbefalt"
+    // (recommended) doesn't pick a literal key here, it resolves server-side
+    // to whatever the job's stored/recommended template already is (often
+    // "vietnamesisk" via a persisted analysis.cv_mal from an earlier
+    // session, since cvLanguage itself never persists across sessions).
+    const resolvedTemplate = pendingSelection === 'anbefalt' ? recommendedTemplate : pendingSelection;
+    // Vietnamese-market CV output is always Vietnamese regardless of UI
+    // language, so confirming this template also confirms the language --
+    // centralized here (not in the per-thumbnail pick step) so it covers
+    // BOTH the explicit pick and the "anbefalt" path equally; previously
+    // only the explicit pick set this, so "anbefalt" resolving to
+    // "vietnamesisk" silently generated in whatever language cvLanguage
+    // already happened to be (usually "no", its default).
+    const targetLang = resolvedTemplate === 'vietnamesisk' ? 'vi' : (cvLanguage === 'vi' ? 'no' : cvLanguage);
+    if (targetLang !== cvLanguage) {
+      setCvLanguage?.(targetLang);
+    }
+    // Pass the resolved language explicitly instead of relying on cvLanguage
+    // state to have re-rendered by the time onConfirm's generation call
+    // reads it -- setCvLanguage above is async/batched, and onConfirm runs
+    // synchronously right after in this same handler, so a caller reading
+    // cvLanguage from its own (still-stale) closure would see the OLD value.
+    onConfirm(pendingSelection === 'anbefalt' ? '' : pendingSelection, targetLang);
   }
 
   const ExpandedFull = expandedTemplate ? FULL_BY_KEY[expandedTemplate] : null;
@@ -350,15 +372,6 @@ export default function CvTemplatePickerModal({ visible, onClose, onConfirm, rec
                   style={[sharedStyles.aerligSecondaryButton, { flex: 1 }]}
                   onPress={() => {
                     setPendingSelection(expandedTemplate);
-                    // Vietnamese-market CV output is always Vietnamese regardless
-                    // of UI language, so picking this template also picks the
-                    // language -- same action, matches _VietnamesiskPdfDoc/the
-                    // backend's "vi" prompt branch which is always-Vietnamese too.
-                    if (expandedTemplate === 'vietnamesisk') {
-                      setCvLanguage?.('vi');
-                    } else if (cvLanguage === 'vi') {
-                      setCvLanguage?.('no');
-                    }
                     setExpandedTemplate(null);
                   }}
                 >
