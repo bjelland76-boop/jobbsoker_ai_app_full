@@ -253,10 +253,20 @@ CV_SECTION_TITLES: list[str] = [
 ]
 CV_SECTION_TITLES_CF = {t.casefold(): t for t in CV_SECTION_TITLES}
 
-# Section rendering category sets (Norwegian + English)
-_SEC_EXPERIENCE = {"arbeidserfaring", "utdanning", "work experience", "education"}
-_SEC_BULLETS = {"kjerneferdigheter", "språk", "sertifiseringer", "referanser",
-                "core skills", "languages", "certifications", "references"}
+# Section rendering category sets (Norwegian + English + Vietnamese). Keys
+# must exactly match (casefolded) the headings the "vi" prompt branch in
+# job_analyzer.py's generate_application_texts() actually generates --
+# otherwise these sections fall back to generic paragraph rendering instead
+# of the smart job-title/company/date-range entry formatting.
+_SEC_EXPERIENCE = {
+    "arbeidserfaring", "utdanning", "work experience", "education",
+    "kinh nghiệm làm việc", "học vấn",
+}
+_SEC_BULLETS = {
+    "kjerneferdigheter", "språk", "sertifiseringer", "referanser",
+    "core skills", "languages", "certifications", "references",
+    "kỹ năng chuyên môn", "ngoại ngữ", "chứng chỉ", "người tham chiếu",
+}
 
 
 def _clean_company_for_pdf(company: str) -> str:
