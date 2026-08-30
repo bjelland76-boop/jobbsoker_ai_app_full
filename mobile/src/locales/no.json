@@ -369,7 +369,12 @@
     "pass7_desc": "Full tilgang i 7 dager, ingen bindingstid",
     "launch_note": "Lanseringspris — begrenset periode 🎉",
     "stripe_note": "Betaling via Stripe — trygt og enkelt",
-    "android_browser_note": "Betaling åpnes i nettleseren utenfor appen",
+    "android_play_billing_note": "Betaling håndteres trygt via Google Play",
+    "android_success_title": "Kjøp fullført",
+    "android_success_sub": "Abonnementet ditt er nå aktivt.",
+    "android_success_pass": "Din 7-dagers tilgang er nå aktiv.",
+    "android_error_title": "Noe gikk galt",
+    "android_error_generic": "Kunne ikke fullføre kjøpet. Prøv igjen senere.",
     "subscribe_btn": "Abonner nå",
     "pay_card_btn": "Betal med kort",
     "not_now": "Ikke nå"

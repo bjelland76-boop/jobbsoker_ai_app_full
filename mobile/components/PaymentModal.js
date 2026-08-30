@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TouchableOpacity, Linking, ActivityIndicator, StyleSheet } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, Linking, ActivityIndicator, StyleSheet, Alert } from 'react-native';
 import { Capacitor } from '@capacitor/core';
 
 import { apiFetch, useApp } from '../context/AppContext';
+import { useProfileContext } from '../context/ProfileContext';
 import { styles as sharedStyles } from '../styles/styles';
+import PlayBilling from '../plugins/PlayBilling';
 
 const ORANGE = '#E8501A';
+
+// Play Console product ids, matching `type` state below ('subscription' | '7day').
+const ANDROID_PRODUCT_IDS = { subscription: '1_maanedsabonnement', '7day': '7dager' };
 
 const LIMIT_LABEL_KEYS = {
   analyse: 'payment.limit_analyse',
@@ -23,6 +28,7 @@ const PRICES_VN = { pass7: '30.000₫', sub: '60.000₫/mnd' };
 
 export default function PaymentModal({ visible, limitType, onClose, userId, userEmail }) {
   const { t, authTokenState, openAuthScreen } = useApp();
+  const { refreshSubscription } = useProfileContext() || {};
   const [type, setType] = useState('subscription');
   const [loading, setLoading] = useState(false);
   const [country, setCountry] = useState('NO');
@@ -45,12 +51,61 @@ export default function PaymentModal({ visible, limitType, onClose, userId, user
     ? t('payment.subtitle_anon_shared')
     : t('payment.subtitle', { limitLabel });
 
-  // Android: real Google Play Billing isn't built yet (separate project --
-  // see the Play Billing feasibility report). Falls back to the same
-  // Stripe-in-browser flow as web for now, rather than blocking payment on
-  // Android entirely. Once Play Billing lands, this is the one place that
-  // needs to branch to it (Play Console product ids: "7dager", "1_maanedsabonnement").
+  // Android: real Google Play Billing (native plugin, see
+  // mobile/plugins/PlayBilling.js). Web keeps the Stripe-in-browser flow below,
+  // completely unchanged.
   const platform = Capacitor.getPlatform(); // 'android' | 'ios' | 'web'
+
+  async function handleAndroidPurchase() {
+    const productId = ANDROID_PRODUCT_IDS[type];
+    try {
+      await PlayBilling.startConnection();
+
+      let purchase;
+      try {
+        purchase = await PlayBilling.purchase({ productId });
+      } catch (e) {
+        // User backing out of the native purchase dialog is not an error --
+        // just settle the modal quietly, no alert.
+        if (String(e?.message || e).includes('Bruker avbrøt kjøpet')) {
+          onClose?.();
+          return;
+        }
+        throw e;
+      }
+
+      // Authoritative granting happens server-side (verifies the token
+      // against the Play Developer API before touching subscription_status)
+      // -- acknowledge with Google only after that succeeds, so a failed
+      // verify-purchase call leaves the purchase unacknowledged and
+      // recoverable via restorePurchases() rather than silently accepted.
+      await apiFetch('/play-billing/verify-purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ purchase_token: purchase.purchaseToken, product_id: productId }),
+      });
+
+      try {
+        await PlayBilling.acknowledgePurchase({ purchaseToken: purchase.purchaseToken });
+      } catch (e) {
+        // Entitlement is already granted at this point (verify-purchase
+        // above succeeded) -- an acknowledge failure here shouldn't read as
+        // a failed purchase to the user. restorePurchases() on a later
+        // launch can retry it.
+        console.error('[Assistant] acknowledgePurchase failed after successful verify-purchase', e);
+      }
+
+      await refreshSubscription?.();
+      onClose?.();
+      Alert.alert(
+        t('payment.android_success_title'),
+        type === 'subscription' ? t('payment.android_success_sub') : t('payment.android_success_pass')
+      );
+    } catch (e) {
+      console.error('[Assistant] Android Play Billing purchase failed', e);
+      Alert.alert(t('payment.android_error_title'), e?.message || t('payment.android_error_generic'));
+    }
+  }
 
   async function handlePay() {
     if (loading) return;
@@ -66,6 +121,13 @@ export default function PaymentModal({ visible, limitType, onClose, userId, user
     }
     if (!userId) return;
     setLoading(true);
+
+    if (platform === 'android') {
+      await handleAndroidPurchase();
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await apiFetch('/create-checkout', {
         method: 'POST',
@@ -141,10 +203,9 @@ export default function PaymentModal({ visible, limitType, onClose, userId, user
           </TouchableOpacity>
 
           <Text style={st.launchNote}>{t('payment.launch_note')}</Text>
-          <Text style={st.stripeNote}>{t('payment.stripe_note')}</Text>
-          {platform === 'android' && (
-            <Text style={st.stripeNote}>{t('payment.android_browser_note')}</Text>
-          )}
+          <Text style={st.stripeNote}>
+            {platform === 'android' ? t('payment.android_play_billing_note') : t('payment.stripe_note')}
+          </Text>
 
           <TouchableOpacity
             style={[st.payButton, loading && { opacity: 0.6 }]}
