@@ -4,9 +4,11 @@ import android.util.Log;
 
 import com.android.billingclient.api.BillingClient;
 import com.android.billingclient.api.BillingClientStateListener;
+import com.android.billingclient.api.BillingFlowParams;
 import com.android.billingclient.api.BillingResult;
 import com.android.billingclient.api.PendingPurchasesParams;
 import com.android.billingclient.api.ProductDetails;
+import com.android.billingclient.api.Purchase;
 import com.android.billingclient.api.QueryProductDetailsParams;
 import com.android.billingclient.api.UnfetchedProduct;
 import com.getcapacitor.JSArray;
@@ -17,14 +19,17 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
  * Google Play Billing plugin (Play Billing prep, Spor B).
  * Step 1: ping() only, proved plugin registration works.
  * Step 2: BillingClient connection lifecycle only.
- * Step 3 (this one): queryProductDetails() for the two real Play Console
- * products -- no purchase flow yet (that's step 4).
+ * Step 3: queryProductDetails() for the two real Play Console products.
+ * Step 4 (this one): purchase() -- launchBillingFlow + PurchasesUpdatedListener,
+ * returns purchaseToken to JS. No acknowledgePurchase yet (that's step 5) and
+ * no backend call yet (that's step 9).
  */
 @CapacitorPlugin(name = "PlayBilling")
 public class PlayBillingPlugin extends Plugin {
@@ -33,20 +38,58 @@ public class PlayBillingPlugin extends Plugin {
 
     private BillingClient billingClient;
 
+    // The PluginCall for an in-flight purchase() -- launchBillingFlow() has no
+    // callback of its own; the result arrives later via the PurchasesUpdatedListener
+    // set once below, so the call has to be kept alive and resolved from there.
+    private PluginCall pendingPurchaseCall;
+
     @Override
     public void load() {
         billingClient = BillingClient.newBuilder(getContext())
-            .setListener((billingResult, purchases) -> {
-                // Real purchase handling arrives in step 4 -- this step only
-                // connects, so just log if anything unexpected comes through.
-                Log.d(
-                    TAG,
-                    "onPurchasesUpdated (unused until step 4): responseCode=" + billingResult.getResponseCode()
-                        + " purchases=" + (purchases == null ? 0 : purchases.size())
-                );
-            })
+            .setListener(this::onPurchasesUpdated)
             .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
             .build();
+    }
+
+    private void onPurchasesUpdated(BillingResult billingResult, List<Purchase> purchases) {
+        Log.d(
+            TAG,
+            "onPurchasesUpdated: responseCode=" + billingResult.getResponseCode()
+                + " debugMessage=" + billingResult.getDebugMessage()
+                + " purchases=" + (purchases == null ? 0 : purchases.size())
+        );
+
+        PluginCall call = pendingPurchaseCall;
+        pendingPurchaseCall = null;
+        if (call == null) {
+            Log.w(TAG, "onPurchasesUpdated fired with no pending purchase() call -- ignoring");
+            return;
+        }
+
+        if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.USER_CANCELED) {
+            call.reject("Bruker avbrøt kjøpet");
+            return;
+        }
+        if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK || purchases == null || purchases.isEmpty()) {
+            call.reject("Kjøpet feilet (responseCode=" + billingResult.getResponseCode() + "): " + billingResult.getDebugMessage());
+            return;
+        }
+
+        Purchase purchase = purchases.get(0);
+        Log.d(
+            TAG,
+            "purchase completed: products=" + purchase.getProducts()
+                + " purchaseState=" + purchase.getPurchaseState()
+                + " isAcknowledged=" + purchase.isAcknowledged()
+        );
+
+        JSObject ret = new JSObject();
+        ret.put("purchaseToken", purchase.getPurchaseToken());
+        ret.put("orderId", purchase.getOrderId());
+        ret.put("products", new JSArray(purchase.getProducts()));
+        ret.put("purchaseState", purchase.getPurchaseState());
+        ret.put("isAcknowledged", purchase.isAcknowledged());
+        call.resolve(ret);
     }
 
     @PluginMethod
@@ -195,6 +238,88 @@ public class PlayBillingPlugin extends Plugin {
             }
 
             onDone.run();
+        });
+    }
+
+    // Same two known products/types as queryProductDetails() -- re-queries
+    // ProductDetails for just the requested one so purchase() doesn't depend
+    // on queryProductDetails() having been called first.
+    @PluginMethod
+    public void purchase(PluginCall call) {
+        String productId = call.getString("productId");
+        if (productId == null || productId.isEmpty()) {
+            call.reject("productId er påkrevd");
+            return;
+        }
+        if (!billingClient.isReady()) {
+            call.reject("BillingClient er ikke tilkoblet -- kall startConnection() først");
+            return;
+        }
+        if (pendingPurchaseCall != null) {
+            call.reject("Et kjøp er allerede i gang");
+            return;
+        }
+
+        String productType;
+        if ("1_maanedsabonnement".equals(productId)) {
+            productType = BillingClient.ProductType.SUBS;
+        } else if ("7dager".equals(productId)) {
+            productType = BillingClient.ProductType.INAPP;
+        } else {
+            call.reject("Ukjent productId: " + productId);
+            return;
+        }
+
+        List<QueryProductDetailsParams.Product> products = new ArrayList<>();
+        products.add(QueryProductDetailsParams.Product.newBuilder().setProductId(productId).setProductType(productType).build());
+        QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder().setProductList(products).build();
+
+        billingClient.queryProductDetailsAsync(params, (billingResult, result) -> {
+            if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK || result.getProductDetailsList().isEmpty()) {
+                Log.e(TAG, "purchase: fant ikke ProductDetails for " + productId + " (responseCode=" + billingResult.getResponseCode() + ")");
+                call.reject("Fant ikke produktdetaljer for " + productId + " (responseCode=" + billingResult.getResponseCode() + ")");
+                return;
+            }
+
+            ProductDetails details = result.getProductDetailsList().get(0);
+            String offerToken = null;
+
+            if (BillingClient.ProductType.SUBS.equals(productType)) {
+                List<ProductDetails.SubscriptionOfferDetails> offers = details.getSubscriptionOfferDetails();
+                if (offers != null && !offers.isEmpty()) {
+                    offerToken = offers.get(0).getOfferToken();
+                }
+            } else {
+                ProductDetails.OneTimePurchaseOfferDetails offer = details.getOneTimePurchaseOfferDetails();
+                if (offer != null) {
+                    offerToken = offer.getOfferToken();
+                }
+            }
+
+            if (offerToken == null) {
+                call.reject("Fant ingen tilgjengelig offer for " + productId);
+                return;
+            }
+
+            BillingFlowParams.ProductDetailsParams productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder()
+                .setProductDetails(details)
+                .setOfferToken(offerToken)
+                .build();
+
+            BillingFlowParams flowParams = BillingFlowParams.newBuilder()
+                .setProductDetailsParamsList(Collections.singletonList(productDetailsParams))
+                .build();
+
+            pendingPurchaseCall = call;
+            call.setKeepAlive(true);
+
+            BillingResult launchResult = billingClient.launchBillingFlow(getActivity(), flowParams);
+            Log.d(TAG, "launchBillingFlow: responseCode=" + launchResult.getResponseCode() + " debugMessage=" + launchResult.getDebugMessage());
+
+            if (launchResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                pendingPurchaseCall = null;
+                call.reject("launchBillingFlow feilet (responseCode=" + launchResult.getResponseCode() + "): " + launchResult.getDebugMessage());
+            }
         });
     }
 
