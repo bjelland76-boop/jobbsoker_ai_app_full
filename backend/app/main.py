@@ -3044,7 +3044,8 @@ def play_billing_verify_purchase(
         except Exception as e:
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Kunne ikke nå Google Play: {e}")
         if resp.status_code != 200:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Play Developer API avviste kjøpet ({resp.status_code})")
+            logger.error("[play-billing] Play Developer API %s: %s", resp.status_code, resp.text[:2000])
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Play Developer API avviste kjøpet ({resp.status_code}): {resp.text[:300]}")
 
         body = resp.json()
         state = body.get("subscriptionState") or ""
@@ -3071,7 +3072,8 @@ def play_billing_verify_purchase(
         except Exception as e:
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Kunne ikke nå Google Play: {e}")
         if resp.status_code != 200:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Play Developer API avviste kjøpet ({resp.status_code})")
+            logger.error("[play-billing] Play Developer API %s: %s", resp.status_code, resp.text[:2000])
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Play Developer API avviste kjøpet ({resp.status_code}): {resp.text[:300]}")
 
         body = resp.json()
         purchase_state = body.get("purchaseState")
