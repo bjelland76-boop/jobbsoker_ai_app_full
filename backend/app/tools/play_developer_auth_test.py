@@ -6,11 +6,17 @@ fake key + a mocked token refresh (no real network call to Google needed).
 
 If a REAL GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is present in the environment
 when this is run, it ALSO makes one real read-only call to the Play
-Developer API (listing the app's in-app products) to confirm the real
-credential actually works end to end. That part is skipped otherwise --
-the real key can only be supplied once Frank has done the Google
-Cloud/Play Console service-account setup (plan step 0) and pasted the key
-into Render's GOOGLE_PLAY_SERVICE_ACCOUNT_JSON env var.
+Developer API (monetization.subscriptions.list -- listing the app's
+subscription catalog) to confirm the real credential actually works end
+to end. That part is skipped otherwise -- the real key can only be
+supplied once Frank has done the Google Cloud/Play Console service-account
+setup (plan step 0) and pasted the key into Render's
+GOOGLE_PLAY_SERVICE_ACCOUNT_JSON env var.
+
+NOTE: this deliberately does NOT call inappproducts.list -- that endpoint
+returns 403 "Please migrate to the new publishing API" for any app that
+has a subscription product in its catalog (ours does). See the comment
+at the live-check call below for the full explanation.
 
 Run manually:
   cd backend && venv/bin/python -m app.tools.play_developer_auth_test
@@ -123,6 +129,20 @@ def main() -> int:
     # 4) OPTIONAL live check: only runs if a real key was already present in
     #    this shell's environment before the test started (never committed,
     #    never required for the test to pass).
+    #
+    # Uses monetization.subscriptions.list (GET .../v3/applications/{pkg}/subscriptions),
+    # NOT inappproducts.list (GET .../v3/applications/{pkg}/inappproducts) --
+    # the latter returns 403 "Please migrate to the new publishing API" for
+    # any app that has a subscription product in its catalog (which ours
+    # does: "1_maanedsabonnement"). Confirmed against Google's live API
+    # discovery doc: inappproducts.list's own description says "This method
+    # should no longer be used to retrieve subscriptions"; monetization.
+    # subscriptions.list is the current, non-deprecated replacement for
+    # reading the subscription catalog. This deprecation is scoped to
+    # catalog-management endpoints only -- it does NOT affect the purchase
+    # verification endpoints /play-billing/verify-purchase actually uses
+    # (purchases.products.get, purchases.subscriptionsv2.get), which are
+    # both confirmed still current/non-deprecated.
     if _real_service_account_json:
         import requests as _requests
         os.environ["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"] = _real_service_account_json
@@ -130,12 +150,12 @@ def main() -> int:
         real_token = _get_play_developer_access_token()
         _assert(real_token, "real service-account key present but no token returned")
         resp = _requests.get(
-            f"https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{PLAY_PACKAGE_NAME}/inappproducts",
+            f"https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{PLAY_PACKAGE_NAME}/subscriptions",
             headers={"Authorization": f"Bearer {real_token}"},
             timeout=10,
         )
         _assert(resp.status_code == 200, f"real Play Developer API call failed: {resp.status_code} {resp.text}")
-        print(f"[OK] Live Play Developer API call succeeded, {len(resp.json().get('inappproduct', []))} in-app product(s) found")
+        print(f"[OK] Live Play Developer API call succeeded, {len(resp.json().get('subscriptions', []))} subscription(s) found in catalog")
     else:
         print("[SKIP] No real GOOGLE_PLAY_SERVICE_ACCOUNT_JSON in environment -- live API check skipped")
 
