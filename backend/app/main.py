@@ -34,6 +34,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from google.auth.transport import requests as google_auth_requests
 from google.oauth2 import id_token as google_id_token
+from google.oauth2 import service_account as google_service_account
 from pydantic import BaseModel
 from sqlalchemy import delete, func, inspect, select, text
 from sqlalchemy.orm import Session
@@ -56,6 +57,7 @@ from .models import (
     Job,
     JobAnalysisHistory,
     LoginCode,
+    PlayBillingPurchase,
     Profile,
     ProfileDocument,
     StripePayment,
@@ -2838,6 +2840,33 @@ def _set_subscription_status(db: Session, *, profile: Profile, subscription_stat
     db.commit()
 
 
+_PLAY_ANDROIDPUBLISHER_SCOPE = "https://www.googleapis.com/auth/androidpublisher"
+PLAY_PACKAGE_NAME = "com.aerlig.app"
+
+
+def _get_play_developer_access_token() -> str | None:
+    """Returns a bearer access token for the Google Play Developer API
+    (androidpublisher), authenticated as the service account whose key JSON
+    is stored in GOOGLE_PLAY_SERVICE_ACCOUNT_JSON. Returns None if that env
+    var isn't set (Play Billing verification not yet configured).
+
+    This is a completely separate credential from Google Sign-In's OAuth
+    client (GOOGLE_CLIENT_ID_WEB / GOOGLE_CLIENT_SECRET, used by
+    google_id_token.verify_oauth2_token above) -- a service account created
+    fresh in Google Cloud Console and linked under Play Console's "Users and
+    permissions", not an OAuth client id.
+    """
+    raw = os.getenv("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON")
+    if not raw:
+        return None
+    info = json.loads(raw)
+    credentials = google_service_account.Credentials.from_service_account_info(
+        info, scopes=[_PLAY_ANDROIDPUBLISHER_SCOPE]
+    )
+    credentials.refresh(google_auth_requests.Request())
+    return credentials.token
+
+
 @app.get("/user-country", tags=["billing"])
 def user_country(request: Request):
     """Best-effort country lookup for the requesting client's IP, used by the
@@ -2936,6 +2965,133 @@ def create_checkout(
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Stripe-feil: {e}")
 
     return {"checkout_url": session.url}
+
+
+class PlayBillingVerifyIn(BaseModel):
+    purchase_token: str
+    product_id: str
+
+
+# Maps our two Play Console products to how they're verified/applied.
+# "1_maanedsabonnement" is a real recurring subscription (verified via
+# subscriptionsv2, expiry comes from Google). "7dager" is configured as a
+# one-time managed in-app product -- like Stripe's "7day_pass", WE compute
+# the 7-day expiry ourselves rather than trusting a Google-tracked one.
+# NOTE: confirm "7dager"'s Play Console product type matches this assumption
+# before relying on this in production -- if it's actually set up as a
+# subscription there instead, this entry (and the branch below) needs to
+# move to the subscriptionsv2 path.
+_PLAY_PRODUCT_TYPES = {
+    "1_maanedsabonnement": "subscription",
+    "7dager": "one_time_pass",
+}
+
+_PLAY_SUBSCRIPTION_STATE_MAP = {
+    "SUBSCRIPTION_STATE_ACTIVE": "active",
+    "SUBSCRIPTION_STATE_IN_GRACE_PERIOD": "past_due",
+    "SUBSCRIPTION_STATE_ON_HOLD": "past_due",
+    "SUBSCRIPTION_STATE_CANCELED": "cancelled",
+    "SUBSCRIPTION_STATE_EXPIRED": "cancelled",
+    "SUBSCRIPTION_STATE_PAUSED": "cancelled",
+}
+
+
+def _parse_play_rfc3339(value: str) -> datetime:
+    """Parses the RFC3339 UTC ("...Z") timestamps the Play Developer API
+    returns (e.g. expiryTime) into a naive UTC datetime, matching how the
+    rest of this file stores subscription_end."""
+    return datetime.strptime(value.split(".")[0].rstrip("Z"), "%Y-%m-%dT%H:%M:%S")
+
+
+@app.post("/play-billing/verify-purchase", tags=["billing"])
+def play_billing_verify_purchase(
+    data: PlayBillingVerifyIn,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Server-side verification of a Google Play purchase against the Play
+    Developer API -- the Play Billing counterpart to /stripe-webhook. Never
+    trusts the client-supplied purchase state; always confirms with Google
+    first. Idempotent via PlayBillingPurchase.purchase_token (unique).
+    """
+    product_type = _PLAY_PRODUCT_TYPES.get(data.product_id)
+    if not product_type:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ukjent product_id")
+
+    existing = db.scalars(
+        select(PlayBillingPurchase).where(PlayBillingPurchase.purchase_token == data.purchase_token)
+    ).first()
+    if existing:
+        return {"verified": True}
+
+    access_token = _get_play_developer_access_token()
+    if not access_token:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Play Billing er ikke konfigurert (GOOGLE_PLAY_SERVICE_ACCOUNT_JSON mangler)")
+
+    profile = db.scalars(select(Profile).where(Profile.user_id == current_user.id)).first()
+    if not profile:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ingen profil")
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    if product_type == "subscription":
+        url = (
+            f"https://androidpublisher.googleapis.com/androidpublisher/v3/applications/"
+            f"{PLAY_PACKAGE_NAME}/purchases/subscriptionsv2/tokens/{data.purchase_token}"
+        )
+        try:
+            resp = requests.get(url, headers=headers, timeout=10)
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Kunne ikke nå Google Play: {e}")
+        if resp.status_code != 200:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Play Developer API avviste kjøpet ({resp.status_code})")
+
+        body = resp.json()
+        state = body.get("subscriptionState") or ""
+        our_status = _PLAY_SUBSCRIPTION_STATE_MAP.get(state, "cancelled")
+        if our_status != "active":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Abonnementet er ikke aktivt (status: {state})")
+
+        subscription_end = None
+        for item in body.get("lineItems") or []:
+            expiry = item.get("expiryTime")
+            if expiry:
+                subscription_end = _parse_play_rfc3339(expiry)
+                break
+
+        _set_subscription_status(db, profile=profile, subscription_status=our_status, subscription_end=subscription_end)
+
+    else:  # "one_time_pass" -- e.g. "7dager"
+        url = (
+            f"https://androidpublisher.googleapis.com/androidpublisher/v3/applications/"
+            f"{PLAY_PACKAGE_NAME}/purchases/products/{data.product_id}/tokens/{data.purchase_token}"
+        )
+        try:
+            resp = requests.get(url, headers=headers, timeout=10)
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Kunne ikke nå Google Play: {e}")
+        if resp.status_code != 200:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Play Developer API avviste kjøpet ({resp.status_code})")
+
+        body = resp.json()
+        purchase_state = body.get("purchaseState")
+        if purchase_state != 0:  # 0 = purchased, 1 = canceled, 2 = pending
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Kjøpet er ikke gyldig (purchaseState: {purchase_state})")
+
+        _set_subscription_status(
+            db, profile=profile, subscription_status="active",
+            subscription_end=datetime.utcnow() + timedelta(days=7),
+        )
+
+    db.add(PlayBillingPurchase(
+        purchase_token=data.purchase_token,
+        user_id=current_user.id,
+        product_id=data.product_id,
+        status="verified",
+    ))
+    db.commit()
+
+    return {"verified": True}
 
 
 @app.post("/stripe-webhook", tags=["billing"])

@@ -206,3 +206,18 @@ class StripePayment(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     credits: Mapped[int] = mapped_column(Integer)
     confirmed_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class PlayBillingPurchase(Base):
+    """Records verified Google Play purchases so POST /play-billing/verify-purchase
+    is idempotent (a purchase_token can only ever be applied once), mirroring
+    StripePayment's role for the Stripe webhook.
+    """
+
+    __tablename__ = "play_billing_purchases"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    purchase_token: Mapped[str] = mapped_column(String(500), unique=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    product_id: Mapped[str] = mapped_column(String(100))
+    status: Mapped[str] = mapped_column(String(20), default="verified")
+    verified_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
