@@ -7,6 +7,7 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(PlayBillingPlugin.class);
         super.onCreate(savedInstanceState);
         // The WebView's HTTP cache persists across Play Store app updates (it's part of
         // app data, not the APK), so a stale index.html/bundle can keep being served after
