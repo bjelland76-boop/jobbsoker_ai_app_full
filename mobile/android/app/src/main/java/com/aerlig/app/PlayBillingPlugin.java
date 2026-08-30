@@ -2,6 +2,7 @@ package com.aerlig.app;
 
 import android.util.Log;
 
+import com.android.billingclient.api.AcknowledgePurchaseParams;
 import com.android.billingclient.api.BillingClient;
 import com.android.billingclient.api.BillingClientStateListener;
 import com.android.billingclient.api.BillingFlowParams;
@@ -10,6 +11,7 @@ import com.android.billingclient.api.PendingPurchasesParams;
 import com.android.billingclient.api.ProductDetails;
 import com.android.billingclient.api.Purchase;
 import com.android.billingclient.api.QueryProductDetailsParams;
+import com.android.billingclient.api.QueryPurchasesParams;
 import com.android.billingclient.api.UnfetchedProduct;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -27,9 +29,10 @@ import java.util.List;
  * Step 1: ping() only, proved plugin registration works.
  * Step 2: BillingClient connection lifecycle only.
  * Step 3: queryProductDetails() for the two real Play Console products.
- * Step 4 (this one): purchase() -- launchBillingFlow + PurchasesUpdatedListener,
- * returns purchaseToken to JS. No acknowledgePurchase yet (that's step 5) and
- * no backend call yet (that's step 9).
+ * Step 4: purchase() -- launchBillingFlow + PurchasesUpdatedListener, returns
+ * purchaseToken to JS.
+ * Step 5 (this one): acknowledgePurchase() and restorePurchases(). No backend
+ * call yet (that's step 9).
  */
 @CapacitorPlugin(name = "PlayBilling")
 public class PlayBillingPlugin extends Plugin {
@@ -83,13 +86,17 @@ public class PlayBillingPlugin extends Plugin {
                 + " isAcknowledged=" + purchase.isAcknowledged()
         );
 
+        call.resolve(purchaseToJs(purchase));
+    }
+
+    private JSObject purchaseToJs(Purchase purchase) {
         JSObject ret = new JSObject();
         ret.put("purchaseToken", purchase.getPurchaseToken());
         ret.put("orderId", purchase.getOrderId());
         ret.put("products", new JSArray(purchase.getProducts()));
         ret.put("purchaseState", purchase.getPurchaseState());
         ret.put("isAcknowledged", purchase.isAcknowledged());
-        call.resolve(ret);
+        return ret;
     }
 
     @PluginMethod
@@ -320,6 +327,90 @@ public class PlayBillingPlugin extends Plugin {
                 pendingPurchaseCall = null;
                 call.reject("launchBillingFlow feilet (responseCode=" + launchResult.getResponseCode() + "): " + launchResult.getDebugMessage());
             }
+        });
+    }
+
+    // Play Billing requires a purchase to be acknowledged within 3 days of
+    // completion, or Google auto-refunds it -- this is what step 4 left
+    // undone (isAcknowledged: false on the returned Purchase).
+    @PluginMethod
+    public void acknowledgePurchase(PluginCall call) {
+        String purchaseToken = call.getString("purchaseToken");
+        if (purchaseToken == null || purchaseToken.isEmpty()) {
+            call.reject("purchaseToken er påkrevd");
+            return;
+        }
+        if (!billingClient.isReady()) {
+            call.reject("BillingClient er ikke tilkoblet -- kall startConnection() først");
+            return;
+        }
+
+        AcknowledgePurchaseParams params = AcknowledgePurchaseParams.newBuilder().setPurchaseToken(purchaseToken).build();
+        billingClient.acknowledgePurchase(params, billingResult -> {
+            Log.d(
+                TAG,
+                "onAcknowledgePurchaseResponse: responseCode=" + billingResult.getResponseCode()
+                    + " debugMessage=" + billingResult.getDebugMessage()
+            );
+            if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                call.reject("acknowledgePurchase feilet (responseCode=" + billingResult.getResponseCode() + "): " + billingResult.getDebugMessage());
+                return;
+            }
+            JSObject ret = new JSObject();
+            ret.put("acknowledged", true);
+            call.resolve(ret);
+        });
+    }
+
+    // Finds purchases already owned by the signed-in account (e.g. after a
+    // reinstall, or resuming an interrupted purchase flow) -- does NOT
+    // acknowledge them; the caller decides what to do with what's returned
+    // (typically: acknowledge unacknowledged ones, verify with the backend).
+    // Same per-product-type query restriction as queryProductDetails().
+    @PluginMethod
+    public void restorePurchases(PluginCall call) {
+        if (!billingClient.isReady()) {
+            call.reject("BillingClient er ikke tilkoblet -- kall startConnection() først");
+            return;
+        }
+
+        JSArray purchasesOut = new JSArray();
+
+        queryOnePurchaseType(BillingClient.ProductType.SUBS, purchasesOut, call, () ->
+            queryOnePurchaseType(BillingClient.ProductType.INAPP, purchasesOut, call, () -> {
+                JSObject ret = new JSObject();
+                ret.put("purchases", purchasesOut);
+                call.resolve(ret);
+            })
+        );
+    }
+
+    private void queryOnePurchaseType(String productType, JSArray purchasesOut, PluginCall call, Runnable onDone) {
+        QueryPurchasesParams params = QueryPurchasesParams.newBuilder().setProductType(productType).build();
+
+        billingClient.queryPurchasesAsync(params, (billingResult, purchases) -> {
+            Log.d(
+                TAG,
+                "onQueryPurchasesResponse (" + productType + "): responseCode=" + billingResult.getResponseCode()
+                    + " found=" + purchases.size()
+            );
+
+            if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                call.reject("queryPurchasesAsync (" + productType + ") feilet (responseCode=" + billingResult.getResponseCode() + ")");
+                return;
+            }
+
+            for (Purchase purchase : purchases) {
+                Log.d(
+                    TAG,
+                    "restored purchase: products=" + purchase.getProducts()
+                        + " purchaseState=" + purchase.getPurchaseState()
+                        + " isAcknowledged=" + purchase.isAcknowledged()
+                );
+                purchasesOut.put(purchaseToJs(purchase));
+            }
+
+            onDone.run();
         });
     }
 
