@@ -631,6 +631,7 @@ Candidate:
 
 {match_block + chr(10) if match_block else ""}Quy tắc:
 - QUAN TRỌNG NHẤT: Dù tin tuyển dụng (mô tả công việc) hay dữ liệu hồ sơ của ứng viên được viết bằng ngôn ngữ nào (tiếng Anh, tiếng Na Uy, hay ngôn ngữ khác), TOÀN BỘ nội dung đầu ra PHẢI được viết bằng tiếng Việt. Dịch mọi thứ sang tiếng Việt — không được để sót bất kỳ từ, cụm từ hay câu nào bằng ngôn ngữ khác trong kết quả.
+- Điều này áp dụng cho MỌI thành phần văn bản, không chỉ cấu trúc chính: chức danh công việc, mô tả nhiệm vụ/trách nhiệm trong Kinh nghiệm làm việc, tên bằng cấp/chương trình học, và thuật ngữ chuyên môn (ví dụ: "varemottak" → "nhận hàng", "plukking" → "lấy hàng/nhặt hàng", "pakking" → "đóng gói"). Giữ nguyên tên riêng và tên công ty (trừ khi có tên tiếng Việt được dùng phổ biến).
 - Không được bịa đặt kinh nghiệm/học vấn.
 - Không sử dụng các placeholder như [điện thoại] hoặc [địa chỉ].
 - {style_text}
@@ -1006,6 +1007,7 @@ Candidate:
 
 {match_block + chr(10) if match_block else ""}Quy tắc:
 - QUAN TRỌNG NHẤT: Dù tin tuyển dụng hay dữ liệu hồ sơ ứng viên được viết bằng ngôn ngữ nào (tiếng Anh, tiếng Na Uy, hay ngôn ngữ khác), TOÀN BỘ nội dung đầu ra PHẢI được viết bằng tiếng Việt. Dịch mọi thứ sang tiếng Việt — không được để sót từ, cụm từ hay câu nào bằng ngôn ngữ khác.
+- Điều này áp dụng cho MỌI thành phần văn bản, không chỉ cấu trúc chính: chức danh công việc, mô tả nhiệm vụ/trách nhiệm trong Kinh nghiệm làm việc, tên bằng cấp/chương trình học, và thuật ngữ chuyên môn (ví dụ: "varemottak" → "nhận hàng", "plukking" → "lấy hàng/nhặt hàng", "pakking" → "đóng gói"). Giữ nguyên tên riêng và tên công ty (trừ khi có tên tiếng Việt được dùng phổ biến).
 - Không được bịa đặt kinh nghiệm/học vấn.
 - Không sử dụng placeholder như [điện thoại] hoặc [địa chỉ].
 - {style_text}
