@@ -531,9 +531,10 @@ Candidate:
 cover_letter:
 - Write in English (British or neutral international English).
 - 3–4 paragraphs. No bullet points.
-- Opening: mention the role and company by name, state why the candidate is a strong fit.
-- Body: highlight 2–3 concrete strengths from the candidate's experience relevant to the role.
-- Closing: express interest in an interview, polite and professional tone.
+- Structure the letter in three explicit parts:
+  1) Why THIS job specifically: must reference something concrete from the job ad text itself (a task, a requirement, a phrase from the ad) — not a generic "I am writing to apply" opener.
+  2) Why the candidate fits: 2–3 concrete examples from the candidate's experience that match the actual tasks/requirements in the ad.
+  3) Personal motivation / what the candidate brings: short and genuine — no cliché adjectives (see anti-cliché rules below).
 - Do NOT include contact details or date in the cover letter text.
 
 tailored_cv:
@@ -643,9 +644,10 @@ Candidate:
 cover_letter:
 - Viết bằng tiếng Việt, văn phong chuyên nghiệp và tự nhiên như người bản xứ viết — không phải văn phong dịch máy.
 - 3–4 đoạn văn. Không dùng gạch đầu dòng.
-- Mở đầu: nêu tên vị trí ứng tuyển và tên công ty, nêu lý do ứng viên phù hợp.
-- Nội dung: nêu bật 2–3 điểm mạnh cụ thể từ kinh nghiệm của ứng viên liên quan đến vị trí.
-- Kết thúc: bày tỏ mong muốn được phỏng vấn, văn phong lịch sự và chuyên nghiệp.
+- Cấu trúc thư theo ba phần rõ ràng:
+  1) Tại sao lại là công việc NÀY: phải nhắc đến điều gì đó cụ thể từ chính nội dung tin tuyển dụng (một nhiệm vụ, một yêu cầu, một cụm từ trong tin) — không mở đầu chung chung kiểu "Tôi viết đơn này để ứng tuyển".
+  2) Tại sao ứng viên phù hợp: 2–3 ví dụ cụ thể từ kinh nghiệm của ứng viên khớp với các nhiệm vụ/yêu cầu thực tế trong tin tuyển dụng.
+  3) Động lực cá nhân / điều ứng viên mang lại: ngắn gọn, chân thật — không dùng tính từ sáo rỗng (xem quy tắc chống sáo rỗng bên dưới).
 - KHÔNG đưa thông tin liên hệ hoặc ngày tháng vào nội dung thư xin việc.
 
 tailored_cv:
@@ -725,6 +727,15 @@ Candidate:
 - VIKTIG: Skriv ALDRI ut matchprosent, matchscore, analysemetadata eller bakgrunnsinformasjonen i selve CV-en eller søknadsbrevet. Kun vanlig CV-innhold er tillatt i output.
 
 {SHARED_ANTI_HALLUCINATION_RULES}
+
+cover_letter:
+- Skriv på norsk, profesjonell og naturlig tone — ikke maskinoversatt stil.
+- 3–4 avsnitt. Ingen punktlister.
+- Strukturer brevet i tre tydelige deler:
+  1) Hvorfor akkurat DENNE jobben: må referere noe konkret fra selve annonseteksten (en arbeidsoppgave, et krav, en formulering fra annonsen) — ikke en generisk åpning som "Jeg søker herved stillingen".
+  2) Hvorfor kandidaten passer: 2–3 konkrete eksempler fra kandidatens erfaring som matcher de faktiske oppgavene/kravene i annonsen.
+  3) Personlig motivasjon / hva kandidaten tilfører: kort og ekte — ikke klisjé-adjektiver (se anti-klisjé-regler under).
+- IKKE inkluder kontaktinfo eller dato i søknadsbrevteksten.
 
 tailored_cv:
 - Ren tekst (ATS-vennlig): ingen markdown, ingen tabeller, ingen emojis.
@@ -948,7 +959,7 @@ Candidate:
 
 {SHARED_ANTI_HALLUCINATION_RULES_EN}
 
-{m1}: 3–4 paragraphs, no bullet points. Mention role and company by name. No contact details or date.
+{m1}: 3–4 paragraphs, no bullet points. Three explicit parts: 1) why THIS job specifically — reference something concrete from the job ad text itself; 2) why the candidate fits — 2–3 concrete examples matching the ad's actual tasks/requirements; 3) personal motivation/what the candidate brings — short, genuine, no cliché adjectives. No contact details or date.
 {m2}: Plain text (ATS-friendly), no markdown, no tables. Sections in order: Key Qualifications / Professional Summary / Core Skills / Work Experience / Education / Languages / References. Key Qualifications: 3–4 short bullets (•) — core competence, one differentiator, a work-style hint; identify 3–5 keywords/phrases the employer uses in the job ad and use them where genuinely accurate; draw on the candidate's strongest point/strengths from the background info above; do not repeat Professional Summary verbatim. Professional Summary: 3–5 concrete sentences. Core Skills: 8–12 bullets (•); translate every skill into English (e.g. "journalføring" → "clinical documentation") — never leave a Norwegian word in the skills list. Work Experience: only actual roles from Candidate data, 2–5 bullets each, distinguishing Task (what the role involved) from Result (concrete numbers/improvement/scale achieved) — at least 1–2 bullets per role must prioritise a Result where the data supports one, otherwise write a task-focused bullet instead; translate Norwegian job titles into their natural English equivalent (e.g. "Butikkmedarbeider" → "Retail Assistant") — never leave a job title untranslated; keep well-known brand/company names as-is but translate generic public-sector employer names (e.g. "Kristiansand kommune" → "Municipality of Kristiansand"). Education: translate degree/programme titles into English (e.g. "Bachelor i sykepleie" → "Bachelor's Degree in Nursing"); translate institution names consistently into English (e.g. "Universitetet i Agder" → "University of Agder"), using the institution's own official English name where commonly used; periods use EXACT year values from data; if STATUS is PÅGÅENDE write e.g. "2023– (In Progress)"; if STATUS is FULLFØRT write only the years (e.g. "2022–2025"). Languages: format as "Language (Level)" e.g. "Norwegian (Native)".
 {m3}: 3–4 sentences, polite, reference the role and company. NEVER mention language level or language proficiency in the cover letter.""".strip()
     elif use_vietnamese:
@@ -998,7 +1009,7 @@ Candidate:
 
 {_anti_halluc_vi}
 
-{m1}: {style_text} Không dùng gạch đầu dòng. Nêu tên vị trí và tên công ty. Không có thông tin liên hệ hoặc ngày tháng.
+{m1}: {style_text} Không dùng gạch đầu dòng. Ba phần rõ ràng: 1) tại sao lại là công việc NÀY — nhắc đến điều cụ thể từ chính tin tuyển dụng; 2) tại sao ứng viên phù hợp — 2–3 ví dụ cụ thể khớp với nhiệm vụ/yêu cầu thực tế trong tin; 3) động lực cá nhân/điều ứng viên mang lại — ngắn gọn, chân thật, không dùng tính từ sáo rỗng. Không có thông tin liên hệ hoặc ngày tháng.
 {m2}: Văn bản thuần (thân thiện với ATS), không markdown, không bảng. Các mục theo thứ tự: NĂNG LỰC NỔI BẬT / TÓM TẮT BẢN THÂN / KỸ NĂNG CHUYÊN MÔN / KINH NGHIỆM LÀM VIỆC / HỌC VẤN / NGOẠI NGỮ / NGƯỜI THAM CHIẾU. NĂNG LỰC NỔI BẬT: 3–4 gạch đầu dòng (•) ngắn gọn — năng lực cốt lõi, một điểm khác biệt, một gợi ý về phong cách làm việc; xác định 3–5 từ khóa/cụm từ nhà tuyển dụng dùng trong tin tuyển dụng và sử dụng chúng khi thực sự phù hợp; dựa trên điểm mạnh nhất/thế mạnh của ứng viên từ thông tin nền ở trên; không lặp lại nguyên văn TÓM TẮT BẢN THÂN. TÓM TẮT BẢN THÂN: 3–5 câu cụ thể. KỸ NĂNG CHUYÊN MÔN: 8–12 gạch đầu dòng (•); dịch mọi kỹ năng sang tiếng Việt (ví dụ "journalføring" → "ghi chép hồ sơ lâm sàng") — không để sót từ tiếng Na Uy hay tiếng Anh nào. KINH NGHIỆM LÀM VIỆC: chỉ những vị trí có thật trong dữ liệu Candidate, 2–5 gạch đầu dòng mỗi vị trí, phân biệt Nhiệm vụ (công việc bao gồm những gì) và Kết quả (con số/cải tiến/quy mô cụ thể đạt được) — ít nhất 1–2 gạch đầu dòng mỗi vị trí phải ưu tiên Kết quả khi dữ liệu có căn cứ, nếu không thì viết gạch đầu dòng về nhiệm vụ thay thế; dịch chức danh sang tiếng Việt tự nhiên (ví dụ "Butikkmedarbeider" → "Nhân viên bán hàng") — không để sót chức danh chưa dịch; giữ nguyên tên thương hiệu/công ty nổi tiếng nhưng dịch tên nhà tuyển dụng khu vực công chung chung (ví dụ "Kristiansand kommune" → "Chính quyền thành phố Kristiansand"). HỌC VẤN: dịch tên bằng cấp/chương trình sang tiếng Việt (ví dụ "Bachelor i sykepleie" → "Cử nhân Điều dưỡng"); dịch tên cơ sở đào tạo nhất quán sang tiếng Việt (ví dụ "Universitetet i Agder" → "Đại học Agder"); dùng CHÍNH XÁC các năm trong dữ liệu; nếu STATUS là PÅGÅENDE viết ví dụ "2023– (đang học)"; nếu STATUS là FULLFØRT chỉ viết các năm (ví dụ "2022–2025"). NGOẠI NGỮ: định dạng "Tên ngôn ngữ (Trình độ)" ví dụ "Tiếng Na Uy (Bản ngữ)".
 {m3}: 3–4 câu, lịch sự, nhắc đến vị trí và công ty. KHÔNG BAO GIỜ đề cập đến trình độ ngôn ngữ trong thư xin việc.""".strip()
     else:
@@ -1031,7 +1042,7 @@ Candidate:
 
 {SHARED_ANTI_HALLUCINATION_RULES}
 
-{m1}: {style_text} Ingen punktlister. Nevn stilling og bedrift med navn. Ingen kontaktinfo eller dato.
+{m1}: {style_text} Ingen punktlister. Tre tydelige deler: 1) hvorfor akkurat DENNE jobben — referer noe konkret fra selve annonseteksten; 2) hvorfor kandidaten passer — 2–3 konkrete eksempler som matcher annonsens faktiske oppgaver/krav; 3) personlig motivasjon/hva kandidaten tilfører — kort, ekte, ikke klisjé-adjektiver. Ingen kontaktinfo eller dato.
 {m2}: Ren tekst (ATS-vennlig), ingen markdown, ingen tabeller. Seksjoner i rekkefølge: Nøkkelkvalifikasjoner / Profesjonell oppsummering / Kjerneferdigheter / Arbeidserfaring / Utdanning / Språk / Referanser. Nøkkelkvalifikasjoner: 3–4 korte punkter (•) — kjernekompetanse, én differensiator, en antydning om arbeidsstil; identifiser 3–5 nøkkelord/fraser arbeidsgiveren bruker i annonsen og bruk dem der de faktisk stemmer; bygg på kandidatens sterkeste side/styrker fra bakgrunnsinfoen over; ikke gjenta Profesjonell oppsummering ordrett. Profesjonell oppsummering: 3–5 konkrete setninger. Kjerneferdigheter: 8–12 punkter (•). Arbeidserfaring: kun roller fra Candidate-data, 2–5 punkter hver, skill mellom Oppgave (hva stillingen innebar) og Resultat (konkrete tall/forbedring/omfang oppnådd) — minst 1–2 punkter per rolle skal prioritere Resultat der data støtter det, ellers skriv et oppgavefokusert punkt. Utdanningsperioder: bruk NØYAKTIGE årstall fra dataen; hvis STATUS er PÅGÅENDE skriv f.eks. "2023– (pågående)"; hvis STATUS er FULLFØRT skriv kun årstallene (f.eks. "2022–2025"). Språk: skriv som "Språknavn (Nivå)" f.eks. "Norsk (Morsmål)".
 {m3}: 3–4 setninger, høflig, referer til stilling og bedrift. Nevn ALDRI språknivå i søknadsbrevet.""".strip()
 
