@@ -51,6 +51,11 @@ export default function useJobAnalysis({
   const [generationBanner, setGenerationBanner] = useState('');
   const generationLockRef = useRef(false);
 
+  // "Rediger CV" — editing the already-generated cv/coverLetter text and
+  // regenerating the PDF from the edited wording (no AI call).
+  const [isEditingText, setIsEditingText] = useState(false);
+  const [savingEditedText, setSavingEditedText] = useState(false);
+
   const [applications, setApplications] = useState([]);
   const [applicationsLoading, setApplicationsLoading] = useState(false);
   const [statsMe, setStatsMe] = useState(null);
@@ -703,6 +708,44 @@ export default function useJobAnalysis({
     }
   }
 
+  // Save user-edited cv/coverLetter text and regenerate the PDF from it,
+  // without a new AI call (backend skips generation when `edited` is sent).
+  async function saveEditedTexts(editedCv, editedLetter) {
+    if (!analysis?.job_id || !applicationPackage) return;
+    if (generationLockRef.current || isGenerating) return;
+
+    generationLockRef.current = true;
+    setSavingEditedText(true);
+    setIsGenerating(true);
+
+    const includePhoto = !!profilePhotoData && !!includePhotoInPdf;
+    try {
+      const pkg = await apiFetch(
+        `/job-analyses/${analysis.job_id}/generate-tailored-cv?profile_id=${profileId}&application_style=${encodeURIComponent(applicationStyle)}&include_photo=${includePhoto}&language=${cvLanguage}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cv: editedCv, coverLetter: editedLetter }),
+        },
+      );
+      if (pkg && typeof pkg.cv === 'string') {
+        setApplicationPackage({
+          cv: pkg.cv || applicationPackage.cv,
+          coverLetter: pkg.coverLetter || applicationPackage.coverLetter,
+          pdfUrl: typeof pkg.pdfUrl === 'string' ? pkg.pdfUrl : '',
+        });
+        setIsEditingText(false);
+      }
+    } catch (e) {
+      console.error('[Assistant] saveEditedTexts failed', e);
+      setGenerationBanner(uiLanguage === 'en' ? 'Could not save changes, try again.' : 'Kunne ikke lagre endringene, prøv igjen.');
+    } finally {
+      setSavingEditedText(false);
+      setIsGenerating(false);
+      generationLockRef.current = false;
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // CV template picker (popup shown before generation)
   // ---------------------------------------------------------------------------
@@ -878,6 +921,8 @@ export default function useJobAnalysis({
     isGenerating,
     generationBanner, setGenerationBanner,
     generationLockRef,
+    isEditingText, setIsEditingText,
+    savingEditedText,
 
     // Applications / documents
     applications, setApplications,
@@ -896,6 +941,7 @@ export default function useJobAnalysis({
     sendApplication,
     generatePdf,
     regeneratePdfWithTemplate,
+    saveEditedTexts,
     openTemplatePicker,
     closeTemplatePicker,
     confirmTemplateAndGenerate,

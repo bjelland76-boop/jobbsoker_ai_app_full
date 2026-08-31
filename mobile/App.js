@@ -157,6 +157,8 @@ function AppContent() {
     isGenerating,
     generationBanner, setGenerationBanner,
     generationLockRef,
+    isEditingText, setIsEditingText,
+    savingEditedText,
     applications, setApplications,
     applicationsLoading,
     statsMe, setStatsMe,
@@ -171,6 +173,7 @@ function AppContent() {
     sendApplication,
     generatePdf,
     regeneratePdfWithTemplate,
+    saveEditedTexts,
     openTemplatePicker,
     closeTemplatePicker,
     confirmTemplateAndGenerate,
@@ -1013,6 +1016,8 @@ function AppContent() {
             openTemplatePicker={openTemplatePicker}
             closeTemplatePicker={closeTemplatePicker}
             confirmTemplateAndGenerate={confirmTemplateAndGenerate}
+            isEditingText={isEditingText} setIsEditingText={setIsEditingText}
+            savingEditedText={savingEditedText} saveEditedTexts={saveEditedTexts}
           />}
           {activeTab === 'new' && <NewJobScreen
             jobUrl={jobUrl} setJobUrl={setJobUrl}

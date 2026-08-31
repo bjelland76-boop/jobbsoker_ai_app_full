@@ -19,6 +19,7 @@ from urllib.parse import quote
 
 from fastapi import (
     BackgroundTasks,
+    Body,
     Depends,
     FastAPI,
     File,
@@ -643,6 +644,14 @@ class ProgressIn(BaseModel):
     applied: bool | None = None
     interviewed: bool | None = None
     got_job: bool | None = None
+
+
+class EditedTextIn(BaseModel):
+    """User-edited CV/cover-letter text, submitted to skip the AI call and
+    render straight from the edited wording (see generate_tailored_cv())."""
+
+    cv: str | None = None
+    coverLetter: str | None = None
 
 
 class RegisterIn(BaseModel):
@@ -2219,6 +2228,7 @@ def generate_tailored_cv(
     include_photo: bool = Query(default=True),
     template: str = Query(default=""),  # "kreativ"|"profesjonell"|"klassisk"|"moderne"|"skandinavisk"|"vietnamesisk"; empty = use stored cv_mal
     language: str = Query(default="no"),  # "no" | "en" | "vi"
+    edited: EditedTextIn | None = Body(default=None),
     current_user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
@@ -2227,6 +2237,12 @@ def generate_tailored_cv(
     If `template` is provided AND the CV texts are already stored for the requested
     language, skip the Claude call and only regenerate the PDF with the new visual template.
     Norwegian, English and Vietnamese variants are cached separately.
+
+    If `edited` is provided (user-edited text from the "Rediger CV" flow), skip the
+    Claude call entirely, use the edited wording as-is, persist it back into the
+    cached analysis (overwriting the previous text for this language), and render
+    the PDF from it. A field left out of `edited` falls back to the stored text, so
+    the caller can edit only the cover letter or only the CV.
     """
     from .job_analyzer import generate_application_texts, fetch_job_text
 
@@ -2277,7 +2293,14 @@ def generate_tailored_cv(
     stored_cv = _to_text(stored.get(cv_key))
     stored_letter = _to_text(stored.get(letter_key))
     stored_email = _to_text(stored.get(email_key))
-    skip_claude = bool(template_norm) and bool(stored_cv) and bool(stored_letter)
+
+    edited_cv = (edited.cv if edited and edited.cv is not None and edited.cv.strip() else None)
+    edited_letter = (
+        edited.coverLetter if edited and edited.coverLetter is not None and edited.coverLetter.strip() else None
+    )
+    has_edit = bool(edited_cv or edited_letter)
+
+    skip_claude = has_edit or (bool(template_norm) and bool(stored_cv) and bool(stored_letter))
 
     if not skip_claude:
         if current_user is not None:
@@ -2288,9 +2311,13 @@ def generate_tailored_cv(
             return blocked
 
     if skip_claude:
-        cover_letter = stored_letter
-        tailored_cv = stored_cv
+        cover_letter = edited_letter or stored_letter
+        tailored_cv = edited_cv or stored_cv
         email_text_val = stored_email
+        if has_edit:
+            # Overwrite in place, matching the template-switch caching pattern.
+            stored[cv_key] = tailored_cv
+            stored[letter_key] = cover_letter
     else:
         match_context = {
             "score": stored.get("match_score"),

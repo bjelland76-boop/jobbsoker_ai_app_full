@@ -25,6 +25,7 @@ export default function AnalysisScreen({
   openSavedAnalysis, moveAnalysisToApplications,
   regeneratePdfWithTemplate, openDocument,
   templatePickerVisible, openTemplatePicker, closeTemplatePicker, confirmTemplateAndGenerate,
+  isEditingText, setIsEditingText, savingEditedText, saveEditedTexts,
   // profile state
   profilePhotoData,
 }) {
@@ -51,6 +52,23 @@ export default function AnalysisScreen({
     : t('home.match_weak');
 
   const strengths = Array.isArray(analysis?.strengths) ? analysis.strengths : [];
+
+  const [draftCv, setDraftCv] = React.useState('');
+  const [draftLetter, setDraftLetter] = React.useState('');
+
+  function startEditingText() {
+    setDraftCv(applicationPackage?.cv || '');
+    setDraftLetter(applicationPackage?.coverLetter || '');
+    setIsEditingText(true);
+  }
+
+  function cancelEditingText() {
+    setIsEditingText(false);
+  }
+
+  function confirmSaveEditedText() {
+    saveEditedTexts(draftCv, draftLetter);
+  }
 
   return (
     <View style={styles.aerligHomeWrap}>
@@ -493,26 +511,73 @@ export default function AnalysisScreen({
                   </TouchableOpacity>
                 ) : null}
 
-                {(typeof applicationPackage?.coverLetter === 'string' && applicationPackage.coverLetter.trim()) ? (
+                {(
+                  (typeof applicationPackage?.coverLetter === 'string' && applicationPackage.coverLetter.trim())
+                  || (typeof applicationPackage?.cv === 'string' && applicationPackage.cv.trim())
+                ) ? (
+                  <TouchableOpacity
+                    style={[styles.aerligSecondaryButton, { marginTop: 10 }]}
+                    disabled={isGenerating}
+                    onPress={() => (isEditingText ? cancelEditingText() : startEditingText())}
+                  >
+                    <Text style={styles.aerligSecondaryButtonText}>
+                      {isEditingText ? t('common.cancel') : t('common.edit')}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+
+                {isEditingText ? (
                   <>
                     <Text style={styles.aerligCardSectionTitle}>{t('analysis.section_cover_letter')}</Text>
-                    <Text style={styles.aerligCardBody}>{applicationPackage.coverLetter}</Text>
-                  </>
-                ) : null}
+                    <TextInput
+                      style={[styles.input, styles.aerligInput, styles.textArea, { minHeight: 140 }]}
+                      value={draftLetter}
+                      onChangeText={setDraftLetter}
+                      multiline
+                    />
 
-                {(typeof applicationPackage?.cv === 'string' && applicationPackage.cv.trim()) ? (
+                    <Text style={[styles.aerligCardSectionTitle, { marginTop: 12 }]}>{t('analysis.section_cv')}</Text>
+                    <TextInput
+                      style={[styles.input, styles.aerligInput, styles.textArea, { minHeight: 240 }]}
+                      value={draftCv}
+                      onChangeText={setDraftCv}
+                      multiline
+                    />
+
+                    <TouchableOpacity
+                      style={[styles.aerligPrimaryButton, { marginTop: 10 }]}
+                      disabled={savingEditedText}
+                      onPress={confirmSaveEditedText}
+                    >
+                      <Text style={styles.aerligPrimaryButtonText}>
+                        {savingEditedText ? t('common.saving') : t('common.save')}
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
                   <>
-                    <Text style={styles.aerligCardSectionTitle}>{t('analysis.section_cv')}</Text>
-                    <Text style={styles.aerligCardBody}>{applicationPackage.cv}</Text>
-                  </>
-                ) : null}
+                    {(typeof applicationPackage?.coverLetter === 'string' && applicationPackage.coverLetter.trim()) ? (
+                      <>
+                        <Text style={styles.aerligCardSectionTitle}>{t('analysis.section_cover_letter')}</Text>
+                        <Text style={styles.aerligCardBody}>{applicationPackage.coverLetter}</Text>
+                      </>
+                    ) : null}
 
-                {(
-                  (!applicationPackage?.coverLetter || !String(applicationPackage.coverLetter).trim())
-                  && (!applicationPackage?.cv || !String(applicationPackage.cv).trim())
-                ) ? (
-                  <Text style={[styles.helpText, styles.aerligHelpText, { marginTop: 6 }]}>{t('analysis.no_text')}</Text>
-                ) : null}
+                    {(typeof applicationPackage?.cv === 'string' && applicationPackage.cv.trim()) ? (
+                      <>
+                        <Text style={styles.aerligCardSectionTitle}>{t('analysis.section_cv')}</Text>
+                        <Text style={styles.aerligCardBody}>{applicationPackage.cv}</Text>
+                      </>
+                    ) : null}
+
+                    {(
+                      (!applicationPackage?.coverLetter || !String(applicationPackage.coverLetter).trim())
+                      && (!applicationPackage?.cv || !String(applicationPackage.cv).trim())
+                    ) ? (
+                      <Text style={[styles.helpText, styles.aerligHelpText, { marginTop: 6 }]}>{t('analysis.no_text')}</Text>
+                    ) : null}
+                  </>
+                )}
               </View>
             ) : null}
           </View>
