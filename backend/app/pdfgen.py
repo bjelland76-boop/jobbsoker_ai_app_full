@@ -223,6 +223,7 @@ _YEAR_ONLY_RE = re.compile(
 
 
 CV_SECTION_TITLES: list[str] = [
+    "Nøkkelkvalifikasjoner",
     "Profesjonell oppsummering",
     "Kjerneferdigheter",
     "Arbeidserfaring",
@@ -231,6 +232,7 @@ CV_SECTION_TITLES: list[str] = [
     "Språk",
     "Referanser",
     # English equivalents
+    "Key Qualifications",
     "Professional Summary",
     "Core Skills",
     "Work Experience",
@@ -243,6 +245,7 @@ CV_SECTION_TITLES: list[str] = [
     # stream_application_texts() actually generates -- otherwise
     # _draw_cv_text() finds no recognized heading and falls back to
     # unstyled paragraph rendering for the whole CV).
+    "NĂNG LỰC NỔI BẬT",
     "TÓM TẮT BẢN THÂN",
     "KỸ NĂNG CHUYÊN MÔN",
     "KINH NGHIỆM LÀM VIỆC",
@@ -263,9 +266,9 @@ _SEC_EXPERIENCE = {
     "kinh nghiệm làm việc", "học vấn",
 }
 _SEC_BULLETS = {
-    "kjerneferdigheter", "språk", "sertifiseringer", "referanser",
-    "core skills", "languages", "certifications", "references",
-    "kỹ năng chuyên môn", "ngoại ngữ", "chứng chỉ", "người tham chiếu",
+    "nøkkelkvalifikasjoner", "kjerneferdigheter", "språk", "sertifiseringer", "referanser",
+    "key qualifications", "core skills", "languages", "certifications", "references",
+    "năng lực nổi bật", "kỹ năng chuyên môn", "ngoại ngữ", "chứng chỉ", "người tham chiếu",
 }
 
 
