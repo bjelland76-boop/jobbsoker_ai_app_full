@@ -561,7 +561,7 @@ Professional Summary (important):
   4) documented results / improvements (use Evidence points first)
   5) systems, process improvements, efficiency, logistics
   6) leadership / special responsibilities (if stated)
-- Avoid generic phrases like "motivated", "team player", "positive attitude" unless followed by a concrete example from Candidate data.
+- Anti-cliché rule (applies to Key Qualifications, Professional Summary AND the cover letter above): avoid these words/phrases unless immediately followed by a concrete example from Candidate data — "motivated", "team player", "hardworking", "passionate", "detail-oriented", "results-driven", "self-starter", "dynamic", "proactive", "excellent communication skills", "go-getter", "quick learner". A bare adjective with no evidence is not allowed.
 
 Core Skills:
 - 8–12 bullet points (•), primarily technical/concrete skills and systems.
@@ -674,7 +674,7 @@ TÓM TẮT BẢN THÂN (quan trọng):
   4) kết quả/cải tiến đã được ghi nhận (ưu tiên dùng các điểm trong "Evidence")
   5) cải tiến hệ thống, quy trình, hiệu quả, hậu cần
   6) lãnh đạo/trách nhiệm đặc biệt (nếu có nêu)
-- Tránh các cụm từ chung chung như "nhiệt tình", "làm việc nhóm tốt", "thái độ tích cực" trừ khi đi kèm ví dụ cụ thể từ dữ liệu Candidate.
+- Quy tắc chống sáo rỗng (áp dụng cho NĂNG LỰC NỔI BẬT, TÓM TẮT BẢN THÂN VÀ thư xin việc ở trên): tránh các từ/cụm từ sau trừ khi đi kèm ngay ví dụ cụ thể từ dữ liệu Candidate — "nhiệt tình", "chăm chỉ", "cầu tiến", "có trách nhiệm cao", "năng động", "hòa đồng", "sáng tạo", "làm việc nhóm tốt", "chịu được áp lực cao", "tinh thần học hỏi cao", "nhiệt huyết", "tận tâm". Một tính từ trần trụi không có bằng chứng đi kèm là không được phép.
 
 KỸ NĂNG CHUYÊN MÔN:
 - 8–12 gạch đầu dòng (•), chủ yếu là kỹ năng/hệ thống chuyên môn cụ thể.
@@ -761,7 +761,7 @@ Profesjonell oppsummering (viktig):
   4) dokumenterte resultater / forbedringer (bruk "Evidence"-punktene først)
   5) systemforbedringer, prosessforbedringer, svinn/effektivitet, logistikk/lagerstyring
   6) ledelse/spesialansvar (hvis oppgitt)
-- Unngå generiske uttrykk som "engasjert", "serviceinnstilt", "motivert", "positiv", "gode samarbeidsevner" med mindre du følger opp med et konkret eksempel fra Candidate-data.
+- Anti-klisjé-regel (gjelder Profesjonell oppsummering, Nøkkelkvalifikasjoner OG søknadsbrevet over): unngå disse ordene/frasene med mindre de umiddelbart følges av et konkret eksempel fra Candidate-data — "engasjert", "serviceinnstilt", "motivert", "positiv", "gode samarbeidsevner", "strukturert", "løsningsorientert", "fleksibel", "ansvarsfull", "nøyaktig", "initiativrik", "utadvendt", "lærevillig", "resultatorientert", "høy arbeidsmoral". Et bart adjektiv uten belegg er ikke tillatt.
 - Hvis Candidate-data inneholder konkrete prestasjoner (tall, forbedringer, systemer), bruk disse før generiske beskrivelser.
 
 Kjerneferdigheter:
@@ -956,6 +956,7 @@ Candidate:
 - {style_text}
 - Use keywords from the job ad in the CV where the candidate genuinely has relevant experience.
 - NEVER output match score, match metadata or background analysis in the CV or cover letter.
+- Anti-cliché rule (applies to Key Qualifications, Professional Summary AND the cover letter): avoid these words/phrases unless immediately followed by a concrete example from Candidate data — "motivated", "team player", "hardworking", "passionate", "detail-oriented", "results-driven", "self-starter", "dynamic", "proactive", "excellent communication skills", "go-getter", "quick learner". A bare adjective with no evidence is not allowed.
 
 {SHARED_ANTI_HALLUCINATION_RULES_EN}
 
@@ -1006,6 +1007,7 @@ Candidate:
 - Sử dụng từ khóa từ tin tuyển dụng trong CV ở những nơi ứng viên thực sự có kinh nghiệm liên quan.
 - KHÔNG BAO GIỜ xuất ra điểm phù hợp, siêu dữ liệu phân tích hoặc thông tin nền trong CV hay thư xin việc.
 - KHÔNG đưa thông tin cá nhân (ngày sinh, chiều cao, tình trạng hôn nhân, giới tính, quốc tịch, nghĩa vụ quân sự) vào phần CV — những thông tin này đã được hiển thị riêng ở phần đầu CV.
+- Quy tắc chống sáo rỗng (áp dụng cho NĂNG LỰC NỔI BẬT, TÓM TẮT BẢN THÂN VÀ thư xin việc): tránh các từ/cụm từ sau trừ khi đi kèm ngay ví dụ cụ thể từ dữ liệu Candidate — "nhiệt tình", "chăm chỉ", "cầu tiến", "có trách nhiệm cao", "năng động", "hòa đồng", "sáng tạo", "làm việc nhóm tốt", "chịu được áp lực cao", "tinh thần học hỏi cao", "nhiệt huyết", "tận tâm". Một tính từ trần trụi không có bằng chứng đi kèm là không được phép.
 
 {_anti_halluc_vi}
 
@@ -1039,6 +1041,7 @@ Candidate:
 - {style_text}
 - Bruk nøkkelord fra stillingsannonsen i CV-en der kandidaten faktisk har relevant erfaring.
 - ALDRI skriv ut matchprosent, analysemetadata eller bakgrunnsinformasjon i CV eller søknadsbrev.
+- Anti-klisjé-regel (gjelder Nøkkelkvalifikasjoner, Profesjonell oppsummering OG søknadsbrevet): unngå disse ordene/frasene med mindre de umiddelbart følges av et konkret eksempel fra Candidate-data — "engasjert", "serviceinnstilt", "motivert", "positiv", "gode samarbeidsevner", "strukturert", "løsningsorientert", "fleksibel", "ansvarsfull", "nøyaktig", "initiativrik", "utadvendt", "lærevillig", "resultatorientert", "høy arbeidsmoral". Et bart adjektiv uten belegg er ikke tillatt.
 
 {SHARED_ANTI_HALLUCINATION_RULES}
 
