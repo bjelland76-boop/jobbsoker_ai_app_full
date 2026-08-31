@@ -794,7 +794,12 @@ cover_letter:
         system="Return ONLY JSON. Be concise.",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.25,
-        max_tokens=2200,
+        # Raised from 2200: the Key Qualifications section (Del 1) and the
+        # task/result work-experience split (Del 2) add real output length,
+        # and Vietnamese needs noticeably more tokens per word than en/no.
+        # At 2200 this truncated mid-JSON-string for vi (JSONDecodeError),
+        # returning a 500 to the client.
+        max_tokens=3500,
     )
 
     raw = res.content[0].text.strip()
@@ -1062,7 +1067,10 @@ Candidate:
             else "Du er en profesjonell jobbsøknad-assistent. Skriv kun de forespurte seksjonene."
         ),
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=2500,
+        # Raised from 2500 for the same reason as generate_application_texts()'s
+        # max_tokens: Del 1/2/3 add real output length, and Vietnamese needs
+        # more tokens per word than en/no.
+        max_tokens=3500,
         temperature=0.25,
     ) as stream:
         for text_chunk in stream.text_stream:
