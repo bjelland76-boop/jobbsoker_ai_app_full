@@ -1119,6 +1119,13 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.2,
   },
+  cardElevated: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
   aerligQuickRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1126,10 +1133,11 @@ export const styles = StyleSheet.create({
   },
   aerligQuickButton: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    flexDirection: 'row',
+    backgroundColor: '#FFF5F0',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(26, 26, 46, 0.14)',
+    borderColor: '#F0997B',
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1137,7 +1145,7 @@ export const styles = StyleSheet.create({
   aerligQuickButtonText: {
     fontSize: 13,
     fontWeight: '900',
-    color: '#1A1A2E',
+    color: '#993C1D',
   },
   aerligSecondaryButton: {
     marginTop: 12,

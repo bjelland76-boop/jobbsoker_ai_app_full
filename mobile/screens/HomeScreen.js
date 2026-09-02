@@ -2,6 +2,7 @@ import React from 'react';
 import {
   View, Text, TouchableOpacity, Pressable, Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useApp, apiFetch } from '../context/AppContext';
 import { styles } from '../styles/styles';
 
@@ -218,23 +219,25 @@ export default function HomeScreen({
           {dynamicMessage}
         </Text>
 
-        <TouchableOpacity style={styles.aerligPrimaryButton} onPress={() => setActiveTab('new')}>
+        <TouchableOpacity style={[styles.aerligPrimaryButton, styles.cardElevated]} onPress={() => setActiveTab('new')}>
           <Text style={styles.aerligPrimaryButtonText}>{t('home.analyze_job')}</Text>
         </TouchableOpacity>
 
         <View style={styles.aerligQuickRow}>
           <Pressable
             {...ripple}
-            style={[styles.aerligQuickButton, { marginRight: 10 }]}
+            style={[styles.aerligQuickButton, styles.cardElevated, { marginRight: 10 }]}
             onPress={() => setActiveTab('cv')}
           >
+            <Ionicons name="document-text-outline" size={16} color="#993C1D" style={{ marginRight: 6 }} />
             <Text style={styles.aerligQuickButtonText}>{t('home.analyze_cv')}</Text>
           </Pressable>
           <Pressable
             {...ripple}
-            style={styles.aerligQuickButton}
+            style={[styles.aerligQuickButton, styles.cardElevated]}
             onPress={() => setActiveTab('interview')}
           >
+            <Ionicons name="mic-outline" size={16} color="#993C1D" style={{ marginRight: 6 }} />
             <Text style={styles.aerligQuickButtonText}>{t('home.interview_practice')}</Text>
           </Pressable>
         </View>
@@ -243,7 +246,7 @@ export default function HomeScreen({
       {hasAnyAnalysis ? (
         <Pressable
           {...ripple}
-          style={styles.aerligCard}
+          style={[styles.aerligCard, styles.cardElevated]}
           onPress={() => {
             if (latestJobId) {
               openSavedAnalysis(latestJobId, latestUrl);
@@ -293,13 +296,13 @@ export default function HomeScreen({
           <Text style={styles.aerligCardLink}>{t('home.open_analysis')}</Text>
         </Pressable>
       ) : (
-        <View style={[styles.aerligCard, styles.aerligEmptyCard, { alignItems: 'center', paddingVertical: 28 }]}>
+        <View style={[styles.aerligCard, styles.aerligEmptyCard, styles.cardElevated, { alignItems: 'center', paddingVertical: 28 }]}>
           <Text style={{ fontSize: 36, marginBottom: 12 }}>🔍</Text>
           <Text style={{ fontSize: 16, fontWeight: '600', color: '#1a1a1a', marginBottom: 6, textAlign: 'center' }}>{t('home.no_analysis_title')}</Text>
           <Text style={{ fontSize: 14, color: '#888888', textAlign: 'center', lineHeight: 20, marginBottom: 16 }}>
             {t('home.no_analysis_body')}
           </Text>
-          <TouchableOpacity style={[styles.aerligPrimaryButton, { paddingHorizontal: 24 }]} onPress={() => setActiveTab('new')}>
+          <TouchableOpacity style={[styles.aerligPrimaryButton, styles.cardElevated, { paddingHorizontal: 24 }]} onPress={() => setActiveTab('new')}>
             <Text style={styles.aerligPrimaryButtonText}>{t('home.analyze_job')}</Text>
           </TouchableOpacity>
         </View>
@@ -308,7 +311,7 @@ export default function HomeScreen({
       <View style={styles.aerligGrid}>
         <Pressable
           {...ripple}
-          style={styles.aerligMiniCard}
+          style={[styles.aerligMiniCard, styles.cardElevated]}
           onPress={() => setActiveTab('analysis')}
         >
           <Text style={styles.aerligMiniLabel}>{t('home.analyzed_jobs')}</Text>
@@ -318,7 +321,7 @@ export default function HomeScreen({
 
         <Pressable
           {...ripple}
-          style={styles.aerligMiniCard}
+          style={[styles.aerligMiniCard, styles.cardElevated]}
           onPress={() => setActiveTab('applications')}
         >
           <Text style={styles.aerligMiniLabel}>{t('home.sent_applications')}</Text>
@@ -338,7 +341,7 @@ export default function HomeScreen({
 
         <Pressable
           {...ripple}
-          style={[styles.aerligMiniCard, styles.aerligMiniCardFull]}
+          style={[styles.aerligMiniCard, styles.aerligMiniCardFull, styles.cardElevated]}
           onPress={() => setActiveTab('profile')}
         >
           <Text style={styles.aerligMiniLabel}>{t('home.profile_status')}</Text>
