@@ -664,6 +664,46 @@ function AppContent() {
     },
   ];
 
+  // Always Vietnamese, regardless of uiLanguage -- targeted content for the
+  // Vietnamese jobseeker community, not translated UI copy. Deliberately a
+  // separate fixed-language array (not run through t()), rendered as its own
+  // accordion block in renderFaq() with its own open-state (vnFaqOpenIndex)
+  // so it doesn't interfere with the general FAQ above it.
+  const FAQ_ITEMS_VI_MARKET = [
+    {
+      q: 'Ærlig giúp gì cho quá trình tìm việc tại Na Uy?',
+      a: 'Ærlig đồng hành với bạn từ đầu đến cuối: điền hồ sơ cá nhân, dán link tin tuyển dụng (ví dụ từ FINN.no), ứng dụng sẽ phân tích mức độ phù hợp, sau đó tạo CV và đơn xin việc riêng cho đúng công việc đó, và cuối cùng bạn có thể luyện phỏng vấn trước khi đi phỏng vấn thật.',
+    },
+    {
+      q: 'Làm sao để có CV và bản phân tích chất lượng nhất?',
+      a: 'Hãy dành thời gian điền đầy đủ hồ sơ trong mục Profil — nhất là kinh nghiệm làm việc, học vấn và kỹ năng. Hồ sơ càng chi tiết, CV và đơn xin việc do AI tạo ra càng chính xác và thuyết phục.',
+    },
+    {
+      q: 'CV theo mẫu Việt Nam khác gì so với CV thông thường trong app?',
+      a: 'Ở Việt Nam, CV thường có thêm ảnh, ngày sinh, chiều cao, tình trạng hôn nhân và tình trạng nghĩa vụ quân sự — những thông tin này không phổ biến trong CV ở Na Uy. Vào mục Profil, bạn sẽ thấy thẻ "CV tiếng Việt" nơi có thể điền thêm các thông tin này. Hoàn toàn tùy chọn, chỉ dùng khi bạn chọn tạo CV theo mẫu tiếng Việt.',
+    },
+    {
+      q: 'Tôi có cần tạo tài khoản mới dùng thử được không?',
+      a: 'Không cần. Bạn có thể phân tích tin tuyển dụng, phân tích CV và tạo CV miễn phí ngay — tổng cộng 6 lượt dùng thử mà không cần đăng nhập. Khi muốn gửi đơn xin việc qua email hoặc luyện phỏng vấn, bạn cần một tài khoản miễn phí (chỉ cần email, không cần mật khẩu) để lưu lại tiến trình của mình.',
+    },
+    {
+      q: 'Sau khi hết lượt miễn phí thì sao? Giá bao nhiêu?',
+      a: 'Sau khi đăng nhập, bạn có thêm 3 lượt miễn phí cho mỗi tính năng (phân tích tin, phân tích CV, tạo CV, luyện phỏng vấn). Muốn dùng không giới hạn, bạn có thể chọn gói 7 ngày không giới hạn (30.000₫) hoặc gói hàng tháng (60.000₫/tháng, hủy bất cứ lúc nào). Thanh toán an toàn qua Stripe hoặc Google Play.',
+    },
+    {
+      q: 'Ứng dụng có tạo CV và đơn xin việc bằng tiếng Việt không?',
+      a: 'Có. Khi tạo CV và đơn xin việc, bạn chọn ngôn ngữ tiếng Việt hoặc tiếng Na Uy/tiếng Anh — toàn bộ nội dung sẽ được viết bằng ngôn ngữ bạn chọn.',
+    },
+    {
+      q: 'Phần luyện phỏng vấn có bằng tiếng Việt không?',
+      a: 'Hiện tại phần luyện phỏng vấn phản hồi bằng tiếng Na Uy — vì hầu hết các buổi phỏng vấn thực tế ở Na Uy cũng diễn ra bằng tiếng Na Uy, đây là cơ hội tốt để bạn luyện nghe và phản xạ. Bạn có thể trả lời bằng cách gõ chữ hoặc nói qua micro.',
+    },
+    {
+      q: 'Thông tin cá nhân của tôi có an toàn không? Lưu ở đâu?',
+      a: 'Hồ sơ, CV, các bản phân tích và câu trả lời phỏng vấn của bạn được lưu trữ an toàn và chỉ dùng để tạo tài liệu và phản hồi cho riêng bạn. Chúng tôi không bán hay dùng dữ liệu của bạn cho quảng cáo. Bạn có thể xóa tài khoản và toàn bộ dữ liệu bất cứ lúc nào trong mục Profil → Cài đặt.',
+    },
+  ];
+  const [vnFaqOpenIndex, setVnFaqOpenIndex] = useState(-1);
 
   const renderFaq = () => (
     <View style={{
@@ -694,7 +734,7 @@ function AppContent() {
             <Text style={{ fontSize: 17, fontWeight: '700', color: '#1A1A2E' }}>Hjelp & FAQ</Text>
           </View>
           <TouchableOpacity
-            onPress={() => { setShowFaq(false); setFaqOpenIndex(-1); }}
+            onPress={() => { setShowFaq(false); setFaqOpenIndex(-1); setVnFaqOpenIndex(-1); }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Text style={{ fontSize: 18, color: '#9CA3AF', fontWeight: '400' }}>✕</Text>
@@ -726,6 +766,43 @@ function AppContent() {
                 </Text>
               </View>
               {faqOpenIndex === i && (
+                <Text style={{ fontSize: 13, color: '#6B7280', lineHeight: 20.8, marginTop: 10, fontWeight: '400' }}>
+                  {item.a}
+                </Text>
+              )}
+            </TouchableOpacity>
+          ))}
+
+          {/* Vietnamese-market FAQ — always Vietnamese, regardless of uiLanguage. */}
+          <Text style={{
+            fontSize: 15, fontWeight: '700', color: '#1A1A2E',
+            marginTop: 18, marginBottom: 10,
+          }}>
+            🇻🇳 Câu hỏi thường gặp (dành cho người Việt)
+          </Text>
+          {FAQ_ITEMS_VI_MARKET.map((item, i) => (
+            <TouchableOpacity
+              key={`vi-${i}`}
+              activeOpacity={0.7}
+              onPress={() => setVnFaqOpenIndex(vnFaqOpenIndex === i ? -1 : i)}
+              style={{
+                backgroundColor: '#FAFAF9',
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: '#EEEBE5',
+                padding: 14,
+                marginBottom: 8,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+                <Text style={{ flex: 1, fontSize: 14, fontWeight: '500', color: '#1A1A2E', lineHeight: 20 }}>
+                  {item.q}
+                </Text>
+                <Text style={{ color: '#E8501A', fontSize: 12, marginTop: 3, fontWeight: '600' }}>
+                  {vnFaqOpenIndex === i ? '▲' : '▼'}
+                </Text>
+              </View>
+              {vnFaqOpenIndex === i && (
                 <Text style={{ fontSize: 13, color: '#6B7280', lineHeight: 20.8, marginTop: 10, fontWeight: '400' }}>
                   {item.a}
                 </Text>
