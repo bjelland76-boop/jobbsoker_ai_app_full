@@ -33,7 +33,7 @@ from fastapi import (
     status,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response, StreamingResponse
 from google.auth.transport import requests as google_auth_requests
 from google.oauth2 import id_token as google_id_token
 from google.oauth2 import service_account as google_service_account
@@ -75,6 +75,7 @@ from .pdfgen import (
 )
 from .text_sanitize import sanitize_employer_text
 from .transcribe import suffix_from_mime, transcribe_path, validate_upload
+from .tts import synthesize_speech
 from .schemas import (
     AnalyzeAndSendOut,
     ApplicationItemOut,
@@ -3764,6 +3765,38 @@ async def interview_transcribe_api(
             except Exception:
                 pass
 
+
+@app.post("/interview/speak", tags=["interview"])
+async def interview_speak_api(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+):
+    """Text-to-speech for interview practice questions.
+
+    Frontend calls: POST /interview/speak
+    Body: { text }
+    Response: raw audio bytes, Content-Type audio/mpeg (mp3) -- plays
+    directly via expo-av on the mobile side.
+
+    Deliberately separate from /interview/chat: this only converts a given
+    piece of text to speech, no AI call, no session/history state.
+    """
+
+    _ = current_user  # auth-only: keeps this endpoint gated like the rest of /interview/*
+
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    if not isinstance(payload, dict):
+        payload = {}
+
+    text = str(payload.get("text") or "")
+
+    audio_bytes = synthesize_speech(text)
+
+    return Response(content=audio_bytes, media_type="audio/mpeg")
 
 
 def _calc_stats(rows: list[ApplicationProgress]) -> dict:
