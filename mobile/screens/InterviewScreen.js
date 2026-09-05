@@ -1,6 +1,7 @@
 import React from 'react';
 import { Audio } from 'expo-av';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   ScrollView,
   View,
@@ -12,7 +13,7 @@ import {
 } from 'react-native';
 
 import { INTERVIEW_QUESTIONS } from '../constants/content';
-import { useApp } from '../context/AppContext';
+import { useApp, API } from '../context/AppContext';
 
 const TOTAL_QUESTIONS = 8;
 
@@ -44,11 +45,23 @@ export default function InterviewScreen({
   profileTooEmpty,
   styles,
 }) {
-  const { showPaymentModal } = useApp();
+  const { showPaymentModal, authTokenState } = useApp();
   const scrollRef = React.useRef(null);
   const recordingRef = React.useRef(null);
   const [isRecording, setIsRecording] = React.useState(false);
   const [transcribing, setTranscribing] = React.useState(false);
+
+  // TTS playback (Azure /interview/speak). Only one question's audio can be
+  // active at a time -- ttsPlayingIndex identifies which message index owns
+  // the currently loading/playing sound, ttsStatus its phase. ttsRequestIdRef
+  // guards against a stale fetch/sound-load resolving after the user has
+  // already moved on to a different question (or paused).
+  const ttsSoundRef = React.useRef(null);
+  const ttsObjectUrlRef = React.useRef(null);
+  const ttsRequestIdRef = React.useRef(0);
+  const [ttsPlayingIndex, setTtsPlayingIndex] = React.useState(null);
+  const [ttsStatus, setTtsStatus] = React.useState(null); // 'loading' | 'playing' | null
+  const [ttsErrorIndex, setTtsErrorIndex] = React.useState(null);
 
   React.useEffect(() => {
     return () => {
@@ -56,8 +69,98 @@ export default function InterviewScreen({
         recordingRef.current.stopAndUnloadAsync().catch(() => {});
         recordingRef.current = null;
       }
+      if (ttsSoundRef.current) {
+        ttsSoundRef.current.unloadAsync().catch(() => {});
+        ttsSoundRef.current = null;
+      }
+      if (ttsObjectUrlRef.current) {
+        try { URL.revokeObjectURL(ttsObjectUrlRef.current); } catch (e) { /* ignore */ }
+        ttsObjectUrlRef.current = null;
+      }
     };
   }, []);
+
+  async function stopTts() {
+    ttsRequestIdRef.current += 1; // invalidate any in-flight fetch/load
+    const sound = ttsSoundRef.current;
+    ttsSoundRef.current = null;
+    if (sound) {
+      try {
+        await sound.stopAsync();
+      } catch (e) { /* ignore */ }
+      try {
+        await sound.unloadAsync();
+      } catch (e) { /* ignore */ }
+    }
+    if (ttsObjectUrlRef.current) {
+      try { URL.revokeObjectURL(ttsObjectUrlRef.current); } catch (e) { /* ignore */ }
+      ttsObjectUrlRef.current = null;
+    }
+    setTtsPlayingIndex(null);
+    setTtsStatus(null);
+  }
+
+  async function handleToggleSpeak(idx, questionText) {
+    // Tapping the button for the question that's already active pauses it.
+    if (ttsPlayingIndex === idx && ttsStatus) {
+      await stopTts();
+      return;
+    }
+
+    // Switching questions (or retrying after an error) -- stop/clear first.
+    await stopTts();
+    setTtsErrorIndex(null);
+
+    const cleanText = String(questionText || '').trim();
+    if (!cleanText || isRecording || transcribing) return;
+
+    const requestId = ++ttsRequestIdRef.current;
+    setTtsPlayingIndex(idx);
+    setTtsStatus('loading');
+
+    try {
+      const res = await fetch(`${API}/interview/speak`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authTokenState ? { Authorization: `Bearer ${authTokenState}` } : {}),
+        },
+        body: JSON.stringify({ text: cleanText }),
+      });
+
+      if (!res.ok) throw new Error('tts_http_error');
+
+      const blob = await res.blob();
+      if (requestId !== ttsRequestIdRef.current) return; // superseded
+
+      const objectUrl = URL.createObjectURL(blob);
+      ttsObjectUrlRef.current = objectUrl;
+
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true });
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: objectUrl },
+        { shouldPlay: true },
+        (playbackStatus) => {
+          if (playbackStatus?.didJustFinish) stopTts();
+        }
+      );
+
+      if (requestId !== ttsRequestIdRef.current) {
+        sound.unloadAsync().catch(() => {});
+        URL.revokeObjectURL(objectUrl);
+        return;
+      }
+
+      ttsSoundRef.current = sound;
+      setTtsStatus('playing');
+    } catch (e) {
+      if (requestId === ttsRequestIdRef.current) {
+        setTtsPlayingIndex(null);
+        setTtsStatus(null);
+        setTtsErrorIndex(idx);
+      }
+    }
+  }
 
   // Derived from message history (not local state) so resuming a session
   // saved in the job picker shows the right state immediately on mount.
@@ -263,7 +366,7 @@ export default function InterviewScreen({
     : isRecording
       ? t('interview.recording')
       : t('interview.speak_answer');
-  const micDisabled = interviewLoading || transcribing || isFinal;
+  const micDisabled = interviewLoading || transcribing || isFinal || ttsStatus !== null;
 
   return (
     <KeyboardAvoidingView
@@ -473,6 +576,9 @@ export default function InterviewScreen({
 
             // Normal AI bubble (supports both new {question,feedback,tip} and legacy {content} format)
             const mainText = m.question || m.content || '';
+            const ttsIsLoading = ttsPlayingIndex === idx && ttsStatus === 'loading';
+            const ttsIsPlaying = ttsPlayingIndex === idx && ttsStatus === 'playing';
+            const ttsDisabled = isRecording || transcribing;
             return (
               <View
                 key={idx}
@@ -482,7 +588,33 @@ export default function InterviewScreen({
                   <View style={[styles.aerligChatTag, styles.aerligChatTagAi]}>
                     <Text style={[styles.aerligChatTagText, styles.aerligChatTagTextAi]}>AI</Text>
                   </View>
-                  <Text style={styles.aerligChatMetaRight}>Intervjuer</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    {mainText ? (
+                      <TouchableOpacity
+                        onPress={() => handleToggleSpeak(idx, mainText)}
+                        disabled={ttsDisabled}
+                        accessibilityLabel={ttsIsPlaying ? t('interview.tts_pause') : t('interview.tts_play')}
+                        style={{
+                          width: 26,
+                          height: 26,
+                          borderRadius: 13,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: 'rgba(232, 80, 26, 0.10)',
+                          opacity: ttsDisabled ? 0.35 : 1,
+                        }}
+                      >
+                        {ttsIsLoading ? (
+                          <ActivityIndicator size="small" color="#E8501A" />
+                        ) : (
+                          <Text style={{ color: '#E8501A', fontSize: 12 }}>
+                            {ttsIsPlaying ? '⏸' : '▶'}
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    ) : null}
+                    <Text style={styles.aerligChatMetaRight}>Intervjuer</Text>
+                  </View>
                 </View>
 
                 {m.feedback ? (
@@ -498,6 +630,12 @@ export default function InterviewScreen({
                 {m.tip ? (
                   <Text style={[styles.aerligChatText, { color: '#a1a1aa', fontSize: 12, marginTop: 6 }]}>
                     Tips: {m.tip}
+                  </Text>
+                ) : null}
+
+                {ttsErrorIndex === idx ? (
+                  <Text style={{ color: '#ef4444', fontSize: 12, marginTop: 6 }}>
+                    {t('interview.tts_failed')}
                   </Text>
                 ) : null}
               </View>
