@@ -155,6 +155,19 @@
     color: var(--accent-dark);
     transform: translateY(-1px);
   }
+  .play-badge {
+    display: inline-flex;
+    align-items: center;
+    transition: transform 0.15s ease;
+  }
+  .play-badge:hover {
+    transform: translateY(-1px);
+  }
+  .play-badge img {
+    height: 52px;
+    width: auto;
+    display: block;
+  }
 
   /* SECTIONS */
   section {
@@ -340,6 +353,13 @@
     background: #FBEBE3;
     color: var(--accent-dark);
   }
+  .cta-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
 
   /* FOOTER */
   footer {
@@ -375,6 +395,7 @@
     section { padding: 48px 0; }
     .cta-band { margin: 0 12px; padding: 40px 20px; }
     .price-row { padding: 22px 20px; }
+    .play-badge img { height: 46px; }
   }
 </style>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-6QXCPDB0K"></script>
@@ -401,6 +422,9 @@
     <div class="hero-actions">
       <a class="btn btn-primary" href="https://jobbsoker-ai-app-full-frontend.onrender.com" target="_blank" rel="noopener">Start gratis i dag</a>
       <a class="btn btn-secondary" href="#funksjoner">Se hvordan det fungerer</a>
+      <a class="play-badge" href="https://play.google.com/store/apps/details?id=com.aerlig.app" target="_blank" rel="noopener" aria-label="Last ned Ærlig på Google Play">
+        <img src="google-play-badge-no.png" alt="Last ned på Google Play" width="646" height="250" loading="lazy">
+      </a>
     </div>
   </div>
 </section>
@@ -499,7 +523,12 @@
   <div class="cta-band">
     <h2>Klar til å søke smartere?</h2>
     <p>Start gratis i dag — ingen kredittkort, ingen binding.</p>
-    <a class="btn btn-primary" href="https://jobbsoker-ai-app-full-frontend.onrender.com" target="_blank" rel="noopener">Start gratis i dag</a>
+    <div class="cta-actions">
+      <a class="btn btn-primary" href="https://jobbsoker-ai-app-full-frontend.onrender.com" target="_blank" rel="noopener">Start gratis i dag</a>
+      <a class="play-badge" href="https://play.google.com/store/apps/details?id=com.aerlig.app" target="_blank" rel="noopener" aria-label="Last ned Ærlig på Google Play">
+        <img src="google-play-badge-no.png" alt="Last ned på Google Play" width="646" height="250" loading="lazy">
+      </a>
+    </div>
   </div>
 </section>
 
