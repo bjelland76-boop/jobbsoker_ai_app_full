@@ -59,6 +59,12 @@ class Profile(Base):
     stripe_customer_id: Mapped[str | None] = mapped_column(String(120), nullable=True, default=None)
     last_active_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
 
+    # Service-email opt-out (welcome + day-7 feedback nudge). Not tied to
+    # consent_analytics, which is a separate marketing/analytics consent.
+    email_opt_out: Mapped[bool] = mapped_column(Boolean, default=False)
+    welcome_email_sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
+    feedback_email_sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
+
     # Optional fields used only when generating a Vietnamese CV.
     birth_date: Mapped[str] = mapped_column(String(20), default="")
     height_cm: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)

@@ -9,6 +9,7 @@ import traceback
 
 import requests
 import stripe
+from apscheduler.schedulers.background import BackgroundScheduler
 
 logger = logging.getLogger(__name__)
 from contextlib import asynccontextmanager
@@ -132,6 +133,9 @@ def ensure_profile_columns() -> None:
         ensure_col("profiles", "subscription_end", "subscription_end DATETIME DEFAULT NULL")
         ensure_col("profiles", "stripe_customer_id", "stripe_customer_id TEXT DEFAULT NULL")
         ensure_col("profiles", "last_active_at", "last_active_at DATETIME DEFAULT NULL")
+        ensure_col("profiles", "email_opt_out", "email_opt_out BOOLEAN DEFAULT FALSE")
+        ensure_col("profiles", "welcome_email_sent_at", "welcome_email_sent_at DATETIME DEFAULT NULL")
+        ensure_col("profiles", "feedback_email_sent_at", "feedback_email_sent_at DATETIME DEFAULT NULL")
 
         # Vietnamese CV fields
         ensure_col("profiles", "birth_date", "birth_date TEXT DEFAULT ''")
@@ -191,6 +195,150 @@ def ensure_profile_columns() -> None:
         ensure_col("login_codes", "ip", "ip TEXT DEFAULT ''")
 
         conn.commit()
+
+
+BACKEND_BASE_URL = (os.getenv("BACKEND_BASE_URL") or "https://jobbsoker-ai-backend.onrender.com").rstrip("/")
+
+
+def _unsubscribe_token(profile_id: int) -> str:
+    # HMAC with JWT_SECRET so the link can't be forged to opt someone else out.
+    secret = os.getenv("JWT_SECRET") or ""
+    return hmac.new(secret.encode("utf-8"), str(profile_id).encode("utf-8"), digestmod="sha256").hexdigest()
+
+
+def _unsubscribe_footer(profile_id: int) -> tuple[str, str]:
+    link = f"{BACKEND_BASE_URL}/email/unsubscribe?profile_id={profile_id}&token={_unsubscribe_token(profile_id)}"
+    text_footer = f"\n\n---\nDette er en service-e-post fra Ærlig. Meld deg av: {link}"
+    html_footer = (
+        f'<p style="color:#888;font-size:12px;margin-top:24px;">'
+        f'Dette er en service-e-post fra Ærlig. '
+        f'<a href="{link}">Meld meg av slike e-poster</a></p>'
+    )
+    return text_footer, html_footer
+
+
+def _welcome_email_content(name: str, profile_id: int) -> tuple[str, str, str]:
+    subject = "Velkommen til Ærlig!"
+    body = (
+        f"Hei {name}!\n\n"
+        "Velkommen til Ærlig – kult at du er her.\n\n"
+        "Ærlig hjelper deg gjennom hele jobbsøkeprosessen: vi analyserer stillingsannonser "
+        "opp mot bakgrunnen din, skriver CV og søknadsbrev tilpasset hver jobb, og du kan "
+        "trene på intervjuspørsmål med AI som gir deg konkret tilbakemelding.\n\n"
+        "Bare hopp inn i appen og prøv deg fram. Lykke til med jobbsøket!\n\n"
+        "Hilsen Ærlig"
+    )
+    text_footer, html_footer = _unsubscribe_footer(profile_id)
+    html = (
+        f"<p>Hei {_escape_html_local(name)}!</p>"
+        "<p>Velkommen til Ærlig – kult at du er her.</p>"
+        "<p>Ærlig hjelper deg gjennom hele jobbsøkeprosessen: vi analyserer stillingsannonser "
+        "opp mot bakgrunnen din, skriver CV og søknadsbrev tilpasset hver jobb, og du kan "
+        "trene på intervjuspørsmål med AI som gir deg konkret tilbakemelding.</p>"
+        "<p>Bare hopp inn i appen og prøv deg fram. Lykke til med jobbsøket!</p>"
+        "<p>Hilsen Ærlig</p>" + html_footer
+    )
+    return subject, body + text_footer, html
+
+
+def _feedback_nudge_email_content(name: str, profile_id: int) -> tuple[str, str, str]:
+    subject = "Hvordan går det med Ærlig?"
+    body = (
+        f"Hei {name}!\n\n"
+        "Du har brukt Ærlig en ukes tid nå, og vi er nysgjerrige på hvordan det går. "
+        "Fant du det du trengte, eller er det noe som kunne vært bedre?\n\n"
+        "Du finner en tilbakemeldingsknapp inne i appen som sender direkte til oss – "
+        "bruk den gjerne, stort og smått er like velkomment.\n\n"
+        "Takk for at du er med!\n\n"
+        "Hilsen Ærlig"
+    )
+    text_footer, html_footer = _unsubscribe_footer(profile_id)
+    html = (
+        f"<p>Hei {_escape_html_local(name)}!</p>"
+        "<p>Du har brukt Ærlig en ukes tid nå, og vi er nysgjerrige på hvordan det går. "
+        "Fant du det du trengte, eller er det noe som kunne vært bedre?</p>"
+        "<p>Du finner en tilbakemeldingsknapp inne i appen som sender direkte til oss – "
+        "bruk den gjerne, stort og smått er like velkomment.</p>"
+        "<p>Takk for at du er med!</p>"
+        "<p>Hilsen Ærlig</p>" + html_footer
+    )
+    return subject, body + text_footer, html
+
+
+def _escape_html_local(text_: str) -> str:
+    return (
+        (text_ or "")
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
+
+
+def _profile_display_name(profile: Profile, fallback_email: str) -> str:
+    name = (getattr(profile, "name", "") or "").strip()
+    if name and name not in {"Bruker", "Ærlig JobbCoach"}:
+        return name
+    return (fallback_email.split("@", 1)[0] or "there").strip()
+
+
+def _maybe_send_welcome_email(db: Session, user: User, profile: Profile) -> None:
+    """Send the one-time welcome email for a brand-new user. Best-effort:
+    never raises, and always marks welcome_email_sent_at so it is not retried.
+    """
+    if getattr(profile, "welcome_email_sent_at", None):
+        return
+
+    profile.welcome_email_sent_at = datetime.utcnow()
+    try:
+        if not getattr(profile, "email_opt_out", False):
+            name = _profile_display_name(profile, user.email)
+            subject, body, html = _welcome_email_content(name, profile.id)
+            result = send_email(user.email, subject, body, html=html)
+            if isinstance(result, dict) and result.get("sent") is False:
+                print(f"[WelcomeEmail] failed for user {user.id}: {result.get('reason')}")
+        db.commit()
+    except Exception as e:
+        print(f"[WelcomeEmail] error for user {user.id}: {e!r}")
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+
+
+def send_pending_day7_feedback_emails() -> None:
+    """Background job: sends the one-time day-7 feedback nudge to every user
+    who registered >=7 days ago and hasn't received it yet. Safe to call
+    repeatedly -- feedback_email_sent_at makes each send idempotent.
+    """
+    db = SessionLocal()
+    try:
+        cutoff = datetime.utcnow() - timedelta(days=7)
+        rows = db.execute(
+            select(Profile, User.email, User.id)
+            .join(User, User.id == Profile.user_id)
+            .where(
+                User.created_at <= cutoff,
+                Profile.feedback_email_sent_at.is_(None),
+                Profile.email_opt_out.is_(False),
+            )
+        ).all()
+
+        for profile, user_email, user_id in rows:
+            try:
+                name = _profile_display_name(profile, user_email)
+                subject, body, html = _feedback_nudge_email_content(name, profile.id)
+                result = send_email(user_email, subject, body, html=html)
+                profile.feedback_email_sent_at = datetime.utcnow()
+                db.commit()
+                if isinstance(result, dict) and result.get("sent") is False:
+                    print(f"[Day7FeedbackEmail] failed for user {user_id}: {result.get('reason')}")
+            except Exception as e:
+                db.rollback()
+                print(f"[Day7FeedbackEmail] error for user {user_id}: {e!r}")
+    except Exception as e:
+        print(f"[Day7FeedbackEmail] job error: {e!r}")
+    finally:
+        db.close()
 
 
 FREE_LIMIT = 3
@@ -556,7 +704,22 @@ async def lifespan(app: FastAPI):
         except Exception:
             pass
 
+    # Day-7 feedback nudge email: checked hourly (idempotent -- see
+    # feedback_email_sent_at) so it stays correct across restarts, and once
+    # immediately at startup so a restart doesn't delay it by up to an hour.
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(
+        send_pending_day7_feedback_emails,
+        "interval",
+        hours=1,
+        next_run_time=datetime.utcnow(),
+        id="day7_feedback_email",
+    )
+    scheduler.start()
+
     yield
+
+    scheduler.shutdown(wait=False)
 
 
 app = FastAPI(title="AI Jobbsøker", lifespan=lifespan)
@@ -740,6 +903,34 @@ def app_config():
     return {"min_version": int(os.getenv("MIN_APP_VERSION", "31"))}
 
 
+@app.get("/email/unsubscribe", tags=["meta"], response_class=HTMLResponse)
+def unsubscribe_from_service_emails(profile_id: int, token: str, db: Session = Depends(get_db)):
+    """Public link clicked from the welcome / day-7 feedback emails. No login
+    required -- authenticated instead by an HMAC token tied to the profile id
+    (see _unsubscribe_token), so the link can't be used to opt anyone else out.
+    """
+    valid = hmac.compare_digest(token or "", _unsubscribe_token(profile_id))
+    if valid:
+        profile = db.get(Profile, profile_id)
+        if profile:
+            profile.email_opt_out = True
+            db.commit()
+
+    message = (
+        "Du er meldt av service-e-poster fra Ærlig."
+        if valid
+        else "Lenken er ugyldig eller utløpt."
+    )
+    return f"""<!DOCTYPE html>
+<html lang="no"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ærlig</title></head>
+<body style="font-family:-apple-system,sans-serif;background:#F7F5F0;padding:40px 16px;text-align:center;color:#1a1a1a;">
+<div style="background:#fff;border-radius:16px;padding:32px;max-width:480px;margin:0 auto;">
+<p style="font-size:16px;">{message}</p>
+</div></body></html>"""
+
+
 @app.post("/auth/register", response_model=TokenOut, tags=["auth"])
 def register(data: RegisterIn, db: Session = Depends(get_db)):
     email = (data.email or "").strip().lower()
@@ -778,6 +969,7 @@ def register(data: RegisterIn, db: Session = Depends(get_db)):
         if not (existing_profile.email or "").strip():
             existing_profile.email = email
         db.commit()
+        profile_for_email = existing_profile
     else:
         p = Profile(
             user_id=user.id,
@@ -799,6 +991,9 @@ def register(data: RegisterIn, db: Session = Depends(get_db)):
         )
         db.add(p)
         db.commit()
+        profile_for_email = p
+
+    _maybe_send_welcome_email(db, user, profile_for_email)
 
     return {"access_token": create_access_token(user_id=user.id), "user_id": user.id, "token_type": "bearer"}
 
@@ -913,6 +1108,8 @@ def _ensure_user_and_profile(db: Session, email: str, *, display_name: str | Non
                 db.commit()
             return user
 
+    is_new_user = user is None
+
     if not user:
         # passwordless => keep empty password_hash (not used)
         user = User(email=email, password_hash="")
@@ -951,6 +1148,9 @@ def _ensure_user_and_profile(db: Session, email: str, *, display_name: str | Non
     )
     db.add(p)
     db.commit()
+
+    if is_new_user:
+        _maybe_send_welcome_email(db, user, p)
 
     return user
 
