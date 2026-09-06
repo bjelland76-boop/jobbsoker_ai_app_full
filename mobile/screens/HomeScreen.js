@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp, apiFetch } from '../context/AppContext';
+import { useProfileContext } from '../context/ProfileContext';
 import { styles } from '../styles/styles';
 
 function AdminStats({ adminStats, adminStatsLoading, setAdminStats, setAdminStatsLoading }) {
@@ -75,6 +76,18 @@ export default function HomeScreen({
   adminStats, adminStatsLoading, setAdminStats, setAdminStatsLoading,
 }) {
   const { t, logEvent, setActiveTab, setShowFaq } = useApp();
+  const { importCvFromFile } = useProfileContext() || {};
+
+  function uploadCvFromHome() {
+    logEvent('cv_upload_from_home');
+    // Navigate first so ProfileScreen is mounted by the time the async
+    // picker/upload/parse round-trip resolves -- its own (unmodified)
+    // cvImportPreview confirm-modal only renders while that screen is
+    // mounted, so triggering the same upload without navigating would
+    // silently produce no visible result.
+    setActiveTab('profile');
+    importCvFromFile?.();
+  }
 
   const ripple = Platform.OS === 'android'
     ? { android_ripple: { color: 'rgba(26, 26, 46, 0.10)' } }
@@ -234,11 +247,19 @@ export default function HomeScreen({
           </Pressable>
           <Pressable
             {...ripple}
-            style={[styles.aerligQuickButton, styles.cardElevated]}
+            style={[styles.aerligQuickButton, styles.cardElevated, { marginRight: 10 }]}
             onPress={() => setActiveTab('interview')}
           >
             <Ionicons name="mic-outline" size={16} color="#993C1D" style={{ marginRight: 6 }} />
             <Text style={styles.aerligQuickButtonText}>{t('home.interview_practice')}</Text>
+          </Pressable>
+          <Pressable
+            {...ripple}
+            style={[styles.aerligQuickButton, styles.cardElevated]}
+            onPress={uploadCvFromHome}
+          >
+            <Ionicons name="cloud-upload-outline" size={16} color="#993C1D" style={{ marginRight: 6 }} />
+            <Text style={styles.aerligQuickButtonText}>{t('home.upload_cv')}</Text>
           </Pressable>
         </View>
       </View>
