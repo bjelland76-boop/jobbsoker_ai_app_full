@@ -195,6 +195,9 @@ def ensure_profile_columns() -> None:
         # login_codes (passwordless)
         ensure_col("login_codes", "ip", "ip TEXT DEFAULT ''")
 
+        # usage_events
+        ensure_col("usage_events", "anon_id", "anon_id TEXT DEFAULT NULL")
+
         conn.commit()
 
 
@@ -3935,6 +3938,17 @@ def stats_global(db: Session = Depends(get_db)):
 class EventLogIn(BaseModel):
     action: str
     metadata: Optional[dict] = None
+    # Client-generated local id (AsyncStorage, not tied to any account/PII) --
+    # lets us correlate anonymous events from the same install over time, e.g.
+    # to measure real drop-off between app_open_anonymous and a later signup.
+    # See mobile/context/AppContext.js. Optional so older installed app
+    # versions that don't send it yet keep working unchanged.
+    anon_id: Optional[str] = None
+
+
+def _clean_anon_id(anon_id: Optional[str]) -> Optional[str]:
+    cleaned = (anon_id or "").strip()[:64]
+    return cleaned or None
 
 
 @app.post("/events/log", status_code=204, tags=["events"])
@@ -3959,14 +3973,30 @@ def log_event(
             meta_str = _json.dumps(data.metadata, ensure_ascii=False)[:500]
         except Exception:
             pass
-    event = UsageEvent(user_id=(current_user.id if current_user else None), action=action, event_meta=meta_str)
+    event = UsageEvent(
+        user_id=(current_user.id if current_user else None),
+        action=action,
+        event_meta=meta_str,
+        anon_id=_clean_anon_id(data.anon_id),
+    )
     db.add(event)
     db.commit()
 
 
 @app.post("/events/anonymous-open", status_code=204, tags=["events"])
-def log_anonymous_open(db: Session = Depends(get_db)):
-    event = UsageEvent(user_id=None, action="app_open_anonymous", event_meta="")
+async def log_anonymous_open(request: Request, db: Session = Depends(get_db)):
+    # Raw/lenient body parsing (not a Pydantic model param) so that app
+    # versions already installed before anon_id existed -- which call this
+    # with no body at all -- keep working unchanged instead of getting a 422.
+    anon_id = None
+    try:
+        payload = await request.json()
+        if isinstance(payload, dict):
+            anon_id = _clean_anon_id(payload.get("anon_id"))
+    except Exception:
+        anon_id = None
+
+    event = UsageEvent(user_id=None, action="app_open_anonymous", event_meta="", anon_id=anon_id)
     db.add(event)
     db.commit()
 

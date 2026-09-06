@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, Platform, NativeModules } from 'react-native';
 
@@ -108,6 +108,41 @@ export async function apiFetch(path, options) {
 }
 
 // ---------------------------------------------------------------------------
+// Anonymous device id (internal usage-event correlation only)
+// ---------------------------------------------------------------------------
+
+// Not tied to any account or personal data, never sent anywhere but our own
+// backend (no Google Ads/analytics) -- purely so we can tell "the same
+// install opened the app N times before signing up" apart from "N different
+// installs opened it once each". Separate from the anonProfileId pattern in
+// useProfile.js (which only exists once a profile has actually been saved) --
+// this one is created on the very first launch, before any profile exists.
+const ANON_DEVICE_ID_KEY = 'anonDeviceId';
+
+function generateLocalAnonId() {
+  // crypto.randomUUID() is available in the Chromium WebView this app
+  // actually runs in (Capacitor wrapping an Expo web export, not a bare RN
+  // JS engine) -- no native module needed. Fallback covers any environment
+  // where it's missing.
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+}
+
+async function getOrCreateAnonId() {
+  try {
+    const existing = await AsyncStorage.getItem(ANON_DEVICE_ID_KEY);
+    if (existing) return existing;
+    const created = generateLocalAnonId();
+    await AsyncStorage.setItem(ANON_DEVICE_ID_KEY, created);
+    return created;
+  } catch (e) {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Context
 // ---------------------------------------------------------------------------
 
@@ -153,6 +188,10 @@ export function AppProvider({ children }) {
   const showPaymentModal = (limitType) => setPaymentModalLimitType(limitType || 'analyse');
   const closePaymentModal = () => setPaymentModalLimitType(null);
 
+  // Anonymous device id, resolved once at startup (see getOrCreateAnonId).
+  // A ref (not state) since it's read by logEvent, not rendered.
+  const anonIdRef = useRef(null);
+
   // ---------------------------------------------------------------------------
   // Effects
   // ---------------------------------------------------------------------------
@@ -166,12 +205,22 @@ export function AppProvider({ children }) {
       resetAuthState();
     });
 
-    // Anonymous app-open ping — fires once per launch, before we know whether
-    // the user is logged in, so we can measure opens vs. completed registrations.
-    apiFetch('/events/anonymous-open', { method: 'POST' }).catch(() => {});
-
     async function initAuth() {
       try {
+        // Resolved first, before any other logEvent-style call this launch,
+        // so anonIdRef is always populated by the time one fires.
+        anonIdRef.current = await getOrCreateAnonId();
+
+        // Anonymous app-open ping — fires once per launch, before we know
+        // whether the user is logged in, so we can measure opens vs.
+        // completed registrations (and, via anon_id, real per-install
+        // drop-off rather than raw open counts).
+        apiFetch('/events/anonymous-open', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ anon_id: anonIdRef.current }),
+        }).catch(() => {});
+
         const lang = await AsyncStorage.getItem('uiLanguage');
         const resolved = SUPPORTED.includes(lang) ? lang : 'no';
         setUiLanguage(resolved);
@@ -199,7 +248,7 @@ export function AppProvider({ children }) {
           apiFetch('/events/log', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'app_opened', metadata: null }),
+            body: JSON.stringify({ action: 'app_opened', metadata: null, anon_id: anonIdRef.current }),
           }).catch(() => {});
         }
       } catch (e) { /* ignore */ }
@@ -349,7 +398,7 @@ export function AppProvider({ children }) {
     apiFetch('/events/log', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, metadata }),
+      body: JSON.stringify({ action, metadata, anon_id: anonIdRef.current }),
     }).catch(() => {});
   }
 

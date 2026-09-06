@@ -197,6 +197,8 @@ class UsageEvent(Base):
     action: Mapped[str] = mapped_column(String(100), index=True)
     event_meta: Mapped[str] = mapped_column("metadata", Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    # Client-generated local id (not tied to any account/PII) -- see EventLogIn.
+    anon_id: Mapped[str | None] = mapped_column(String(64), nullable=True, default=None, index=True)
 
 
 class StripePayment(Base):
