@@ -12,6 +12,7 @@ export default function useJobAnalysis({
   setIncludePhotoInPdf,
   isProfileTooEmpty,
   flushAutoSave,
+  saveProfile,
 } = {}) {
   const { authTokenState, openAuthScreen, logEvent, errText, uiLanguage, activeTab, setActiveTab, showPaymentModal } = useApp();
 
@@ -291,14 +292,10 @@ export default function useJobAnalysis({
       ? {
         missingUrlTitle: 'Paste a job URL',
         missingUrlBody: 'Paste a job ad URL so I can analyze it for you.',
-        missingProfileTitle: 'Profile missing',
-        missingProfileBody: 'Please save your profile before running an analysis.',
       }
       : {
         missingUrlTitle: 'Lim inn jobbannonse',
         missingUrlBody: 'Lim inn en jobbannonse-URL, så analyserer jeg den for deg.',
-        missingProfileTitle: 'Mangler profil',
-        missingProfileBody: 'Lagre profilen før du kjører analyse.',
       };
 
     const hasJobInput = jobInputMode === 'text' ? !!jobText.trim() : !!jobUrl.trim();
@@ -307,18 +304,20 @@ export default function useJobAnalysis({
       return;
     }
 
-    if (!profileId) {
-      // Alert.alert's buttons array is a no-op in this app's web build (it
-      // ships as react-native-web's `static alert(){}` stub -- confirmed by
-      // inspecting the bundle -- and Platform.OS is always "web" here, both
-      // on the Render web frontend and inside the Android app's Capacitor
-      // WebView). window.confirm() is the pattern already used for real
-      // confirm-with-action dialogs elsewhere in this app (see
-      // AppContext.js's deleteAccount()).
-      if (window.confirm(`${copy.missingProfileTitle}\n\n${copy.missingProfileBody}`)) {
-        setActiveTab('profile');
+    // A brand-new anonymous user has no profile row yet -- rather than
+    // dead-ending here (the old behaviour, see git history), silently
+    // create an empty one so a first-time visitor can reach an analysis
+    // without a manual "save profile" detour. The isProfileTooEmpty()
+    // check right below still gates on having *real* CV content (name
+    // alone isn't enough for a useful analysis anyway), so this only
+    // removes the redundant technical step, not the legitimate one.
+    let currentProfileId = profileId;
+    if (!currentProfileId) {
+      currentProfileId = await saveProfile?.({ silent: true });
+      if (!currentProfileId) {
+        // saveProfile already surfaced its own error alert on failure.
+        return;
       }
-      return;
     }
 
     if (isProfileTooEmpty?.()) {
@@ -345,7 +344,7 @@ export default function useJobAnalysis({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          profile_id: profileId,
+          profile_id: currentProfileId,
           ...(jobInputMode === 'text' ? { job_text: jobText } : { url: jobUrl }),
           application_style: applicationStyle,
           language: uiLanguage,
@@ -870,13 +869,15 @@ export default function useJobAnalysis({
   // CV analysis
   // ---------------------------------------------------------------------------
   async function analyzeCv() {
-    if (!profileId) {
-      // See analyzeJob()'s identical !profileId branch above for why this
-      // uses window.confirm() rather than Alert.alert's buttons array.
-      if (window.confirm('Feil\n\nLagre profilen før CV-analyse')) {
-        setActiveTab('profile');
+    // See analyzeJob()'s identical !profileId branch for why a missing
+    // profile is auto-created silently instead of dead-ending here.
+    let currentProfileId = profileId;
+    if (!currentProfileId) {
+      currentProfileId = await saveProfile?.({ silent: true });
+      if (!currentProfileId) {
+        // saveProfile already surfaced its own error alert on failure.
+        return;
       }
-      return;
     }
 
     await flushAutoSave?.();
@@ -885,7 +886,7 @@ export default function useJobAnalysis({
       const data = await apiFetch('/analyze-cv', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profile_id: profileId, language: uiLanguage }),
+        body: JSON.stringify({ profile_id: currentProfileId, language: uiLanguage }),
       });
 
       setCvAnalysis(data);

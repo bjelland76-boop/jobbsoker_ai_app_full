@@ -614,6 +614,11 @@ export default function useProfile({ onProfileSaved } = {}) {
       military_service: override.military_service ?? militaryService,
     };
 
+    // Callers that need the id synchronously (e.g. auto-creating an empty
+    // profile right before the first analyse, see useJobAnalysis.js) can't
+    // rely on the profileId state update landing in time -- state updates
+    // aren't visible within the same function call/tick.
+    let savedId;
     try {
       const method = profileId ? 'PUT' : 'POST';
       const data = await apiFetch(profileId ? `/profiles/${profileId}` : '/profiles', {
@@ -623,6 +628,7 @@ export default function useProfile({ onProfileSaved } = {}) {
       });
 
       setProfileId(data.id);
+      savedId = data.id;
       if (!authTokenState) {
         // Anonymous: this id is the only way to find this profile again on
         // the next launch (GET /profiles returns [] with no identity).
@@ -637,6 +643,7 @@ export default function useProfile({ onProfileSaved } = {}) {
     }
 
     setSavingProfile(false);
+    return savedId;
   }
 
   async function saveProfileAuto() {

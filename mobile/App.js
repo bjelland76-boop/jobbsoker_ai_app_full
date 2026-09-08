@@ -130,6 +130,7 @@ function AppContent() {
     isProfileTooEmpty,
     flushAutoSave,
     dismissOnboarding,
+    saveProfile,
   } = profileHook;
 
   const {
@@ -191,6 +192,7 @@ function AppContent() {
     setIncludePhotoInPdf,
     isProfileTooEmpty,
     flushAutoSave,
+    saveProfile,
   });
 
   // Keep profileSavedCbRef in sync with current analysis/jobUrl values
