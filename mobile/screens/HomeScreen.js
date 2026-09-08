@@ -236,6 +236,24 @@ export default function HomeScreen({
           <Text style={styles.aerligPrimaryButtonText}>{t('home.analyze_job')}</Text>
         </TouchableOpacity>
 
+        {/* Moved up from the stats grid below so a new user sees this
+            before -- not after -- trying "Analyser jobb"/"Analyser CV",
+            since a saved profile with real content is what those need to
+            actually produce a useful result. Was previously below the
+            fold on most phones. */}
+        <Pressable
+          {...ripple}
+          style={[styles.aerligMiniCard, styles.aerligMiniCardFull, styles.cardElevated, { marginTop: 10, marginBottom: 14 }]}
+          onPress={() => setActiveTab('profile')}
+        >
+          <Text style={styles.aerligMiniLabel}>{t('home.profile_status')}</Text>
+          <Text style={styles.aerligProfileValue}>{profilePercent}%</Text>
+          <Text style={styles.aerligProfileHint}>{profileStatus} {t('home.open_profile')}</Text>
+          <View style={styles.aerligProfileMeter}>
+            <View style={[styles.aerligProfileMeterFill, { width: `${Math.max(0, Math.min(100, profilePercent))}%` }]} />
+          </View>
+        </Pressable>
+
         <View style={styles.aerligQuickRow}>
           <Pressable
             {...ripple}
@@ -358,19 +376,6 @@ export default function HomeScreen({
               <Text style={styles.aerligMiniHint}>{t('home.update_status')}</Text>
             </>
           )}
-        </Pressable>
-
-        <Pressable
-          {...ripple}
-          style={[styles.aerligMiniCard, styles.aerligMiniCardFull, styles.cardElevated]}
-          onPress={() => setActiveTab('profile')}
-        >
-          <Text style={styles.aerligMiniLabel}>{t('home.profile_status')}</Text>
-          <Text style={styles.aerligProfileValue}>{profilePercent}%</Text>
-          <Text style={styles.aerligProfileHint}>{profileStatus} {t('home.open_profile')}</Text>
-          <View style={styles.aerligProfileMeter}>
-            <View style={[styles.aerligProfileMeterFill, { width: `${Math.max(0, Math.min(100, profilePercent))}%` }]} />
-          </View>
         </Pressable>
       </View>
 
