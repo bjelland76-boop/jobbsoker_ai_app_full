@@ -1713,7 +1713,7 @@ async def import_cv(
 
     Stateless (no DB write), so it never needed the caller's identity --
     open to anonymous callers."""
-    from .cv_importer import extract_and_parse
+    from .cv_importer import CvImportParseError, extract_and_parse
 
     data = await file.read()
     if len(data) > 20 * 1024 * 1024:
@@ -1723,6 +1723,11 @@ async def import_cv(
         result = extract_and_parse(file.filename or "", file.content_type or "", data)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except CvImportParseError as e:
+        # Already logged (with the raw response) inside cv_importer -- no
+        # need to also dump a full traceback here for this anticipated,
+        # named failure mode. str(e) is already a clear, Norwegian message.
+        raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Kunne ikke lese filen: {e}")
 

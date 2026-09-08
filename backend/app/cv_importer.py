@@ -4,6 +4,7 @@ from __future__ import annotations
 import base64
 import io
 import json
+import logging
 import os
 import re
 from pathlib import Path
@@ -12,6 +13,8 @@ import anthropic
 from dotenv import load_dotenv
 
 load_dotenv(".env")
+
+logger = logging.getLogger(__name__)
 
 _CLAUDE_MODEL = "claude-haiku-4-5-20251001"
 
@@ -58,12 +61,57 @@ def _get_client() -> anthropic.Anthropic:
     return anthropic.Anthropic(api_key=api_key)
 
 
+class CvImportParseError(RuntimeError):
+    """Claude's CV-import response could not be parsed as JSON, even after
+    stripping code fences and trying to recover the first complete JSON
+    value from any trailing content. Caught in main.py's /profile/import-cv
+    and surfaced as a clear 500 detail instead of a raw JSONDecodeError
+    string. Same failure mode and fix as cv_analyzer.CvAnalysisParseError."""
+
+
 def _strip_md(raw: str) -> dict:
+    """Parse Claude's JSON response robustly.
+
+    Claude is instructed (system prompt) to return ONLY JSON, but in
+    practice sometimes still appends trailing content after a complete,
+    valid JSON object -- a stray repeated block, a trailing remark. Plain
+    json.loads() then raises "Extra data" even though the JSON itself is
+    perfectly valid. json.JSONDecoder().raw_decode() parses only the first
+    complete JSON value and ignores whatever follows it, which is exactly
+    what's needed here. Same fallback already used in cv_analyzer.py's
+    _parse_json() and job_analyzer.py's generate_application_texts() for
+    the identical failure mode (production bug fixed 2026-08-28, ~5 of 6
+    /analyze-cv calls failed with this before the fix -- this file had the
+    same unguarded json.loads() but was missed at the time).
+    """
     raw = (raw or "").strip()
     if raw.startswith("```"):
         raw = re.sub(r"^```(?:json)?\s*", "", raw)
         raw = re.sub(r"\s*```\s*$", "", raw)
-    return json.loads(raw)
+    raw = raw.strip()
+
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as first_err:
+        # Skip any leading prose Claude might have added before the JSON
+        # object itself (rare, but raw_decode needs to start ON the value).
+        start = raw.find("{")
+        if start == -1:
+            logger.error("[cv_importer] no JSON object found in response: %r", raw[:500])
+            raise CvImportParseError(
+                "Kunne ikke tolke AI-modellens svar: fant ingen JSON-struktur i svaret."
+            ) from first_err
+        try:
+            data, _end = json.JSONDecoder().raw_decode(raw, start)
+            return data
+        except json.JSONDecodeError as second_err:
+            logger.error(
+                "[cv_importer] JSON parse failed even with raw_decode fallback (%s): %r",
+                second_err, raw[:500],
+            )
+            raise CvImportParseError(
+                "Kunne ikke tolke AI-modellens svar som JSON. Prøv igjen om et øyeblikk."
+            ) from second_err
 
 
 def _normalize(parsed: dict) -> dict:
