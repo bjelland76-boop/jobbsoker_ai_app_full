@@ -308,21 +308,27 @@ export default function useJobAnalysis({
     }
 
     if (!profileId) {
-      Alert.alert(copy.missingProfileTitle, copy.missingProfileBody);
+      // Alert.alert's buttons array is a no-op in this app's web build (it
+      // ships as react-native-web's `static alert(){}` stub -- confirmed by
+      // inspecting the bundle -- and Platform.OS is always "web" here, both
+      // on the Render web frontend and inside the Android app's Capacitor
+      // WebView). window.confirm() is the pattern already used for real
+      // confirm-with-action dialogs elsewhere in this app (see
+      // AppContext.js's deleteAccount()).
+      if (window.confirm(`${copy.missingProfileTitle}\n\n${copy.missingProfileBody}`)) {
+        setActiveTab('profile');
+      }
       return;
     }
 
     if (isProfileTooEmpty?.()) {
-      Alert.alert(
-        uiLanguage === 'en' ? 'Complete your profile' : 'Fyll ut profilen din',
-        uiLanguage === 'en'
-          ? 'Add work experience or education to get a relevant analysis.'
-          : 'Legg til arbeidserfaring eller utdanning for å få en god analyse.',
-        [
-          { text: uiLanguage === 'en' ? 'Cancel' : 'Avbryt', style: 'cancel' },
-          { text: uiLanguage === 'en' ? 'Go to Profile' : 'Gå til Profil', onPress: () => setActiveTab('profile') },
-        ]
-      );
+      const title = uiLanguage === 'en' ? 'Complete your profile' : 'Fyll ut profilen din';
+      const body = uiLanguage === 'en'
+        ? 'Add work experience or education to get a relevant analysis.'
+        : 'Legg til arbeidserfaring eller utdanning for å få en god analyse.';
+      if (window.confirm(`${title}\n\n${body}`)) {
+        setActiveTab('profile');
+      }
       return;
     }
 
@@ -865,7 +871,11 @@ export default function useJobAnalysis({
   // ---------------------------------------------------------------------------
   async function analyzeCv() {
     if (!profileId) {
-      Alert.alert('Feil', 'Lagre profilen før CV-analyse');
+      // See analyzeJob()'s identical !profileId branch above for why this
+      // uses window.confirm() rather than Alert.alert's buttons array.
+      if (window.confirm('Feil\n\nLagre profilen før CV-analyse')) {
+        setActiveTab('profile');
+      }
       return;
     }
 
