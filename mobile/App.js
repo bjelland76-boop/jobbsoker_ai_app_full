@@ -55,6 +55,18 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, info) {
     console.error('[ErrorBoundary] caught:', error, info?.componentStack);
+    // Fire-and-forget, same pattern as useApp()'s logEvent() -- but this is
+    // a class component so it can't use that hook. apiFetch is a plain
+    // function (not a hook), already imported above, so it works here
+    // unchanged. Previously a render crash here was invisible: the app has
+    // no crash-reporting tool, and everything past this point (including
+    // any Alert.alert the user might otherwise have seen) never ran.
+    const message = String(error?.message || error);
+    apiFetch('/events/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'client_crash', metadata: { message } }),
+    }).catch(() => {});
   }
 
   render() {
