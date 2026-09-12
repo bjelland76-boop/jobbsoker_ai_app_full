@@ -97,7 +97,7 @@ export default function AnalysisScreen({
         ) : null}
       </View>
 
-      {jobAnalyses.map((item) => {
+      {jobAnalyses.map((item, index) => {
         const heartScale = new Animated.Value(1);
         const onHeartPress = () => {
           Animated.sequence([
@@ -106,10 +106,21 @@ export default function AnalysisScreen({
           ]).start();
           toggleFavoriteAnalysis(item.job.id);
         };
+        // Backend sorts by updated_at DESC (main.py's list_job_analyses),
+        // so index 0 is always the freshest analysis in this list.
+        const isFreshest = index === 0;
         return (
           <View key={item.job.id} style={[styles.aerligCard, { paddingVertical: 12 }]}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <View style={{ flex: 1, marginRight: 8 }}>
+                {isFreshest ? (
+                  <View style={{
+                    alignSelf: 'flex-start', backgroundColor: '#FEF0EB', borderWidth: 1, borderColor: '#E8501A',
+                    borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, marginBottom: 4,
+                  }}>
+                    <Text style={{ color: '#E8501A', fontSize: 10, fontWeight: '700' }}>{t('analysis.just_analyzed_badge')}</Text>
+                  </View>
+                ) : null}
                 <Text style={[styles.aerligCardTitle, { fontSize: 15 }]} numberOfLines={2}>{item.job.title}</Text>
                 <Text style={[styles.aerligCardMeta, { marginTop: 2 }]}>
                   {item.job.company || t('common.unknown_company')} · {Math.round(item.match_score || item.job.match_score || 0)}%

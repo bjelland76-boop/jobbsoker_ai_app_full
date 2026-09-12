@@ -111,6 +111,7 @@
     "analyzing": "Analyzing...",
     "analyze_btn": "Analyze job",
     "previous_analyses": "Previous analyses",
+    "just_analyzed_badge": "Just analyzed",
     "loading": "Loading...",
     "update_list": "Update list",
     "loading_analyses": "Loading analyses...",
