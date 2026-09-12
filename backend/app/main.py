@@ -3321,6 +3321,30 @@ def play_billing_verify_purchase(
             subscription_end=datetime.utcnow() + timedelta(days=7),
         )
 
+        # Defense-in-depth: the client (PaymentModal.js) also calls
+        # consumeAsync() on-device right after this endpoint returns, but if
+        # the app gets killed or loses connectivity between the two, that
+        # purchase is left acknowledged-but-unconsumed forever -- Google then
+        # permanently treats the account as still owning "7dager" and
+        # rejects any future purchase of it (the exact bug this whole
+        # change fixes). Never trust the client alone for this, same
+        # principle as the verification above. consumptionState 1 already
+        # means consumed (e.g. the client won the race) -- not an error.
+        if body.get("consumptionState") != 1:
+            consume_url = (
+                f"https://androidpublisher.googleapis.com/androidpublisher/v3/applications/"
+                f"{PLAY_PACKAGE_NAME}/purchases/products/{data.product_id}/tokens/{data.purchase_token}:consume"
+            )
+            try:
+                consume_resp = requests.post(consume_url, headers=headers, timeout=10)
+                if consume_resp.status_code != 200:
+                    logger.error(
+                        "[play-billing] server-side consume failed (%s): %s -- relying on client-side consumeAsync() as fallback",
+                        consume_resp.status_code, consume_resp.text[:500],
+                    )
+            except Exception as e:
+                logger.error("[play-billing] server-side consume request failed: %s -- relying on client-side consumeAsync() as fallback", e)
+
     db.add(PlayBillingPurchase(
         purchase_token=data.purchase_token,
         user_id=current_user.id,

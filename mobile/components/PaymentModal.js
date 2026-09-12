@@ -86,13 +86,25 @@ export default function PaymentModal({ visible, limitType, onClose, userId, user
       });
 
       try {
-        await PlayBilling.acknowledgePurchase({ purchaseToken: purchase.purchaseToken });
+        // Subscriptions (SUBS) must only ever be acknowledged. "7dager" is
+        // an INAPP one-time product and must be consumed instead --
+        // consumeAsync() acknowledges it as a side effect, so calling
+        // acknowledgePurchase() too would be redundant. Getting this branch
+        // wrong for INAPP products is exactly what caused every account
+        // that ever bought "7dager" to be permanently blocked from buying
+        // it again (Google keeps an acknowledged-but-unconsumed INAPP
+        // purchase as "owned" forever).
+        if (type === 'subscription') {
+          await PlayBilling.acknowledgePurchase({ purchaseToken: purchase.purchaseToken });
+        } else {
+          await PlayBilling.consumePurchase({ purchaseToken: purchase.purchaseToken });
+        }
       } catch (e) {
         // Entitlement is already granted at this point (verify-purchase
-        // above succeeded) -- an acknowledge failure here shouldn't read as
-        // a failed purchase to the user. restorePurchases() on a later
-        // launch can retry it.
-        console.error('[Assistant] acknowledgePurchase failed after successful verify-purchase', e);
+        // above succeeded) -- an acknowledge/consume failure here shouldn't
+        // read as a failed purchase to the user. restorePurchases() on a
+        // later launch can retry it.
+        console.error('[Assistant] acknowledge/consume failed after successful verify-purchase', e);
       }
 
       await refreshSubscription?.();

@@ -7,6 +7,7 @@ import com.android.billingclient.api.BillingClient;
 import com.android.billingclient.api.BillingClientStateListener;
 import com.android.billingclient.api.BillingFlowParams;
 import com.android.billingclient.api.BillingResult;
+import com.android.billingclient.api.ConsumeParams;
 import com.android.billingclient.api.PendingPurchasesParams;
 import com.android.billingclient.api.ProductDetails;
 import com.android.billingclient.api.Purchase;
@@ -31,8 +32,11 @@ import java.util.List;
  * Step 3: queryProductDetails() for the two real Play Console products.
  * Step 4: purchase() -- launchBillingFlow + PurchasesUpdatedListener, returns
  * purchaseToken to JS.
- * Step 5 (this one): acknowledgePurchase() and restorePurchases(). No backend
- * call yet (that's step 9).
+ * Step 5: acknowledgePurchase() and restorePurchases(). No backend call yet
+ * (that's step 9).
+ * Step 10 (this one): consumePurchase() for INAPP products (e.g. "7dager")
+ * -- acknowledgePurchase() alone left them permanently "owned", blocking any
+ * repeat purchase by the same account.
  */
 @CapacitorPlugin(name = "PlayBilling")
 public class PlayBillingPlugin extends Plugin {
@@ -358,6 +362,44 @@ public class PlayBillingPlugin extends Plugin {
             }
             JSObject ret = new JSObject();
             ret.put("acknowledged", true);
+            call.resolve(ret);
+        });
+    }
+
+    // Consumable (INAPP) one-time products -- e.g. "7dager" -- must be
+    // consumed, not just acknowledged, or Google permanently treats the
+    // product as still owned by that account and rejects any future
+    // purchase() of it with ITEM_ALREADY_OWNED ("du eier allerede dette
+    // produktet"). consumeAsync() acknowledges the purchase as a side
+    // effect, so callers should use this INSTEAD OF acknowledgePurchase()
+    // for INAPP products, never both. Subscriptions (SUBS, e.g.
+    // "1_maanedsabonnement") must never be consumed -- keep using
+    // acknowledgePurchase() for those, unchanged.
+    @PluginMethod
+    public void consumePurchase(PluginCall call) {
+        String purchaseToken = call.getString("purchaseToken");
+        if (purchaseToken == null || purchaseToken.isEmpty()) {
+            call.reject("purchaseToken er påkrevd");
+            return;
+        }
+        if (!billingClient.isReady()) {
+            call.reject("BillingClient er ikke tilkoblet -- kall startConnection() først");
+            return;
+        }
+
+        ConsumeParams params = ConsumeParams.newBuilder().setPurchaseToken(purchaseToken).build();
+        billingClient.consumeAsync(params, (billingResult, token) -> {
+            Log.d(
+                TAG,
+                "onConsumeResponse: responseCode=" + billingResult.getResponseCode()
+                    + " debugMessage=" + billingResult.getDebugMessage()
+            );
+            if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                call.reject("consumePurchase feilet (responseCode=" + billingResult.getResponseCode() + "): " + billingResult.getDebugMessage());
+                return;
+            }
+            JSObject ret = new JSObject();
+            ret.put("consumed", true);
             call.resolve(ret);
         });
     }
