@@ -607,10 +607,12 @@ export default function AnalysisScreen({
       </View>
 
       {justAnalyzed ? (
-        <>
-          {resultSection}
-          {historySection}
-        </>
+        // Right after a fresh analysis (or opening the latest one from
+        // HomeScreen's "Siste analyse" card), the history list is omitted
+        // entirely -- not just pushed below the fold. It only reappears
+        // once the user explicitly navigates to it via "Analyserte jobber"
+        // (which resets justAnalyzed to false, see HomeScreen.js).
+        resultSection
       ) : (
         <>
           {historySection}
