@@ -367,6 +367,13 @@
     "android_browser_note": "Payment opens in the browser outside the app",
     "checkout_error_title": "Something went wrong",
     "checkout_error_body": "Could not start the payment. Please try again in a moment.",
+    "restore_btn": "Restore purchases",
+    "restore_success_title": "Restored",
+    "restore_success_body": "Previous purchases have been cleaned up. Try buying again if needed.",
+    "restore_none_title": "Nothing to restore",
+    "restore_none_body": "No previous purchases found on this account.",
+    "restore_error_title": "Something went wrong",
+    "restore_error_body": "Could not restore purchases. Please try again in a moment.",
     "subscribe_btn": "Subscribe now",
     "pay_card_btn": "Pay by card",
     "not_now": "Not now"

@@ -367,6 +367,13 @@
     "android_browser_note": "Mokėjimas atsidaro naršyklėje už programėlės ribų",
     "checkout_error_title": "Kažkas nutiko ne taip",
     "checkout_error_body": "Nepavyko pradėti mokėjimo. Bandykite dar kartą po akimirkos.",
+    "restore_btn": "Atkurti pirkinius",
+    "restore_success_title": "Atkurta",
+    "restore_success_body": "Ankstesni pirkiniai dabar sutvarkyti. Jei reikia, bandykite pirkti dar kartą.",
+    "restore_none_title": "Nėra ką atkurti",
+    "restore_none_body": "Šioje paskyroje ankstesnių pirkinių nerasta.",
+    "restore_error_title": "Kažkas nutiko ne taip",
+    "restore_error_body": "Nepavyko atkurti pirkinių. Bandykite dar kartą po akimirkos.",
     "subscribe_btn": "Prenumeruoti dabar",
     "pay_card_btn": "Mokėti kortele",
     "not_now": "Ne dabar"

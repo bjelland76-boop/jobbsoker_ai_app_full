@@ -368,6 +368,13 @@
     "android_browser_note": "Lacag-bixinta waxay ku furmaysaa biraawsarka ka baxsan abka",
     "checkout_error_title": "Wax baa qaldamay",
     "checkout_error_body": "Lama bilaabi karin lacag-bixinta. Fadlan isku day mar kale wax yar kadib.",
+    "restore_btn": "Soo celi iibka",
+    "restore_success_title": "La soo celiyay",
+    "restore_success_body": "Iibkii hore waa la nadiifiyay. Isku day inaad dib u iibsato haddii loo baahdo.",
+    "restore_none_title": "Wax la soo celiyo ma jiraan",
+    "restore_none_body": "Iib hore lagama helin akoonkan.",
+    "restore_error_title": "Wax baa qaldamay",
+    "restore_error_body": "Lama soo celin karin iibka. Fadlan isku day mar kale wax yar kadib.",
     "subscribe_btn": "Hadda is diiwaan geli",
     "pay_card_btn": "Ku bixi kaadhka",
     "not_now": "Hadda ma aha"

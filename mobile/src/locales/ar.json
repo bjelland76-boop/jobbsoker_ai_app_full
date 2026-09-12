@@ -367,6 +367,13 @@
     "android_browser_note": "يفتح الدفع في المتصفح خارج التطبيق",
     "checkout_error_title": "حدث خطأ ما",
     "checkout_error_body": "تعذر بدء عملية الدفع. حاول مرة أخرى بعد قليل.",
+    "restore_btn": "استعادة المشتريات",
+    "restore_success_title": "تمت الاستعادة",
+    "restore_success_body": "تم تنظيف المشتريات السابقة. حاول الشراء مرة أخرى إذا لزم الأمر.",
+    "restore_none_title": "لا يوجد ما يمكن استعادته",
+    "restore_none_body": "لم يتم العثور على مشتريات سابقة لهذا الحساب.",
+    "restore_error_title": "حدث خطأ ما",
+    "restore_error_body": "تعذرت استعادة المشتريات. حاول مرة أخرى بعد قليل.",
     "subscribe_btn": "اشترك الآن",
     "pay_card_btn": "ادفع بالبطاقة",
     "not_now": "ليس الآن"

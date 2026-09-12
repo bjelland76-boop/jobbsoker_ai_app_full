@@ -31,6 +31,7 @@ export default function PaymentModal({ visible, limitType, onClose, userId, user
   const { refreshSubscription } = useProfileContext() || {};
   const [type, setType] = useState('subscription');
   const [loading, setLoading] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const [country, setCountry] = useState('NO');
 
   useEffect(() => {
@@ -162,6 +163,66 @@ export default function PaymentModal({ visible, limitType, onClose, userId, user
     }
   }
 
+  // "Gjenopprett kjøp" -- permanent feature (not a one-off dev tool), for
+  // two overlapping cases: (1) repairing an INAPP purchase that was
+  // acknowledged-but-never-consumed (the exact bug that made every account
+  // that ever bought "7dager" permanently unable to buy it again -- see
+  // handleAndroidPurchase()'s type-branch above), and (2) the general
+  // "reinstalled the app / switched device" case, where Google still shows
+  // the purchase as owned but this account's own backend profile never
+  // got the entitlement. Both are fixed the same way: find what Google
+  // Play says this account owns, re-verify each with the backend
+  // (idempotent), then consume (INAPP) or acknowledge (SUBS, if somehow
+  // still unacknowledged) it.
+  async function handleRestorePurchases() {
+    if (restoring) return;
+    setRestoring(true);
+    try {
+      await PlayBilling.startConnection();
+      const { purchases } = await PlayBilling.restorePurchases();
+
+      let fixedCount = 0;
+      for (const p of purchases || []) {
+        const productId = (p.products || [])[0];
+        if (!productId) continue;
+
+        try {
+          await apiFetch('/play-billing/verify-purchase', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ purchase_token: p.purchaseToken, product_id: productId }),
+          });
+        } catch (e) {
+          console.error('[Assistant] restorePurchases: verify-purchase failed for', productId, e);
+          continue;
+        }
+
+        try {
+          if (productId === '7dager') {
+            await PlayBilling.consumePurchase({ purchaseToken: p.purchaseToken });
+          } else if (!p.isAcknowledged) {
+            await PlayBilling.acknowledgePurchase({ purchaseToken: p.purchaseToken });
+          }
+          fixedCount += 1;
+        } catch (e) {
+          console.error('[Assistant] restorePurchases: consume/acknowledge failed for', productId, e);
+        }
+      }
+
+      await refreshSubscription?.();
+      window.alert(
+        fixedCount > 0
+          ? `${t('payment.restore_success_title')}\n\n${t('payment.restore_success_body')}`
+          : `${t('payment.restore_none_title')}\n\n${t('payment.restore_none_body')}`
+      );
+    } catch (e) {
+      console.error('[Assistant] restorePurchases failed', e);
+      window.alert(`${t('payment.restore_error_title')}\n\n${e?.message || t('payment.restore_error_body')}`);
+    } finally {
+      setRestoring(false);
+    }
+  }
+
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <View style={sharedStyles.cvModalOverlay}>
@@ -240,6 +301,19 @@ export default function PaymentModal({ visible, limitType, onClose, userId, user
               </Text>
             )}
           </TouchableOpacity>
+          {platform === 'android' && authTokenState ? (
+            <TouchableOpacity
+              style={[sharedStyles.aerligSecondaryButton, { marginTop: 10 }, restoring && { opacity: 0.6 }]}
+              onPress={handleRestorePurchases}
+              disabled={restoring}
+            >
+              {restoring ? (
+                <ActivityIndicator size="small" color={ORANGE} />
+              ) : (
+                <Text style={sharedStyles.aerligSecondaryButtonText}>{t('payment.restore_btn')}</Text>
+              )}
+            </TouchableOpacity>
+          ) : null}
           <TouchableOpacity style={[sharedStyles.aerligDangerButton, { marginTop: 10 }]} onPress={onClose}>
             <Text style={sharedStyles.aerligDangerButtonText}>{t('payment.not_now')}</Text>
           </TouchableOpacity>
