@@ -248,10 +248,16 @@ export default function useJobAnalysis({
 
   async function moveAnalysisToApplications(jobId) {
     if (!profileId) {
-      Alert.alert(
-        (uiLanguage === 'en') ? 'Profile missing' : 'Mangler profil',
-        (uiLanguage === 'en') ? 'Please save your profile first.' : 'Lagre profilen først.'
-      );
+      // Alert.alert's buttons array is a no-op in this app's web build (see
+      // analyzeJob()'s identical dead-end fixed earlier this week) --
+      // window.confirm() is the pattern already used for real
+      // confirm-with-action dialogs elsewhere (AppContext.js's
+      // deleteAccount()).
+      const title = (uiLanguage === 'en') ? 'Profile missing' : 'Mangler profil';
+      const body = (uiLanguage === 'en') ? 'Please save your profile first.' : 'Lagre profilen først.';
+      if (window.confirm(`${title}\n\n${body}`)) {
+        setActiveTab('profile');
+      }
       return;
     }
 
@@ -262,9 +268,10 @@ export default function useJobAnalysis({
         body: JSON.stringify({}),
       });
 
-      Alert.alert(
-        (uiLanguage === 'en') ? 'Added' : 'Lagt til',
-        (uiLanguage === 'en') ? 'The job is now tracked under Applications.' : 'Jobben er lagt til under Søknader.'
+      window.alert(
+        (uiLanguage === 'en')
+          ? 'Added\n\nThe job is now tracked under Applications.'
+          : 'Lagt til\n\nJobben er lagt til under Søknader.'
       );
       setActiveTab('applications');
     } catch (e) {
@@ -388,34 +395,37 @@ export default function useJobAnalysis({
   // ---------------------------------------------------------------------------
   async function sendApplication(template = '', languageOverride = null) {
     const lang = languageOverride || cvLanguage;
+    // The three checks below all used to show a dead Alert.alert(title,
+    // body, buttons) -- its buttons array is a no-op in this app's web
+    // build (same root cause fixed in analyzeJob()/analyzeCv() earlier
+    // this week), so the "Logg inn"/"Gå til Profil" callbacks could never
+    // fire. window.confirm() is the pattern already used for real
+    // confirm-with-action dialogs elsewhere (AppContext.js's
+    // deleteAccount(), and generatePdf()'s regenerate-CV confirm below).
     if (!authTokenState) {
-      Alert.alert(
-        uiLanguage === 'en' ? 'Log in' : 'Logg inn',
-        uiLanguage === 'en'
-          ? 'Log in to send your application by email.'
-          : 'Logg inn for å sende søknaden på e-post.',
-        [
-          { text: uiLanguage === 'en' ? 'Cancel' : 'Avbryt', style: 'cancel' },
-          { text: uiLanguage === 'en' ? 'Log in' : 'Logg inn', onPress: () => openAuthScreen?.() },
-        ]
-      );
+      const title = uiLanguage === 'en' ? 'Log in' : 'Logg inn';
+      const body = uiLanguage === 'en'
+        ? 'Log in to send your application by email.'
+        : 'Logg inn for å sende søknaden på e-post.';
+      if (window.confirm(`${title}\n\n${body}`)) {
+        openAuthScreen?.();
+      }
       return;
     }
     if (!profileId) {
-      Alert.alert('Feil', 'Lagre profilen før sending');
+      if (window.confirm('Feil\n\nLagre profilen før sending')) {
+        setActiveTab('profile');
+      }
       return;
     }
     if (isProfileTooEmpty?.()) {
-      Alert.alert(
-        uiLanguage === 'en' ? 'Complete your profile' : 'Fyll ut profilen din',
-        uiLanguage === 'en'
-          ? 'Add work experience or education to generate a relevant application.'
-          : 'Legg til arbeidserfaring eller utdanning for å generere en god søknad.',
-        [
-          { text: uiLanguage === 'en' ? 'Cancel' : 'Avbryt', style: 'cancel' },
-          { text: uiLanguage === 'en' ? 'Go to Profile' : 'Gå til Profil', onPress: () => setActiveTab('profile') },
-        ]
-      );
+      const title = uiLanguage === 'en' ? 'Complete your profile' : 'Fyll ut profilen din';
+      const body = uiLanguage === 'en'
+        ? 'Add work experience or education to generate a relevant application.'
+        : 'Legg til arbeidserfaring eller utdanning for å generere en god søknad.';
+      if (window.confirm(`${title}\n\n${body}`)) {
+        setActiveTab('profile');
+      }
       return;
     }
     if (!applicationEmail || !applicationEmail.trim()) {
@@ -499,21 +509,22 @@ export default function useJobAnalysis({
     // synchronous handler -- setCvLanguage is async/batched, so cvLanguage
     // here would otherwise still read the value from BEFORE that change.
     const lang = languageOverride || cvLanguage;
+    // See sendApplication()'s identical checks above for why these use
+    // window.confirm() rather than Alert.alert's no-op buttons array.
     if (!profileId) {
-      Alert.alert('Feil', 'Lagre profilen først');
+      if (window.confirm('Feil\n\nLagre profilen først')) {
+        setActiveTab('profile');
+      }
       return;
     }
     if (isProfileTooEmpty?.()) {
-      Alert.alert(
-        uiLanguage === 'en' ? 'Complete your profile' : 'Fyll ut profilen din',
-        uiLanguage === 'en'
-          ? 'Add work experience or education to generate a relevant CV.'
-          : 'Legg til arbeidserfaring eller utdanning for å generere en god CV.',
-        [
-          { text: uiLanguage === 'en' ? 'Cancel' : 'Avbryt', style: 'cancel' },
-          { text: uiLanguage === 'en' ? 'Go to Profile' : 'Gå til Profil', onPress: () => setActiveTab('profile') },
-        ]
-      );
+      const title = uiLanguage === 'en' ? 'Complete your profile' : 'Fyll ut profilen din';
+      const body = uiLanguage === 'en'
+        ? 'Add work experience or education to generate a relevant CV.'
+        : 'Legg til arbeidserfaring eller utdanning for å generere en god CV.';
+      if (window.confirm(`${title}\n\n${body}`)) {
+        setActiveTab('profile');
+      }
       return;
     }
 
