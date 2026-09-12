@@ -24,6 +24,13 @@ export default function useJobAnalysis({
   const [jobText, setJobText] = useState('');
   const [jobInputMode, setJobInputMode] = useState('url'); // 'url' | 'text'
   const [analysis, setAnalysis] = useState(null);
+  // Drives AnalysisScreen's render order: true right after a fresh analysis
+  // (or opening the latest one from HomeScreen's "Siste analyse" card) so
+  // the result appears before the history list, without scrolling. False
+  // when the user explicitly asked to browse history (HomeScreen's
+  // "Analyserte jobber" stat, or opening an item directly from the list on
+  // AnalysisScreen itself) -- see setJustAnalyzed usages below.
+  const [justAnalyzed, setJustAnalyzed] = useState(false);
   const [tailoredCvJobTitle, setTailoredCvJobTitle] = useState('');
   const [cvTemplate, setCvTemplate] = useState('profesjonell');
   const [cvLanguage, setCvLanguage] = useState('no');
@@ -210,7 +217,7 @@ export default function useJobAnalysis({
     }
   }
 
-  async function openSavedAnalysis(jobId, url) {
+  async function openSavedAnalysis(jobId, url, { markFresh = false } = {}) {
     if (!profileId) return;
 
     setLoading(true);
@@ -220,6 +227,11 @@ export default function useJobAnalysis({
     try {
       const data = await apiFetch(`/job-analyses/${jobId}?profile_id=${profileId}`);
       setAnalysis(data);
+      // markFresh: true only when called from HomeScreen's "Siste analyse"
+      // card (the user wants the result, not the list). Explicitly set
+      // (not left untouched) so a stale true from an earlier fresh analysis
+      // can't leak into "open this specific item from the history list".
+      setJustAnalyzed(markFresh);
       if (data?.cv_mal) setCvTemplate(data.cv_mal);
       if (url) setJobUrl(url);
       setActiveTab('analysis');
@@ -352,6 +364,7 @@ export default function useJobAnalysis({
       });
 
       setAnalysis(data);
+      setJustAnalyzed(true);
       if (data?.cv_mal) setCvTemplate(data.cv_mal);
       setProfileUpdatedSinceAnalysis(false);
       logEvent('analyze_job_completed');
@@ -910,6 +923,7 @@ export default function useJobAnalysis({
     jobText, setJobText,
     jobInputMode, setJobInputMode,
     analysis, setAnalysis,
+    justAnalyzed, setJustAnalyzed,
     tailoredCvJobTitle, setTailoredCvJobTitle,
     cvTemplate, setCvTemplate,
     cvLanguage, setCvLanguage,

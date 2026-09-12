@@ -150,6 +150,7 @@ function AppContent() {
     jobText, setJobText,
     jobInputMode, setJobInputMode,
     analysis, setAnalysis,
+    justAnalyzed, setJustAnalyzed,
     tailoredCvJobTitle, setTailoredCvJobTitle,
     cvTemplate, setCvTemplate,
     cvLanguage, setCvLanguage,
@@ -1073,6 +1074,7 @@ function AppContent() {
             jobAnalyses={jobAnalyses} analysis={analysis}
             applications={applications} statsMe={statsMe}
             openSavedAnalysis={openSavedAnalysis}
+            setJustAnalyzed={setJustAnalyzed}
             tipText={tipText}
             adminStats={adminStats} adminStatsLoading={adminStatsLoading}
             setAdminStats={setAdminStats} setAdminStatsLoading={setAdminStatsLoading}
@@ -1081,7 +1083,7 @@ function AppContent() {
             cvAnalysis={cvAnalysis} cvLoading={cvLoading} analyzeCv={analyzeCv}
           />}
           {activeTab === 'analysis' && <AnalysisScreen
-            analysis={analysis} jobUrl={jobUrl} setJobUrl={setJobUrl}
+            analysis={analysis} justAnalyzed={justAnalyzed} jobUrl={jobUrl} setJobUrl={setJobUrl}
             loading={loading} analyzeJob={analyzeJob}
             jobAnalyses={jobAnalyses} jobAnalysesLoading={jobAnalysesLoading}
             loadJobAnalyses={loadJobAnalyses}

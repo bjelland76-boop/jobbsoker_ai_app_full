@@ -69,7 +69,7 @@ export default function HomeScreen({
   profileId, name, profileEmail, skills, phone, experienceEntries, jobCredits,
   // Analysis state
   jobAnalyses, analysis, applications, statsMe,
-  openSavedAnalysis,
+  openSavedAnalysis, setJustAnalyzed,
   // Home tab
   tipText,
   // Admin
@@ -288,7 +288,7 @@ export default function HomeScreen({
           style={[styles.aerligCard, styles.cardElevated]}
           onPress={() => {
             if (latestJobId) {
-              openSavedAnalysis(latestJobId, latestUrl);
+              openSavedAnalysis(latestJobId, latestUrl, { markFresh: true });
             } else {
               setActiveTab('analysis');
             }
@@ -351,7 +351,13 @@ export default function HomeScreen({
         <Pressable
           {...ripple}
           style={[styles.aerligMiniCard, styles.cardElevated]}
-          onPress={() => setActiveTab('analysis')}
+          onPress={() => {
+            // Explicitly browsing history -- reset justAnalyzed so a stale
+            // true from an earlier fresh analysis doesn't push the list
+            // below the (unrelated, possibly outdated) result section.
+            setJustAnalyzed?.(false);
+            setActiveTab('analysis');
+          }}
         >
           <Text style={styles.aerligMiniLabel}>{t('home.analyzed_jobs')}</Text>
           <Text style={styles.aerligMiniValue}>{analysedJobsCount}</Text>

@@ -10,7 +10,7 @@ import CvTemplatePickerModal from '../components/CvTemplatePickerModal';
 
 export default function AnalysisScreen({
   // analysis state
-  analysis, jobUrl, setJobUrl, loading, analyzeJob,
+  analysis, justAnalyzed, jobUrl, setJobUrl, loading, analyzeJob,
   jobAnalyses, jobAnalysesLoading, loadJobAnalyses,
   profileUpdatedSinceAnalysis,
   applicationStyle, setApplicationStyle,
@@ -70,32 +70,11 @@ export default function AnalysisScreen({
     saveEditedTexts(draftCv, draftLetter);
   }
 
-  return (
-    <View style={styles.aerligHomeWrap}>
-      <Pressable
-        android_ripple={{ color: 'rgba(26, 26, 46, 0.10)' }}
-        style={styles.aerligBackButton}
-        onPress={() => setActiveTab('home')}
-      >
-        <Text style={styles.aerligBackButtonText}>{t('common.back')}</Text>
-      </Pressable>
-      <View style={styles.aerligPageCard}>
-        <Text style={styles.aerligPageTitle}>{t('analysis.title')}</Text>
-        <Text style={styles.aerligPageSubtitle}>{t('analysis.subtitle')}</Text>
-
-        <TextInput
-          style={[styles.input, styles.aerligInput]}
-          placeholder={t('analysis.url_placeholder')}
-          value={jobUrl}
-          onChangeText={setJobUrl}
-          autoCapitalize="none"
-        />
-
-        <TouchableOpacity style={styles.aerligPrimaryButton} onPress={analyzeJob}>
-          <Text style={styles.aerligPrimaryButtonText}>{loading ? t('analysis.analyzing') : t('analysis.analyze_btn')}</Text>
-        </TouchableOpacity>
-      </View>
-
+  // Two top-level sections, order swapped depending on justAnalyzed (see
+  // return below): the history list (browsing past analyses) and the
+  // result for whichever analysis is currently loaded (fresh or reopened).
+  const historySection = (
+    <>
       <View style={styles.aerligCard}>
         <Text style={styles.aerligCardEyebrow}>{t('analysis.previous_analyses')}</Text>
 
@@ -187,7 +166,11 @@ export default function AnalysisScreen({
           </View>
         );
       })}
+    </>
+  );
 
+  const resultSection = (
+    <>
       {profileUpdatedSinceAnalysis && analysis && jobUrl ? (
         <View style={[styles.aerligCard, { borderWidth: 1.5, borderColor: '#E8501A', backgroundColor: '#FFF8F4' }]}>
           <Text style={{ fontSize: 14, fontWeight: '700', color: '#E8501A', marginBottom: 4 }}>{t('analysis.profile_updated_title')}</Text>
@@ -583,6 +566,46 @@ export default function AnalysisScreen({
           </View>
         </>
       ) : null}
+    </>
+  );
+
+  return (
+    <View style={styles.aerligHomeWrap}>
+      <Pressable
+        android_ripple={{ color: 'rgba(26, 26, 46, 0.10)' }}
+        style={styles.aerligBackButton}
+        onPress={() => setActiveTab('home')}
+      >
+        <Text style={styles.aerligBackButtonText}>{t('common.back')}</Text>
+      </Pressable>
+      <View style={styles.aerligPageCard}>
+        <Text style={styles.aerligPageTitle}>{t('analysis.title')}</Text>
+        <Text style={styles.aerligPageSubtitle}>{t('analysis.subtitle')}</Text>
+
+        <TextInput
+          style={[styles.input, styles.aerligInput]}
+          placeholder={t('analysis.url_placeholder')}
+          value={jobUrl}
+          onChangeText={setJobUrl}
+          autoCapitalize="none"
+        />
+
+        <TouchableOpacity style={styles.aerligPrimaryButton} onPress={analyzeJob}>
+          <Text style={styles.aerligPrimaryButtonText}>{loading ? t('analysis.analyzing') : t('analysis.analyze_btn')}</Text>
+        </TouchableOpacity>
+      </View>
+
+      {justAnalyzed ? (
+        <>
+          {resultSection}
+          {historySection}
+        </>
+      ) : (
+        <>
+          {historySection}
+          {resultSection}
+        </>
+      )}
     </View>
   );
 }
