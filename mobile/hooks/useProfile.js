@@ -333,11 +333,20 @@ export default function useProfile({ onProfileSaved } = {}) {
   // ---------------------------------------------------------------------------
   // Job credits (refetched after a Stripe purchase is confirmed)
   // ---------------------------------------------------------------------------
+  // GET /profiles always returns [] for anonymous callers (no identity to
+  // list against, see loadProfile() above) -- only GET /profiles/{id}
+  // works for them. Both refresh functions used to call GET /profiles
+  // unconditionally, so for every anonymous user they silently no-op on
+  // every call, forever, after the initial load (jobCredits/
+  // subscriptionStatus could never be refreshed -- e.g. after a credit is
+  // consumed elsewhere or a Stripe purchase completes).
   async function refreshJobCredits() {
     try {
-      const data = await apiFetch('/profiles');
-      if (Array.isArray(data) && data.length > 0) {
-        const credits = data[0].job_credits || 0;
+      const profile = authTokenState
+        ? (await apiFetch('/profiles'))?.[0]
+        : (profileId ? await apiFetch(`/profiles/${profileId}`) : null);
+      if (profile) {
+        const credits = profile.job_credits || 0;
         setJobCredits(credits);
         return credits;
       }
@@ -349,11 +358,13 @@ export default function useProfile({ onProfileSaved } = {}) {
 
   async function refreshSubscription() {
     try {
-      const data = await apiFetch('/profiles');
-      if (Array.isArray(data) && data.length > 0) {
-        const status = data[0].subscription_status || null;
+      const profile = authTokenState
+        ? (await apiFetch('/profiles'))?.[0]
+        : (profileId ? await apiFetch(`/profiles/${profileId}`) : null);
+      if (profile) {
+        const status = profile.subscription_status || null;
         setSubscriptionStatus(status);
-        setSubscriptionEnd(data[0].subscription_end || null);
+        setSubscriptionEnd(profile.subscription_end || null);
         return status;
       }
     } catch (e) {
