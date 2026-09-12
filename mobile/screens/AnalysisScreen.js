@@ -253,28 +253,6 @@ export default function AnalysisScreen({
                 </View>
               </>
             ) : null}
-
-            {analysis.recommended_application_style ? (
-              <View style={{ marginTop: 10 }}>
-                <Text style={styles.aerligCardSectionTitle}>{t('analysis.recommended_length')}</Text>
-                <Text style={styles.aerligCardBody}>
-                  {analysis.recommended_application_style === 'kort'
-                    ? t('analysis.style_short')
-                    : analysis.recommended_application_style === 'profesjonell'
-                      ? t('analysis.style_professional')
-                      : t('analysis.style_normal')}
-                </Text>
-                {analysis.recommended_style_reason ? (
-                  <Text style={[styles.aerligCardBody, { marginTop: 6 }]}>{t('analysis.recommended_style_reason')}</Text>
-                ) : null}
-                <TouchableOpacity
-                  style={[styles.aerligSecondaryButton, { marginTop: 10, paddingVertical: 12 }]}
-                  onPress={() => setApplicationStyle(analysis.recommended_application_style)}
-                >
-                  <Text style={styles.aerligSecondaryButtonText}>{t('analysis.use_recommended')}</Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
           </View>
 
           {analysis.honest_assessment ? (
