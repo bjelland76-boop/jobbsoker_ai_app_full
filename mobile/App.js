@@ -264,11 +264,14 @@ function AppContent() {
         if (confirmed) {
           closePaymentModal();
           dismissInactivityReminder();
-          Alert.alert('Abonnement aktivert', 'Du har nå fri bruk av alle funksjoner.');
+          // Alert.alert is a no-op in this app's web build (react-native-web's
+          // `static alert(){}` stub, and Platform.OS is always "web" here) --
+          // a real Stripe payment just completed, so window.alert() (a real
+          // browser dialog) is used instead of silently showing nothing.
+          window.alert('Abonnement aktivert\n\nDu har nå fri bruk av alle funksjoner.');
         } else {
-          Alert.alert(
-            'Betaling mottatt',
-            'Vi venter fortsatt på bekreftelse fra Stripe. Abonnementet aktiveres om kort tid — sjekk gjerne på nytt om litt.'
+          window.alert(
+            'Betaling mottatt\n\nVi venter fortsatt på bekreftelse fra Stripe. Abonnementet aktiveres om kort tid — sjekk gjerne på nytt om litt.'
           );
         }
         return;
@@ -286,11 +289,10 @@ function AppContent() {
       }
       if (confirmed) {
         closePaymentModal();
-        Alert.alert('Betaling bekreftet', `${expectedCredits > 0 ? expectedCredits : ''} credits er lagt til kontoen din.`.trim());
+        window.alert(`Betaling bekreftet\n\n${`${expectedCredits > 0 ? expectedCredits : ''} credits er lagt til kontoen din.`.trim()}`);
       } else {
-        Alert.alert(
-          'Betaling mottatt',
-          'Vi venter fortsatt på bekreftelse fra Stripe. Credits dukker opp om kort tid — sjekk gjerne på nytt om litt.'
+        window.alert(
+          'Betaling mottatt\n\nVi venter fortsatt på bekreftelse fra Stripe. Credits dukker opp om kort tid — sjekk gjerne på nytt om litt.'
         );
       }
     })();
@@ -581,11 +583,11 @@ function AppContent() {
       if (res?.portal_url) {
         Linking.openURL(res.portal_url);
       } else {
-        Alert.alert('Feil', 'Fikk ingen lenke til abonnementsportalen.');
+        window.alert('Feil\n\nFikk ingen lenke til abonnementsportalen.');
       }
     } catch (e) {
       console.error('[Assistant] create-portal-session failed', e);
-      Alert.alert('Feil', e?.message || 'Kunne ikke åpne abonnementsportalen.');
+      window.alert(`Feil\n\n${e?.message || 'Kunne ikke åpne abonnementsportalen.'}`);
     }
   }
 

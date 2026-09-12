@@ -366,6 +366,8 @@
     "launch_note": "Qiimaha bilowga — waqti xaddidan 🎉",
     "stripe_note": "Lacag bixinta waxaa lagu sameeyaa Stripe — ammaan ah oo fudud",
     "android_browser_note": "Lacag-bixinta waxay ku furmaysaa biraawsarka ka baxsan abka",
+    "checkout_error_title": "Wax baa qaldamay",
+    "checkout_error_body": "Lama bilaabi karin lacag-bixinta. Fadlan isku day mar kale wax yar kadib.",
     "subscribe_btn": "Hadda is diiwaan geli",
     "pay_card_btn": "Ku bixi kaadhka",
     "not_now": "Hadda ma aha"

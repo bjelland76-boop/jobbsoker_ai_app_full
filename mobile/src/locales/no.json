@@ -374,6 +374,8 @@
     "android_success_pass": "Din 7-dagers tilgang er nå aktiv.",
     "android_error_title": "Noe gikk galt",
     "android_error_generic": "Kunne ikke fullføre kjøpet. Prøv igjen senere.",
+    "checkout_error_title": "Noe gikk galt",
+    "checkout_error_body": "Kunne ikke starte betalingen. Prøv igjen om et øyeblikk.",
     "subscribe_btn": "Abonner nå",
     "pay_card_btn": "Betal med kort",
     "not_now": "Ikke nå"

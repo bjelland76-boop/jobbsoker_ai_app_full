@@ -365,6 +365,8 @@
     "launch_note": "Launch pricing — limited time 🎉",
     "stripe_note": "Payment via Stripe — safe and easy",
     "android_browser_note": "Payment opens in the browser outside the app",
+    "checkout_error_title": "Something went wrong",
+    "checkout_error_body": "Could not start the payment. Please try again in a moment.",
     "subscribe_btn": "Subscribe now",
     "pay_card_btn": "Pay by card",
     "not_now": "Not now"

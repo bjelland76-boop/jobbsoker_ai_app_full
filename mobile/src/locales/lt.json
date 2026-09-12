@@ -365,6 +365,8 @@
     "launch_note": "Pradinė kaina — ribotą laiką 🎉",
     "stripe_note": "Mokėjimas per Stripe — saugu ir paprasta",
     "android_browser_note": "Mokėjimas atsidaro naršyklėje už programėlės ribų",
+    "checkout_error_title": "Kažkas nutiko ne taip",
+    "checkout_error_body": "Nepavyko pradėti mokėjimo. Bandykite dar kartą po akimirkos.",
     "subscribe_btn": "Prenumeruoti dabar",
     "pay_card_btn": "Mokėti kortele",
     "not_now": "Ne dabar"

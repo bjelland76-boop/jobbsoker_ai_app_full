@@ -365,6 +365,8 @@
     "launch_note": "سعر الإطلاق — لفترة محدودة 🎉",
     "stripe_note": "الدفع عبر Stripe — آمن وسهل",
     "android_browser_note": "يفتح الدفع في المتصفح خارج التطبيق",
+    "checkout_error_title": "حدث خطأ ما",
+    "checkout_error_body": "تعذر بدء عملية الدفع. حاول مرة أخرى بعد قليل.",
     "subscribe_btn": "اشترك الآن",
     "pay_card_btn": "ادفع بالبطاقة",
     "not_now": "ليس الآن"

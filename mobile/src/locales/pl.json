@@ -365,6 +365,8 @@
     "launch_note": "Cena wprowadzająca — czas ograniczony 🎉",
     "stripe_note": "Płatność przez Stripe — bezpiecznie i wygodnie",
     "android_browser_note": "Płatność otwiera się w przeglądarce poza aplikacją",
+    "checkout_error_title": "Coś poszło nie tak",
+    "checkout_error_body": "Nie udało się rozpocząć płatności. Spróbuj ponownie za chwilę.",
     "subscribe_btn": "Subskrybuj teraz",
     "pay_card_btn": "Zapłać kartą",
     "not_now": "Nie teraz"

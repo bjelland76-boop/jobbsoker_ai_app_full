@@ -366,6 +366,8 @@
     "launch_note": "Giá ra mắt — thời gian có hạn 🎉",
     "stripe_note": "Thanh toán qua Stripe — an toàn và dễ dàng",
     "android_browser_note": "Thanh toán mở trong trình duyệt bên ngoài ứng dụng",
+    "checkout_error_title": "Đã có lỗi xảy ra",
+    "checkout_error_body": "Không thể bắt đầu thanh toán. Vui lòng thử lại sau giây lát.",
     "subscribe_btn": "Đăng ký ngay",
     "pay_card_btn": "Thanh toán bằng thẻ",
     "not_now": "Không phải bây giờ"

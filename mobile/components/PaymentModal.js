@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TouchableOpacity, Linking, ActivityIndicator, StyleSheet, Alert } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, Linking, ActivityIndicator, StyleSheet } from 'react-native';
 import { Capacitor } from '@capacitor/core';
 
 import { apiFetch, useApp } from '../context/AppContext';
@@ -97,13 +97,18 @@ export default function PaymentModal({ visible, limitType, onClose, userId, user
 
       await refreshSubscription?.();
       onClose?.();
-      Alert.alert(
-        t('payment.android_success_title'),
-        type === 'subscription' ? t('payment.android_success_sub') : t('payment.android_success_pass')
+      // Real money just changed hands -- Alert.alert is a no-op in this
+      // app's web build (react-native-web's `static alert(){}` stub, and
+      // Platform.OS is always "web" here, including inside the Android
+      // app's Capacitor WebView), so it was previously showing the user
+      // literally nothing after a successful charge. window.alert() is a
+      // real browser dialog and always works.
+      window.alert(
+        `${t('payment.android_success_title')}\n\n${type === 'subscription' ? t('payment.android_success_sub') : t('payment.android_success_pass')}`
       );
     } catch (e) {
       console.error('[Assistant] Android Play Billing purchase failed', e);
-      Alert.alert(t('payment.android_error_title'), e?.message || t('payment.android_error_generic'));
+      window.alert(`${t('payment.android_error_title')}\n\n${e?.message || t('payment.android_error_generic')}`);
     }
   }
 
@@ -139,6 +144,7 @@ export default function PaymentModal({ visible, limitType, onClose, userId, user
       }
     } catch (e) {
       console.error('[Assistant] create-checkout failed', e);
+      window.alert(`${t('payment.checkout_error_title')}\n\n${e?.message || t('payment.checkout_error_body')}`);
     } finally {
       setLoading(false);
     }
