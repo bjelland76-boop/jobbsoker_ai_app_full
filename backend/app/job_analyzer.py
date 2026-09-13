@@ -1164,7 +1164,7 @@ def analyze_job_url(
         # Phase 1: pass through from the single matcher call.
         "recommended_cv_changes": match.get("recommended_cv_changes") or [],
         "should_apply": bool(int(match.get("score", 0)) >= 60),
-        "improvement_tips": [x for x in [(match.get("advice") or "").strip()] if x],
+        "improvement_tips": match.get("advice") or [],
         "recommended_application_style": style_norm,
         "recommended_style_reason": "Bruker-valgt stil.",
         "__job_text": _compress_text(job_text, 3000),

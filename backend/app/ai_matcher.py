@@ -23,7 +23,7 @@ class MatchResult(TypedDict):
     fit: str
     strengths: List[str]
     missing: List[str]
-    advice: str
+    advice: List[str]  # tiered positioning advice / honest "don't apply" verdict -- see ADVICE TIERING in the prompt
 
     # Phase 1: small, concrete CV improvements derived from missing requirements.
     recommended_cv_changes: List[str]
@@ -196,7 +196,7 @@ def _normalize_result(data: Any, *, lang: str = "no") -> MatchResult:
         "fit": "",
         "strengths": [],
         "missing": [],
-        "advice": "",
+        "advice": [],
         "recommended_cv_changes": [],
         "interview_probability": 0,
         "seniority_match": 0,
@@ -218,13 +218,22 @@ def _normalize_result(data: Any, *, lang: str = "no") -> MatchResult:
     ip = max(s - 20, min(s + 10, ip))
     out["interview_probability"] = _clamp_0_100(ip)
 
-    out["fit"] = _short_text(data.get("fit"), 180)
+    out["fit"] = _short_text(data.get("fit"), 280)
     out["top_reason"] = _short_text(data.get("top_reason"), 160)
     out["main_risk"] = _short_text(data.get("main_risk"), 160)
-    out["advice"] = _short_text(data.get("advice"), 180)
 
     out["strengths"] = _normalize_list(data.get("strengths"), max_items=3)
-    out["missing"] = _normalize_list(data.get("missing"), max_items=3)
+    # Bumped from 3/60 -> 5/110: this list now doubles as the concrete
+    # "requirements you don't currently meet" content (certifications,
+    # language level, years of experience, education, licences), not just a
+    # short "weaknesses" blurb -- needs room for specific items, and for the
+    # post-employment-requirement clarifying note (see ADVICE TIERING /
+    # POST-EMPLOYMENT rules in the prompt) to fit alongside the requirement itself.
+    out["missing"] = _normalize_list(data.get("missing"), max_items=5, max_item_chars=110)
+    # Tiered positioning advice (or an honest "don't apply" verdict at very
+    # low scores) -- always a list now, 1-3 items depending on score tier,
+    # so a single item can be a full sentence rather than a short tip.
+    out["advice"] = _normalize_list(data.get("advice"), max_items=3, max_item_chars=220)
     out["recommended_cv_changes"] = _normalize_list(
         data.get("recommended_cv_changes"),
         max_items=3,
@@ -376,7 +385,10 @@ def analyze_job_match(
 
     lang_rule = _LANG_OUTPUT_RULE[lang]
     system_prompt = (
-        f"Recruiter AI. Return ONLY JSON. Be concise. {lang_rule}\n\n" + SHARED_ANTI_HALLUCINATION_RULES
+        "You are Ærlig, a warm, honest career mentor -- not a bureaucratic recruiter. "
+        "You talk directly TO the candidate, like a good friend who respects them enough to "
+        "tell the truth kindly. Return ONLY JSON. Be concise. "
+        f"{lang_rule}\n\n" + SHARED_ANTI_HALLUCINATION_RULES
     )
 
     # Very compact schema instruction to minimize tokens.
@@ -399,18 +411,43 @@ def analyze_job_match(
         "If the candidate's level is insufficient for a required language, reduce score, add to 'missing', and mention it in 'main_risk' "
         "with a short explanation (e.g. 'Job requires fluent Norwegian; candidate shows Grunnleggende'). "
         "If no language level is listed in CV but the language appears in experience/education, assume adequate proficiency.\n"
+        "\nTONE AND VOICE (applies to 'fit' and every item in 'advice'):\n"
+        "- Talk directly TO the candidate in second person ('you have...', 'your experience...'). "
+        "NEVER third person ('the candidate has...', 'this applicant...').\n"
+        "- Sound like a warm, honest mentor or a good friend giving real feedback -- never robotic, "
+        "bureaucratic, or like a form letter. Be genuinely kind, but never sugar-coat or soften a real gap "
+        "just to be nice: honest and concrete first, warmly phrased second.\n"
+        "\nADVICE TIERING -- 'advice' is a JSON list of strings, sized and framed based on the SCORE you "
+        "just assigned (never a single plain string):\n"
+        "- score >= 60: 1-2 short, concrete tips for making an already-good application even stronger.\n"
+        "- 25 <= score < 60: 2-3 concrete, honest tips for how to best position THIS specific application "
+        "despite the gap -- which real, documented strengths to lead with, where to be upfront about what's "
+        "missing rather than hide it, and optionally one short phrasing suggestion for the cover letter. "
+        "Still direct and warm, not just encouraging fluff.\n"
+        "- score < 25: exactly ONE clear, direct, kind sentence telling the candidate this specific job is "
+        "not a good match and that applying is unlikely to be worth their time -- do NOT soften this into "
+        "generic improvement tips or imply it might still work out. Briefly say why in the same sentence, "
+        "and suggest they look for better-matching roles instead. Honesty here is the whole point of this app.\n"
+        "\nPOST-EMPLOYMENT REQUIREMENTS -- do not penalize:\n"
+        "- Requirements normally verified or arranged AFTER being hired -- e.g. security clearance "
+        "('sikkerhetsklarering'), a police record certificate ('politiattest'), employer-provided courses/"
+        "certifications, probation-period requirements -- must NOT lower the score and must NOT appear in "
+        "'main_risk' as a real risk (they are not a barrier to applying).\n"
+        "- Such a requirement may still be listed in 'missing' (see below) so the candidate knows it exists, "
+        "but ONLY with an explicit short note that it is normally arranged after hiring, e.g. "
+        "'Sikkerhetsklarering (ordnes normalt etter ansettelse, ikke et hinder for å søke)'.\n"
         f"{_reinforced_language_instruction(lang)}"
         "Return JSON: {"
         '"score":0-100,'
         '"interview_probability":0-100,'
         '"seniority_match":0-100,'
-        '"fit":"1 short sentence",'
+        '"fit":"1-2 sentences, direct address, warm+honest tone (see TONE above)",'
         '"top_reason":"1 short sentence",'
-        '"main_risk":"1 short sentence — only a real gap, not an implied skill",'
+        '"main_risk":"1 short sentence — only a real gap, not an implied skill, never a post-employment requirement",'
         '"strengths":["max 3"],'
-        '"missing":["max 3; only genuine gaps not inferable from stated experience"],'
+        '"missing":["up to 5; the concrete, complete list of REAL requirements from the job ad not found in the CV — certifications, language level, years of experience, education, licences; only genuine gaps not inferable from stated experience; post-employment-only requirements allowed here with their clarifying note (see POST-EMPLOYMENT rule), never elsewhere"],'
         '"recommended_cv_changes":["max 3; actionable CV edits addressing missing requirements; <=120 chars; no generic"],'
-        '"advice":"1 short sentence",'
+        '"advice":["1-3 items — size, content and tone strictly per ADVICE TIERING above, based on the score field in this same response"],'
         '"cv_mal":"profesjonell (DEFAULT for de fleste stillinger: salg/kontor/service/logistikk/bygg/HR generelt) | kreativ (KUN for: designer/UX/grafisk/animasjon/reklame/media/innhold) | klassisk (KUN for: advokat/jurist/revisor/forsker/akademiker/offentlig forvaltning) | moderne (KUN for: tech/IT/startup/utvikler/data/produkt) | skandinavisk (KUN for: helse/omsorg/offentlig sektor/konservative bransjer — alternativ til klassisk) — velg basert på stillingstittelen i JOB-seksjonen (ignorer vietnamesisk — den velges automatisk basert på språk, ikke av deg)"'
         "}"
         f"\n{lang_rule}"
