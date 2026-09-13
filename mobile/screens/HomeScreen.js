@@ -108,9 +108,18 @@ export default function HomeScreen({
     ? Math.max(0, Math.min(100, Math.round(rawMatch)))
     : null;
 
-  const latestShouldApply = (typeof latestFromHistory?.should_apply === 'boolean')
-    ? latestFromHistory.should_apply
-    : (typeof analysis?.should_apply === 'boolean' ? analysis.should_apply : null);
+  const honestyPillStyle = latestMatch == null ? null
+    : latestMatch >= 60 ? styles.aerligPillYes
+    : latestMatch >= 25 ? styles.aerligPillWarn
+    : styles.aerligPillNo;
+  const honestyPillTextStyle = latestMatch == null ? null
+    : latestMatch >= 60 ? styles.aerligPillTextYes
+    : latestMatch >= 25 ? styles.aerligPillTextWarn
+    : styles.aerligPillTextNo;
+  const honestyPillLabel = latestMatch == null ? ''
+    : latestMatch >= 60 ? t('home.recommend_high')
+    : latestMatch >= 25 ? t('home.recommend_medium')
+    : t('home.recommend_low');
 
   const honestText = latestFromHistory?.honest_assessment || analysis?.honest_assessment || '';
 
@@ -317,10 +326,10 @@ export default function HomeScreen({
             </>
           ) : null}
 
-          {(typeof latestShouldApply === 'boolean') ? (
-            <View style={[styles.aerligPill, latestShouldApply ? styles.aerligPillYes : styles.aerligPillNo]}>
-              <Text style={[styles.aerligPillText, latestShouldApply ? styles.aerligPillTextYes : styles.aerligPillTextNo]}>
-                {t('home.recommendation')}: {latestShouldApply ? t('home.recommend_apply') : t('home.recommend_wait')}
+          {(latestMatch != null) ? (
+            <View style={[styles.aerligPill, honestyPillStyle]}>
+              <Text style={[styles.aerligPillText, honestyPillTextStyle]}>
+                {t('home.recommendation')}: {honestyPillLabel}
               </Text>
             </View>
           ) : null}

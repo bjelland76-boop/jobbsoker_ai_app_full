@@ -51,6 +51,16 @@ export default function AnalysisScreen({
     : matchScore >= 40 ? t('home.match_ok')
     : t('home.match_weak');
 
+  const honestyMeterStyle = matchScore >= 60 ? styles.aerligMeterGood
+    : matchScore >= 25 ? styles.aerligMeterWarn
+    : styles.aerligMeterBad;
+  const honestyMeterColor = matchScore >= 60 ? '#16A34A'
+    : matchScore >= 25 ? '#D97706'
+    : '#DC2626';
+  const honestyMeterLabel = matchScore >= 60 ? t('analysis.honesty_high')
+    : matchScore >= 25 ? t('analysis.honesty_medium')
+    : t('analysis.honesty_low');
+
   const strengths = Array.isArray(analysis?.strengths) ? analysis.strengths : [];
 
   const [draftCv, setDraftCv] = React.useState('');
@@ -236,18 +246,18 @@ export default function AnalysisScreen({
               </>
             ) : null}
 
-            {(typeof analysis?.should_apply === 'boolean') ? (
+            {hasMatchScore ? (
               <>
                 <View style={styles.aerligMeterRow}>
                   <Text style={styles.aerligMeterLabel}>{t('analysis.honesty_meter')}</Text>
-                  <Text style={styles.aerligMeterValue}>{analysis.should_apply ? t('analysis.apply') : t('analysis.wait')}</Text>
+                  <Text style={[styles.aerligMeterValue, { color: honestyMeterColor }]}>{honestyMeterLabel}</Text>
                 </View>
                 <View style={styles.aerligMeterOuter}>
                   <View
                     style={[
                       styles.aerligMeterInner,
-                      analysis.should_apply ? styles.aerligMeterGood : styles.aerligMeterWarn,
-                      { width: '100%' },
+                      honestyMeterStyle,
+                      { width: `${Math.max(0, Math.min(100, matchScore))}%` },
                     ]}
                   />
                 </View>

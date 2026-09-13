@@ -1272,8 +1272,12 @@ export const styles = StyleSheet.create({
     borderColor: 'rgba(58, 125, 68, 0.35)',
   },
   aerligPillNo: {
-    backgroundColor: 'rgba(232, 98, 42, 0.10)',
-    borderColor: 'rgba(232, 98, 42, 0.35)',
+    backgroundColor: 'rgba(220, 38, 38, 0.10)',
+    borderColor: 'rgba(220, 38, 38, 0.35)',
+  },
+  aerligPillWarn: {
+    backgroundColor: 'rgba(217, 119, 6, 0.10)',
+    borderColor: 'rgba(217, 119, 6, 0.35)',
   },
   aerligPillText: {
     fontSize: 12,
@@ -1283,7 +1287,10 @@ export const styles = StyleSheet.create({
     color: '#3A7D44',
   },
   aerligPillTextNo: {
-    color: '#E8622A',
+    color: '#DC2626',
+  },
+  aerligPillTextWarn: {
+    color: '#D97706',
   },
   aerligGrid: {
     flexDirection: 'row',
