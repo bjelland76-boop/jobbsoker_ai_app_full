@@ -147,6 +147,8 @@
     "photo_in_pdf": "Ảnh trong PDF",
     "photo_in_pdf_help": "Chọn xem ảnh hồ sơ có được đưa vào đơn/PDF này không (mặc định có thể đặt trong Hồ sơ).",
     "language_label": "Ngôn ngữ",
+    "language_detected_prefix": "Viết bằng:",
+    "language_change_link": "Đổi ngôn ngữ",
     "sending": "Đang gửi...",
     "send_application": "Gửi đơn xin việc (email)",
     "generating": "Đang tạo...",

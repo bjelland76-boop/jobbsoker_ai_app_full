@@ -34,6 +34,13 @@ class MatchResult(TypedDict):
     main_risk: str
     cv_mal: str  # "kreativ" | "profesjonell" | "klassisk" | "moderne" | "skandinavisk" | "vietnamesisk"
 
+    # Fase 1 auto-language-detection: the language the JOB AD TEXT itself is
+    # written in (not the language the response above is written in, which
+    # is a separate, caller-chosen setting -- see `lang`/_LANG_OUTPUT_RULE).
+    # "no" or "en" only for now; "no" is the fallback when the model can't
+    # tell confidently, never a hard failure.
+    detected_ad_language: str
+
 
 def _compress_text(text: str, max_len: int = 2500) -> str:
     # IMPORTANT: keep this helper exact/compatible for token reduction.
@@ -203,6 +210,7 @@ def _normalize_result(data: Any, *, lang: str = "no") -> MatchResult:
         "top_reason": "",
         "main_risk": "",
         "cv_mal": "profesjonell",
+        "detected_ad_language": "no",
     }
 
     if not isinstance(data, dict):
@@ -247,6 +255,14 @@ def _normalize_result(data: Any, *, lang: str = "no") -> MatchResult:
     # what the model picked based on job title.
     if lang == "vi":
         out["cv_mal"] = "vietnamesisk"
+
+    # Fase 1 auto-language-detection: only "no"/"en" are trusted values for
+    # now (Norwegian job market coverage). Anything else the model returns --
+    # a typo, a third language, an empty/missing field -- falls back to "no"
+    # rather than failing the whole analysis: better a wrong-but-safe default
+    # than a broken generation step downstream.
+    detected_lang_raw = str(data.get("detected_ad_language") or "").strip().lower()
+    out["detected_ad_language"] = detected_lang_raw if detected_lang_raw in ("no", "en") else "no"
 
     return out
 
@@ -448,7 +464,8 @@ def analyze_job_match(
         '"missing":["up to 5; the concrete, complete list of REAL requirements from the job ad not found in the CV — certifications, language level, years of experience, education, licences; only genuine gaps not inferable from stated experience; post-employment-only requirements allowed here with their clarifying note (see POST-EMPLOYMENT rule), never elsewhere"],'
         '"recommended_cv_changes":["max 3; actionable CV edits addressing missing requirements; <=120 chars; no generic"],'
         '"advice":["1-3 items — size, content and tone strictly per ADVICE TIERING above, based on the score field in this same response"],'
-        '"cv_mal":"profesjonell (DEFAULT for de fleste stillinger: salg/kontor/service/logistikk/bygg/HR generelt) | kreativ (KUN for: designer/UX/grafisk/animasjon/reklame/media/innhold) | klassisk (KUN for: advokat/jurist/revisor/forsker/akademiker/offentlig forvaltning) | moderne (KUN for: tech/IT/startup/utvikler/data/produkt) | skandinavisk (KUN for: helse/omsorg/offentlig sektor/konservative bransjer — alternativ til klassisk) — velg basert på stillingstittelen i JOB-seksjonen (ignorer vietnamesisk — den velges automatisk basert på språk, ikke av deg)"'
+        '"cv_mal":"profesjonell (DEFAULT for de fleste stillinger: salg/kontor/service/logistikk/bygg/HR generelt) | kreativ (KUN for: designer/UX/grafisk/animasjon/reklame/media/innhold) | klassisk (KUN for: advokat/jurist/revisor/forsker/akademiker/offentlig forvaltning) | moderne (KUN for: tech/IT/startup/utvikler/data/produkt) | skandinavisk (KUN for: helse/omsorg/offentlig sektor/konservative bransjer — alternativ til klassisk) — velg basert på stillingstittelen i JOB-seksjonen (ignorer vietnamesisk — den velges automatisk basert på språk, ikke av deg)",'
+        '"detected_ad_language":"no or en — the language the JOB AD TEXT in the JOB section above is ACTUALLY WRITTEN IN, completely independent of what language you were told to write THIS response in. If the job ad is not clearly Norwegian or English, or you are not confident, answer no."'
         "}"
         f"\n{lang_rule}"
     )

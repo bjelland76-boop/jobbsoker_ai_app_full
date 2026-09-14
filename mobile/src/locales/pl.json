@@ -147,6 +147,8 @@
     "photo_in_pdf": "Zdjęcie w PDF",
     "photo_in_pdf_help": "Możesz wybrać, czy zdjęcie profilowe ma być dołączone do tego podania/PDF.",
     "language_label": "Język / Language",
+    "language_detected_prefix": "Piszemy po:",
+    "language_change_link": "Zmień język",
     "sending": "Wysyłanie...",
     "send_application": "Wyślij podanie (e-mail)",
     "generating": "Generowanie...",

@@ -65,6 +65,11 @@ export default function AnalysisScreen({
 
   const [draftCv, setDraftCv] = React.useState('');
   const [draftLetter, setDraftLetter] = React.useState('');
+  // Fase 1 auto-language-detection: cvLanguage is now set automatically from
+  // the detected job-ad language (see analyzeJob() in useJobAnalysis.js).
+  // This just toggles visibility of the manual override chips -- collapsed
+  // by default so it reads as a correction, not a required step.
+  const [showLanguageOverride, setShowLanguageOverride] = React.useState(false);
 
   function startEditingText() {
     setDraftCv(applicationPackage?.cv || '');
@@ -357,23 +362,34 @@ export default function AnalysisScreen({
                 </View>
               </View>
             ) : (
-              <>
-                <Text style={[styles.inputLabel, styles.aerligLabel, { marginTop: 6 }]}>{t('analysis.language_label')}</Text>
-                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
-                  {[{ key: 'no', label: '🇳🇴 Norsk' }, { key: 'en', label: '🇬🇧 English' }].map(({ key, label }) => {
-                    const active = cvLanguage === key;
-                    return (
-                      <TouchableOpacity
-                        key={key}
-                        onPress={() => setCvLanguage(key)}
-                        style={[styles.filterChip, styles.aerligFilterChip, active && styles.aerligFilterChipActive]}
-                      >
-                        <Text style={[styles.filterChipText, styles.aerligFilterChipText, active && styles.aerligFilterChipTextActive]}>{label}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+              <View style={{ marginTop: 6, marginBottom: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <Text style={{ fontSize: 12, color: '#6B7280' }}>
+                    {t('analysis.language_detected_prefix')} {cvLanguage === 'en' ? '🇬🇧 English' : '🇳🇴 Norsk'}
+                  </Text>
+                  <TouchableOpacity onPress={() => setShowLanguageOverride((v) => !v)}>
+                    <Text style={{ fontSize: 12, color: THEME.colors.primary, fontWeight: '700' }}>
+                      {showLanguageOverride ? t('common.cancel') : t('analysis.language_change_link')}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
-              </>
+                {showLanguageOverride ? (
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                    {[{ key: 'no', label: '🇳🇴 Norsk' }, { key: 'en', label: '🇬🇧 English' }].map(({ key, label }) => {
+                      const active = cvLanguage === key;
+                      return (
+                        <TouchableOpacity
+                          key={key}
+                          onPress={() => { setCvLanguage(key); setShowLanguageOverride(false); }}
+                          style={[styles.filterChip, styles.aerligFilterChip, active && styles.aerligFilterChipActive]}
+                        >
+                          <Text style={[styles.filterChipText, styles.aerligFilterChipText, active && styles.aerligFilterChipTextActive]}>{label}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ) : null}
+              </View>
             )}
             {(analysis?.has_tailored_cv_no || analysis?.has_tailored_cv_en || analysis?.has_tailored_cv_vi) ? (
               <View style={{ flexDirection: 'row', gap: 6, marginBottom: 6 }}>

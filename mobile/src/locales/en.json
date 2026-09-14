@@ -147,6 +147,8 @@
     "photo_in_pdf": "Photo in PDF",
     "photo_in_pdf_help": "Choose whether your profile photo should be included in this application/PDF (default can be set in Profile).",
     "language_label": "Language",
+    "language_detected_prefix": "Writing in:",
+    "language_change_link": "Change language",
     "sending": "Sending...",
     "send_application": "Send application (email)",
     "generating": "Generating...",

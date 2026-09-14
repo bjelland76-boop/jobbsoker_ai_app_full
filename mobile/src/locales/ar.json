@@ -147,6 +147,8 @@
     "photo_in_pdf": "الصورة في PDF",
     "photo_in_pdf_help": "يمكنك اختيار ما إذا كانت صورة ملفك الشخصي ستُدرج في هذا الطلب/PDF (يمكن تعيين الافتراضي في الملف الشخصي).",
     "language_label": "اللغة / Language",
+    "language_detected_prefix": "الكتابة بلغة:",
+    "language_change_link": "تغيير اللغة",
     "sending": "جارٍ الإرسال...",
     "send_application": "إرسال الطلب (بريد إلكتروني)",
     "generating": "جارٍ الإنشاء...",

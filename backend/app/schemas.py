@@ -120,6 +120,11 @@ class JobAnalysisOut(BaseModel):
     # One of: "kreativ" | "profesjonell" | "klassisk" | "moderne" | "skandinavisk" | "vietnamesisk"
     cv_mal: str = "profesjonell"
 
+    # Fase 1 auto-language-detection: the job ad's own detected language
+    # ("no" | "en"), used as the default for generated documents unless the
+    # user explicitly overrides it. Falls back to "no" when uncertain.
+    detected_ad_language: str = "no"
+
     # Whether a generated CV already exists for each language (used by frontend confirm dialog).
     has_tailored_cv_no: bool = False
     has_tailored_cv_en: bool = False

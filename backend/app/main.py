@@ -803,7 +803,11 @@ class SendAnalysisIn(BaseModel):
     to_email: str | None = None
     application_style: str = "vanlig"  # kort | vanlig | profesjonell
     include_photo: bool = True
-    language: str = "no"  # "no" | "en"
+    # Fase 1 auto-language-detection: None (the normal case) means "no
+    # override" -- the generated documents are written in this same call's
+    # freshly detected job-ad language. "no"/"en"/"vi" forces that language
+    # instead, for the discreet manual-override control.
+    language: str | None = None
     template: str | None = None  # "kreativ"|"profesjonell"|"klassisk"|"moderne"|"skandinavisk"|"vietnamesisk"; None = use AI-recommended cv_mal
 
 
@@ -2436,7 +2440,7 @@ def generate_tailored_cv(
     application_style: str = Query(default="vanlig"),
     include_photo: bool = Query(default=True),
     template: str = Query(default=""),  # "kreativ"|"profesjonell"|"klassisk"|"moderne"|"skandinavisk"|"vietnamesisk"; empty = use stored cv_mal
-    language: str = Query(default="no"),  # "no" | "en" | "vi"
+    language: str = Query(default=""),  # "no"|"en"|"vi" override; empty (Fase 1 default) = use stored detected_ad_language
     edited: EditedTextIn | None = Body(default=None),
     current_user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
@@ -2489,8 +2493,13 @@ def generate_tailored_cv(
     if effective_template not in _VALID_TEMPLATES:
         effective_template = "profesjonell"
 
-    # Language-specific storage keys: Norwegian uses legacy keys, English/Vietnamese use _en/_vi suffixes
-    lang = (language or "no").strip().lower()
+    # Fase 1 auto-language-detection: an explicit `language` query param is a
+    # manual override; empty (the normal case) falls back to the language
+    # detected from the job ad itself at analysis time, not a client default.
+    language_norm = (language or "").strip().lower()
+    if language_norm not in ("no", "en", "vi"):
+        language_norm = ""
+    lang = language_norm or str(stored.get("detected_ad_language") or "no")
     if lang not in ("no", "en", "vi"):
         lang = "no"
     _lang_suffix = {"no": "", "en": "_en", "vi": "_vi"}[lang]
@@ -2649,7 +2658,7 @@ def stream_documents(
     profile_id: int = Query(..., ge=1),
     application_style: str = Query(default="vanlig"),
     include_photo: bool = Query(default=True),
-    language: str = Query(default="no"),
+    language: str = Query(default=""),  # "no"|"en"|"vi" override; empty (Fase 1 default) = use stored detected_ad_language
     template: str = Query(default=""),  # "kreativ"|"profesjonell"|"klassisk"|"moderne"|"skandinavisk"|"vietnamesisk"; empty = use stored cv_mal
     current_user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
@@ -2709,7 +2718,14 @@ def stream_documents(
     style_norm = (application_style or "vanlig").strip().lower()
     if style_norm not in {"kort", "vanlig", "profesjonell"}:
         style_norm = "vanlig"
-    lang = (language or "no").strip().lower()
+
+    # Fase 1 auto-language-detection: an explicit `language` query param is a
+    # manual override; empty (the normal case) falls back to the language
+    # detected from the job ad itself at analysis time, not a client default.
+    language_norm = (language or "").strip().lower()
+    if language_norm not in ("no", "en", "vi"):
+        language_norm = ""
+    lang = language_norm or str(stored.get("detected_ad_language") or "no")
     if lang not in ("no", "en", "vi"):
         lang = "no"
 
@@ -2873,6 +2889,7 @@ def generateApplicationPackage(
     application_style: str = "vanlig",
     include_photo: bool = True,
     language: str = "no",
+    language_override: str | None = None,
     template_override: str | None = None,
     current_user: User,
     db: Session,
@@ -2905,6 +2922,7 @@ def generateApplicationPackage(
         application_style=application_style,
         generate_documents=True,
         language=language,
+        language_override=language_override,
         job_text_override=job_text or None,
     )
 
@@ -3656,7 +3674,7 @@ def analyze_url_and_send(
             job_text=data.job_text,
             application_style=data.application_style,
             include_photo=bool(data.include_photo),
-            language=data.language,
+            language_override=data.language,
             template_override=data.template,
             current_user=current_user,
             db=db,

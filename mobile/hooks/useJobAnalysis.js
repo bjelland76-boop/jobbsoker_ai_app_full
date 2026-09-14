@@ -373,6 +373,13 @@ export default function useJobAnalysis({
       setAnalysis(data);
       setJustAnalyzed(true);
       if (data?.cv_mal) setCvTemplate(data.cv_mal);
+      // Fase 1 auto-language-detection: replaces the old manual 🇳🇴/🇬🇧
+      // pick as the default -- cvLanguage now follows the job ad's own
+      // detected language unless the user explicitly overrides it via the
+      // discreet "Endre språk" control in AnalysisScreen.
+      if (data?.detected_ad_language === 'en' || data?.detected_ad_language === 'no') {
+        setCvLanguage(data.detected_ad_language);
+      }
       setProfileUpdatedSinceAnalysis(false);
       logEvent('analyze_job_completed');
       setActiveTab('analysis');

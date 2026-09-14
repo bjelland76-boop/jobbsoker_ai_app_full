@@ -147,6 +147,8 @@
     "photo_in_pdf": "Bilde i PDF",
     "photo_in_pdf_help": "Du kan velge om profilbildet skal være med i denne søknaden/PDF-en (standard kan settes i Profil).",
     "language_label": "Språk / Language",
+    "language_detected_prefix": "Skriv på:",
+    "language_change_link": "Endre språk",
     "sending": "Sender...",
     "send_application": "Send søknad (e-post)",
     "generating": "Genererer...",

@@ -147,6 +147,8 @@
     "photo_in_pdf": "Nuotrauka PDF faile",
     "photo_in_pdf_help": "Galite pasirinkti, ar profilio nuotrauka bus įtraukta į šią paraišką/PDF (numatytąją reikšmę galima nustatyti Profilyje).",
     "language_label": "Kalba / Language",
+    "language_detected_prefix": "Rašoma:",
+    "language_change_link": "Keisti kalbą",
     "sending": "Siunčiama...",
     "send_application": "Siųsti paraišką (el. paštu)",
     "generating": "Generuojama...",

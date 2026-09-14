@@ -1089,12 +1089,24 @@ def analyze_job_url(
     *,
     generate_documents: bool = False,
     language: str = "no",
+    language_override: str | None = None,
     job_text_override: str | None = None,
 ) -> dict:
     """Analyze a job ad, either by fetching `url` or using pasted text directly.
 
     Default behavior is low-token matching only. Full document generation is
     optional and can be enabled by the caller.
+
+    `language`: language for the ANALYSIS text itself (fit/advice/top_reason/
+    main_risk) -- independent of the job ad's own language, e.g. driven by the
+    caller's UI language at initial-analysis time.
+
+    `language_override` (Fase 1 auto-language-detection): when
+    `generate_documents=True`, the language the generated CV/cover letter
+    documents are written in. "no"/"en"/"vi" to force a specific language;
+    None/empty (the normal case) means "no override" -- use this same call's
+    freshly detected `detected_ad_language` instead of a caller-chosen
+    default, per the auto-detection replacing the old manual cvLanguage pick.
 
     `job_text_override`: when given (non-empty), used as the job ad content
     as-is instead of fetching/scraping `url` — lets callers support pasting
@@ -1140,6 +1152,11 @@ def analyze_job_url(
 
     match_model = (os.getenv("CLAUDE_MODEL") or _CLAUDE_MODEL).strip() or _CLAUDE_MODEL
 
+    # Fase 1 auto-language-detection: the job ad's own language, as detected
+    # by this same match call (see ai_matcher._normalize_result). Falls back
+    # to "no" there already if the model is unsure, so this is never empty.
+    detected_ad_language = str(match.get("detected_ad_language") or "no")
+
     result: dict[str, Any] = {
         # Phase 5: lightweight analytics fields (stored in analysis_json).
         "analysis_version": 2,
@@ -1167,10 +1184,16 @@ def analyze_job_url(
         "improvement_tips": match.get("advice") or [],
         "recommended_application_style": style_norm,
         "recommended_style_reason": "Bruker-valgt stil.",
+        "detected_ad_language": detected_ad_language,
         "__job_text": _compress_text(job_text, 3000),
     }
 
     if generate_documents:
+        override_norm = (language_override or "").strip().lower()
+        if override_norm not in ("no", "en", "vi"):
+            override_norm = ""
+        doc_language = override_norm or detected_ad_language
+
         docs = generate_application_texts(
             profile,
             job_title=job_title,
@@ -1178,7 +1201,7 @@ def analyze_job_url(
             job_text=job_text,
             application_style=style_norm,
             match_context=match,
-            language=language,
+            language=doc_language,
         )
         result.update(docs)
 

@@ -147,6 +147,8 @@
     "photo_in_pdf": "Sawir PDF-ka ku jira",
     "photo_in_pdf_help": "Waxaad dooran kartaa in sawirka profaylka uu ku jiro codsigan/PDF-kan (caadiga waxaa lagu dejin karaa Profaylka).",
     "language_label": "Luqadda / Language",
+    "language_detected_prefix": "Ku qoraya:",
+    "language_change_link": "Beddel luqadda",
     "sending": "Waa la dirayaa...",
     "send_application": "Dir codsiga (iimeel)",
     "generating": "Waa la abuurayaa...",
