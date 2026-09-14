@@ -35,7 +35,6 @@ export default function useJobAnalysis({
   const [cvTemplate, setCvTemplate] = useState('profesjonell');
   const [cvLanguage, setCvLanguage] = useState('no');
   const [templatePickerVisible, setTemplatePickerVisible] = useState(false);
-  const [pendingGenerateKind, setPendingGenerateKind] = useState(null); // 'pdf' | 'send' | null
   const [profileUpdatedSinceAnalysis, setProfileUpdatedSinceAnalysis] = useState(false);
   const [loading, setLoading] = useState(false);
   const [jobAnalyses, setJobAnalyses] = useState([]);
@@ -408,8 +407,15 @@ export default function useJobAnalysis({
   // ---------------------------------------------------------------------------
   // Send application (email)
   // ---------------------------------------------------------------------------
-  async function sendApplication(template = '', languageOverride = null) {
-    const lang = languageOverride || cvLanguage;
+  // Fase 4: sends the ALREADY generated cover letter + CV for the currently
+  // selected language via email -- no new AI generation, no re-analysis.
+  // Previously this re-ran the entire analysis+generation pipeline from
+  // scratch on every send (via /analyze-url-and-send), which could email a
+  // subtly different text than whatever the user had just reviewed on
+  // screen (AI generation isn't perfectly deterministic). Only meaningful
+  // once something has actually been generated -- same precondition as
+  // regeneratePdfWithTemplate() below.
+  async function sendApplication() {
     // The three checks below all used to show a dead Alert.alert(title,
     // body, buttons) -- its buttons array is a no-op in this app's web
     // build (same root cause fixed in analyzeJob()/analyzeCv() earlier
@@ -447,71 +453,30 @@ export default function useJobAnalysis({
       setGenerationBanner('Skriv inn e-postadressen din for å sende søknaden.');
       return;
     }
-    if (jobInputMode === 'text' ? !jobText.trim() : !jobUrl.trim()) {
-      setGenerationBanner('Lim inn en jobbannonse først.');
+    if (!analysis?.job_id || !applicationPackage) {
+      setGenerationBanner(uiLanguage === 'en' ? 'Generate a CV first.' : 'Generer en CV først.');
       return;
     }
-
-    if (generationLockRef.current || isGenerating) return;
-
-    await flushAutoSave?.();
-
-    generationLockRef.current = true;
-    setIsGenerating(true);
-
-    const prevPackage = applicationPackage;
-    const failMsg = (uiLanguage === 'en') ? 'Generation failed, try again' : 'Generering feilet, prøv igjen';
-    const includePhoto = !!profilePhotoData && !!includePhotoInPdf;
+    if (sending) return;
 
     setSending(true);
     setGenerationBanner('');
-    setApplicationPackage(null);
 
     try {
-      const pkg = await apiFetch('/analyze-url-and-send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          profile_id: profileId,
-          ...(jobInputMode === 'text' ? { job_text: jobText } : { url: jobUrl }),
-          to_email: applicationEmail,
-          application_style: applicationStyle,
-          include_photo: includePhoto,
-          language: lang,
-          ...(template ? { template } : {}),
-        }),
-      });
-
-      const isValidPackage = pkg && typeof pkg.cv === 'string' && typeof pkg.coverLetter === 'string';
-
-      if (isValidPackage) {
-        const safePkg = {
-          cv: pkg.cv,
-          coverLetter: pkg.coverLetter,
-          pdfUrl: (typeof pkg.pdfUrl === 'string') ? pkg.pdfUrl : '',
-        };
-
-        if ((safePkg.cv || '').trim().length > 0 || (safePkg.coverLetter || '').trim().length > 0) {
-          setApplicationPackage(safePkg, lang);
-          Alert.alert('OK', 'Søknad + CV er generert. Sjekk e-post hvis utsending er konfigurert.');
-          return;
-        }
-      }
-
-      if (prevPackage) setApplicationPackage(prevPackage);
-      setGenerationBanner(failMsg);
+      await apiFetch(
+        `/job-analyses/${analysis.job_id}/send-application?profile_id=${profileId}&language=${cvLanguage}&to_email=${encodeURIComponent(applicationEmail)}`,
+        { method: 'POST' },
+      );
+      logEvent('application_sent');
+      Alert.alert(
+        'OK',
+        uiLanguage === 'en' ? `Application sent to ${applicationEmail}.` : `Søknaden ble sendt til ${applicationEmail}.`,
+      );
     } catch (e) {
       console.error('[Assistant] sendApplication failed', e);
-      if (e?.code === 'free_limit_reached') {
-        showPaymentModal(e?.data?.limit_type || 'cv');
-      } else {
-        if (prevPackage) setApplicationPackage(prevPackage);
-        setGenerationBanner(failMsg);
-      }
+      setGenerationBanner(uiLanguage === 'en' ? 'Could not send, try again.' : 'Kunne ikke sende, prøv igjen.');
     } finally {
       setSending(false);
-      setIsGenerating(false);
-      generationLockRef.current = false;
     }
   }
 
@@ -793,25 +758,21 @@ export default function useJobAnalysis({
   // ---------------------------------------------------------------------------
   // CV template picker (popup shown before generation)
   // ---------------------------------------------------------------------------
-  function openTemplatePicker(kind) {
-    setPendingGenerateKind(kind);
+  // Fase 4: this used to also gate "Send søknad" (via a 'send'/'pdf' kind
+  // distinction) -- sending is no longer a generation path at all (see
+  // sendApplication() above), so the picker now only ever leads to
+  // generatePdf().
+  function openTemplatePicker() {
     setTemplatePickerVisible(true);
   }
 
   function closeTemplatePicker() {
     setTemplatePickerVisible(false);
-    setPendingGenerateKind(null);
   }
 
   function confirmTemplateAndGenerate(template, languageOverride) {
-    const kind = pendingGenerateKind;
     setTemplatePickerVisible(false);
-    setPendingGenerateKind(null);
-    if (kind === 'send') {
-      sendApplication(template, languageOverride);
-    } else {
-      generatePdf(template, languageOverride);
-    }
+    generatePdf(template, languageOverride);
   }
 
   // ---------------------------------------------------------------------------

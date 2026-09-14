@@ -357,16 +357,6 @@ export default function AnalysisScreen({
               );
             })()}
 
-            <Text style={[styles.inputLabel, styles.aerligLabel, { marginTop: 6 }]}>{t('analysis.send_to_email')}</Text>
-            <TextInput
-              style={[styles.input, styles.aerligInput]}
-              placeholder={t('analysis.send_to_email')}
-              value={applicationEmail}
-              onChangeText={setApplicationEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-
             {profilePhotoData ? (
               <View style={styles.profileField}>
                 <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('analysis.photo_in_pdf')}</Text>
@@ -456,15 +446,7 @@ export default function AnalysisScreen({
 
             <TouchableOpacity
               style={[styles.aerligSecondaryButton, isGenerating ? { opacity: 0.6 } : null]}
-              onPress={() => openTemplatePicker('send')}
-              disabled={isGenerating}
-            >
-              <Text style={styles.aerligSecondaryButtonText}>{sending ? t('analysis.sending') : t('analysis.send_application')}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.aerligSecondaryButton, isGenerating ? { opacity: 0.6 } : null]}
-              onPress={() => openTemplatePicker('pdf')}
+              onPress={() => openTemplatePicker()}
               disabled={isGenerating}
             >
               <Text style={styles.aerligSecondaryButtonText}>{generatingPdf ? t('analysis.generating') : t('analysis.generate_pdf')}</Text>
@@ -522,6 +504,28 @@ export default function AnalysisScreen({
                       );
                     })}
                   </View>
+                </View>
+
+                {/* Fase 4: sending is now a post-generation action, next to the
+                    template-switch buttons above -- it emails exactly this
+                    already-generated content, not a fresh regeneration. */}
+                <View style={{ marginBottom: 12 }}>
+                  <Text style={[styles.inputLabel, styles.aerligLabel]}>{t('analysis.send_to_email')}</Text>
+                  <TextInput
+                    style={[styles.input, styles.aerligInput]}
+                    placeholder={t('analysis.send_to_email')}
+                    value={applicationEmail}
+                    onChangeText={setApplicationEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                  />
+                  <TouchableOpacity
+                    style={[styles.aerligSecondaryButton, { marginTop: 8 }, isGenerating ? { opacity: 0.6 } : null]}
+                    onPress={sendApplication}
+                    disabled={isGenerating || sending}
+                  >
+                    <Text style={styles.aerligSecondaryButtonText}>{sending ? t('analysis.sending') : t('analysis.send_application')}</Text>
+                  </TouchableOpacity>
                 </View>
 
                 {(typeof applicationPackage?.pdfUrl === 'string' && applicationPackage.pdfUrl.trim()) ? (

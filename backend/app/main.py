@@ -2661,6 +2661,97 @@ def generate_tailored_cv(
 
 
 @app.post(
+    "/job-analyses/{job_id}/send-application",
+    tags=["analysis"],
+)
+def send_generated_application(
+    job_id: int,
+    background_tasks: BackgroundTasks,
+    profile_id: int = Query(..., ge=1),
+    language: str = Query(default=""),  # "no"|"en"|"vi" override; empty (Fase 1 default) = use stored detected_ad_language
+    to_email: str = Query(...),
+    current_user: User | None = Depends(get_current_user_optional),
+    db: Session = Depends(get_db),
+):
+    """Fase 4: email the ALREADY generated cover letter + CV for this job and
+    language -- no new AI generation, no re-analysis. Replaces the old
+    /analyze-url-and-send flow's "Send søknad" behavior for the (now normal)
+    case where the user has already reviewed a generated application and
+    just wants that exact content emailed. Resolves job_id/profile_id/
+    language the same way generate-tailored-cv and stream-documents do, and
+    picks the most recent GeneratedApplication row for that (job, profile,
+    language) triple -- i.e. exactly what the caller currently has open.
+    """
+    profile = db.get(Profile, profile_id)
+    if not _owns_profile(profile, current_user):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke profil")
+
+    job = db.get(Job, job_id)
+    if not _owns_job(job, current_user):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fant ikke jobb")
+
+    to_email_norm = (to_email or "").strip()
+    if not to_email_norm:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mangler mottaker-e-post")
+
+    row = db.scalars(
+        select(JobAnalysisHistory).where(
+            JobAnalysisHistory.profile_id == profile_id,
+            JobAnalysisHistory.job_id == job_id,
+            JobAnalysisHistory.hidden == False,  # noqa: E712
+        )
+    ).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kjør jobbanalyse først")
+
+    try:
+        stored = json.loads(row.analysis_json) if row.analysis_json else {}
+    except Exception:
+        stored = {}
+
+    # Same override-vs-stored resolution as generate-tailored-cv/stream-documents.
+    language_norm = (language or "").strip().lower()
+    if language_norm not in ("no", "en", "vi"):
+        language_norm = ""
+    lang = language_norm or str(stored.get("detected_ad_language") or "no")
+    if lang not in ("no", "en", "vi"):
+        lang = "no"
+
+    generated = db.scalars(
+        select(GeneratedApplication)
+        .where(
+            GeneratedApplication.job_id == job_id,
+            GeneratedApplication.profile_id == profile_id,
+            GeneratedApplication.language == lang,
+        )
+        .order_by(GeneratedApplication.created_at.desc())
+    ).first()
+    if not generated:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Ingen generert søknad funnet for dette språket -- generer CV først.",
+        )
+
+    # Same email contract as the old /analyze-url-and-send: body is the
+    # cover letter (sanitized so internal analysis never leaks to the
+    # employer), attachment is the CV-only PDF.
+    body_raw = (generated.cover_letter or "").strip() or (generated.email_text or "").strip()
+    body = sanitize_employer_text(body_raw)
+
+    attachments: list[str] = []
+    if generated.cv_pdf_path:
+        attachments.append(generated.cv_pdf_path)
+
+    subject = f"Jobbanalyse: {job.title or 'stilling'}"
+
+    background_tasks.add_task(send_email, to_email_norm, subject, body, attachments=attachments)
+
+    _log_usage(db, current_user, "application_sent")
+
+    return {"sent": True}
+
+
+@app.post(
     "/job-analyses/{job_id}/stream-documents",
     tags=["analysis"],
 )
