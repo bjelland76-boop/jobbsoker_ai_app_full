@@ -251,6 +251,8 @@
     "choose_file": "Wybierz plik (PDF lub .docx)",
     "take_photo": "Zrób zdjęcie CV (aparat)",
     "choose_gallery": "Wybierz zdjęcie z galerii",
+    "import_cv_notice": "Wybierz plik CV (PDF lub Word)",
+    "import_cv_canceled": "Nie wybrano pliku",
     "found_in_cv": "Co znaleźliśmy w CV",
     "experience_count": "Doświadczenie ({{count}} wpisy)",
     "education_count": "Wykształcenie ({{count}} wpisy)",

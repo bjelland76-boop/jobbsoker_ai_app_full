@@ -252,6 +252,8 @@
     "choose_file": "Dooro faylka (PDF ama .docx)",
     "take_photo": "Sawir CV-ga (kamarad)",
     "choose_gallery": "Dooro sawir sawir-kaydka",
+    "import_cv_notice": "Dooro faylka CV-gaaga (PDF ama Word)",
+    "import_cv_canceled": "Fayl lama dooran",
     "found_in_cv": "Waxa aan ka helnay CV-ga",
     "experience_count": "Khibrad ({{count}} qoraal)",
     "education_count": "Waxbarasho ({{count}} qoraal)",

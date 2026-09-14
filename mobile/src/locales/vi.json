@@ -251,6 +251,8 @@
     "choose_file": "Chọn tệp (PDF hoặc .docx)",
     "take_photo": "Chụp ảnh CV (camera)",
     "choose_gallery": "Chọn ảnh từ thư viện",
+    "import_cv_notice": "Chọn tệp CV của bạn (PDF hoặc Word)",
+    "import_cv_canceled": "Chưa chọn tệp nào",
     "found_in_cv": "Những gì chúng tôi tìm thấy trong CV",
     "experience_count": "Kinh nghiệm ({{count}} mục)",
     "education_count": "Học vấn ({{count}} mục)",

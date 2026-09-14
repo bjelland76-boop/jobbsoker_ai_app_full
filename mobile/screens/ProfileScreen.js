@@ -67,6 +67,7 @@ export default function ProfileScreen({ onManageSubscription }) {
     cvImportModalVisible, setCvImportModalVisible,
     cvImportLoading,
     cvImportPreview, setCvImportPreview,
+    cvImportNotice,
     profileDocsList,
     docsUploading,
     showDocTypeModal, setShowDocTypeModal,
@@ -120,6 +121,20 @@ export default function ProfileScreen({ onManageSubscription }) {
         <Text style={styles.aerligPageSubtitle}>{t('profile.subtitle')}</Text>
 
         {/* CV Import */}
+        {cvImportNotice ? (
+          <View style={{
+            backgroundColor: THEME.colors.primarySoft,
+            borderColor: THEME.colors.primary,
+            borderWidth: 1,
+            borderRadius: 12,
+            paddingVertical: 8,
+            paddingHorizontal: 12,
+            marginTop: 4,
+            marginBottom: 12,
+          }}>
+            <Text style={{ color: THEME.colors.primary, fontWeight: '700', fontSize: 13 }}>{cvImportNotice}</Text>
+          </View>
+        ) : null}
         <TouchableOpacity
           style={[styles.aerligSecondaryButton, { marginBottom: 16, marginTop: 4 }]}
           onPress={() => setCvImportModalVisible(true)}

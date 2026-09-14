@@ -251,6 +251,8 @@
     "choose_file": "Velg fil (PDF eller .docx)",
     "take_photo": "Ta bilde av CV (kamera)",
     "choose_gallery": "Velg bilde fra galleri",
+    "import_cv_notice": "Velg CV-filen din (PDF eller Word)",
+    "import_cv_canceled": "Ingen fil ble valgt",
     "found_in_cv": "Hva vi fant i CV-en",
     "experience_count": "Erfaring ({{count}} oppføringer)",
     "education_count": "Utdanning ({{count}} oppføringer)",

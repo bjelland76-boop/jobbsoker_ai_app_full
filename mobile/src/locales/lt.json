@@ -251,6 +251,8 @@
     "choose_file": "Pasirinkti failą (PDF arba .docx)",
     "take_photo": "Nufotografuoti CV (kamera)",
     "choose_gallery": "Pasirinkti nuotrauką iš galerijos",
+    "import_cv_notice": "Pasirinkite CV failą (PDF arba Word)",
+    "import_cv_canceled": "Failas nepasirinktas",
     "found_in_cv": "Ką radome jūsų CV",
     "experience_count": "Patirtis ({{count}} įrašai)",
     "education_count": "Išsilavinimas ({{count}} įrašai)",

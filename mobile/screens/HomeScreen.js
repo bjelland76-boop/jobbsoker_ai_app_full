@@ -76,10 +76,15 @@ export default function HomeScreen({
   adminStats, adminStatsLoading, setAdminStats, setAdminStatsLoading,
 }) {
   const { t, logEvent, setActiveTab, setShowFaq } = useApp();
-  const { importCvFromFile } = useProfileContext() || {};
+  const { importCvFromFile, setCvImportNotice } = useProfileContext() || {};
 
   function uploadCvFromHome() {
     logEvent('cv_upload_from_home');
+    // Shown on ProfileScreen (see below) so the tab switch that follows
+    // doesn't look like an unexplained jump -- the user taps this button,
+    // the screen changes AND the OS file picker opens at the same instant,
+    // with nothing else on screen to say why.
+    setCvImportNotice?.(t('profile.import_cv_notice'));
     // Navigate first so ProfileScreen is mounted by the time the async
     // picker/upload/parse round-trip resolves -- its own (unmodified)
     // cvImportPreview confirm-modal only renders while that screen is

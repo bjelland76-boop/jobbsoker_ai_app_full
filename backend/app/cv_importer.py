@@ -281,7 +281,15 @@ def extract_and_parse(filename: str, content_type: str, data: bytes) -> dict:
     if ext == ".pdf" or "pdf" in ct:
         text = _extract_pdf(data)
         return _ask_claude_text(text)
-    elif ext in (".docx", ".doc") or "word" in ct or "officedocument" in ct:
+    elif ext == ".doc" or "msword" in ct:
+        # Legacy binary .doc (pre-2007 Word format) -- python-docx only reads
+        # the modern .docx (OOXML/zip) format and throws an opaque exception
+        # on these, which used to surface as a raw Python error message to
+        # the user. Fail with a clear, actionable message instead.
+        raise ValueError(
+            "Gammelt Word-format (.doc) støttes ikke. Lagre CV-en som PDF eller .docx og last opp på nytt."
+        )
+    elif ext == ".docx" or "officedocument" in ct:
         text = _extract_docx(data)
         return _ask_claude_text(text)
     elif ct.startswith("image/") or ext in (".jpg", ".jpeg", ".png", ".webp", ".gif"):

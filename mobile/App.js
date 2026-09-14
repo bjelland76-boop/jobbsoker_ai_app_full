@@ -679,6 +679,18 @@ function AppContent() {
       q: 'Hvordan legger jeg til erfaring og utdanning?',
       a: 'Gå til Profil og trykk på \'Erfaring\' eller \'Utdanning\'-kortet for å ekspandere det. Trykk \'+ Legg til\' for å registrere en ny oppføring.',
     },
+    {
+      q: 'Kan jeg laste opp en CV jeg allerede har, i stedet for å skrive alt inn selv?',
+      a: 'Ja — trykk \'Importer CV\' på hjemskjermen eller under Profil, og velg fil, ta bilde eller velg fra galleri. Vi leser CV-en automatisk og fyller ut profilen din med informasjonen vi finner.',
+    },
+    {
+      q: 'Hvilke filformater støttes når jeg laster opp CV?',
+      a: 'PDF og Word (.docx) som fil, eller et bilde (foto/galleri) av CV-en. Gammelt Word-format (.doc) støttes ikke — lagre den som PDF eller .docx først.',
+    },
+    {
+      q: 'Hva skjer etter at jeg har lastet opp CV-en?',
+      a: 'Vi leser innholdet og viser deg en forhåndsvisning av det vi fant (navn, erfaring, utdanning, ferdigheter osv.). Ingenting lagres i profilen din før du bekrefter forhåndsvisningen.',
+    },
   ];
 
   // Always Vietnamese, regardless of uiLanguage -- targeted content for the

@@ -103,6 +103,11 @@ export default function useProfile({ onProfileSaved } = {}) {
   const [cvImportModalVisible, setCvImportModalVisible] = useState(false);
   const [cvImportLoading, setCvImportLoading] = useState(false);
   const [cvImportPreview, setCvImportPreview] = useState(null);
+  // Short-lived status text shown near the import button -- e.g. "pick a
+  // file now" right before the OS picker opens, or "no file chosen" after a
+  // cancel -- so the user always has visible feedback, even when nothing
+  // else on screen changes (see cv_upload_from_home investigation).
+  const [cvImportNotice, setCvImportNotice] = useState('');
 
   // Edit state
   const [editExperience, setEditExperience] = useState(false);
@@ -468,6 +473,7 @@ export default function useProfile({ onProfileSaved } = {}) {
   // CV import
   // ---------------------------------------------------------------------------
   async function _sendCvBlob(blob, fileName, mimeType) {
+    setCvImportNotice('');
     setCvImportLoading(true);
     setCvImportModalVisible(false);
     try {
@@ -493,6 +499,7 @@ export default function useProfile({ onProfileSaved } = {}) {
       await _sendCvBlob(blob, fileName, mimeType);
       return;
     }
+    setCvImportNotice('');
     setCvImportLoading(true);
     setCvImportModalVisible(false);
     try {
@@ -513,7 +520,10 @@ export default function useProfile({ onProfileSaved } = {}) {
         type: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
         copyToCacheDirectory: true,
       });
-      if (result.canceled) return;
+      if (result.canceled) {
+        setCvImportNotice(t('profile.import_cv_canceled'));
+        return;
+      }
       const asset = result.assets[0];
       await _sendCvFile({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType, nativeFile: asset.file });
     } catch (e) {
@@ -999,6 +1009,7 @@ export default function useProfile({ onProfileSaved } = {}) {
     cvImportModalVisible, setCvImportModalVisible,
     cvImportLoading,
     cvImportPreview, setCvImportPreview,
+    cvImportNotice, setCvImportNotice,
 
     // Documents
     profileDocsList, setProfileDocsList,

@@ -251,6 +251,8 @@
     "choose_file": "اختر ملفاً (PDF أو .docx)",
     "take_photo": "التقط صورة للسيرة الذاتية (الكاميرا)",
     "choose_gallery": "اختر صورة من المعرض",
+    "import_cv_notice": "اختر ملف السيرة الذاتية (PDF أو Word)",
+    "import_cv_canceled": "لم يتم اختيار أي ملف",
     "found_in_cv": "ما وجدناه في سيرتك الذاتية",
     "experience_count": "الخبرة ({{count}} إدخالات)",
     "education_count": "التعليم ({{count}} إدخالات)",
