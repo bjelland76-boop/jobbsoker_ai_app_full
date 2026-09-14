@@ -1168,6 +1168,13 @@ def analyze_job_url(
     # to "no" there already if the model is unsure, so this is never empty.
     detected_ad_language = str(match.get("detected_ad_language") or "no")
 
+    # Fase 3: local vs. international Vietnamese-market employer, as judged
+    # by this same match call. Only meaningful when the Vietnamese CV
+    # template ends up being used -- "internasjonal" (no extra personal
+    # fields) is the safe fallback otherwise, already applied in
+    # ai_matcher._normalize_result.
+    vietnam_company_type = str(match.get("vietnam_company_type") or "internasjonal")
+
     result: dict[str, Any] = {
         # Phase 5: lightweight analytics fields (stored in analysis_json).
         "analysis_version": 2,
@@ -1196,6 +1203,7 @@ def analyze_job_url(
         "recommended_application_style": ai_recommended_style,
         "recommended_style_reason": "Anbefalt av AI basert på stillingstype og bransje.",
         "detected_ad_language": detected_ad_language,
+        "vietnam_company_type": vietnam_company_type,
         "__job_text": _compress_text(job_text, 3000),
     }
 

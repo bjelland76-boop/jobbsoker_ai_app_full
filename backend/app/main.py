@@ -2634,6 +2634,7 @@ def generate_tailored_cv(
             include_photo=include_photo_bool,
             template=effective_template,
             language=lang,
+            vietnam_company_type=str(stored.get("vietnam_company_type") or "internasjonal"),
         )
         approw = GeneratedApplication(
             job_id=job.id,
@@ -2857,6 +2858,7 @@ def stream_documents(
                         include_photo=include_photo_bool,
                         template=effective_template,
                         language=lang,
+                        vietnam_company_type=str(stored.get("vietnam_company_type") or "internasjonal"),
                     )
                     approw = GeneratedApplication(
                         job_id=job_id_val,
@@ -3016,6 +3018,7 @@ def generateApplicationPackage(
             include_photo=bool(include_photo),
             template=cv_mal,
             language=language,
+            vietnam_company_type=str(result.get("vietnam_company_type") or "internasjonal"),
         )
 
         # Persist generated content.

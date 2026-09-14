@@ -1302,6 +1302,11 @@ class _ClassicPdfDoc:
         *,
         include_photo: bool = True,
         cv_only: bool = False,
+        # Fase 3: only consulted by _VietnamesiskPdfDoc (local vs.
+        # international Vietnamese-market employer) -- a harmless no-op for
+        # every other template, so it lives on the shared base class rather
+        # than needing its own constructor branch.
+        show_personal_details: bool = True,
     ):
         self.path = OUT / filename
         self.c = canvas.Canvas(str(self.path), pagesize=A4)
@@ -1312,6 +1317,7 @@ class _ClassicPdfDoc:
         self.cv_text = cv_text
         self.include_photo = include_photo
         self.cv_only = cv_only
+        self.show_personal_details = show_personal_details
 
         self.left = self._MARGIN_X
         self.right = self.width - self._MARGIN_X
@@ -1922,8 +1928,10 @@ class _VietnamesiskPdfDoc(_ClassicPdfDoc):
     - Large circular profile photo, centred at the top
     - Red accent (#DA020E), matching the Vietnamese flag
     - Extra "personal details" block (height, civil status, gender,
-      nationality, military service) — common on Vietnamese CVs — shown
-      only for the fields the profile actually has filled in
+      nationality, military service) — common on Vietnamese CVs at LOCAL
+      Vietnamese companies, not expected by international companies
+      operating in Vietnam (Fase 3) — shown only when `show_personal_details`
+      is True, and even then only for the fields actually filled in
     """
 
     _MARGIN_X = 2.2 * cm
@@ -2032,6 +2040,11 @@ class _VietnamesiskPdfDoc(_ClassicPdfDoc):
         self.y -= 0.75 * cm
 
     def _draw_personal_details(self) -> None:
+        # Fase 3: international companies operating in Vietnam don't expect
+        # this section -- skip it entirely regardless of what's filled in.
+        if not self.show_personal_details:
+            return
+
         rows: list[tuple[str, str]] = []
 
         birth_date = (getattr(self.profile, "birth_date", "") or "").strip()
@@ -2164,12 +2177,17 @@ def make_application_pdfs(
     include_photo: bool = True,
     template: str = "profesjonell",
     language: str = "no",
+    vietnam_company_type: str = "internasjonal",
 ):
     """Generate TWO PDFs — combined (søknad+CV) and CV-only.
 
     `template` is one of: "kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk", "vietnamesisk".
     `language` ("no" | "en") only affects the sidebar templates' (kreativ/profesjonell)
     profile-fallback section labels, used when the AI-generated CV text is missing.
+    `vietnam_company_type` (Fase 3): "lokal" | "internasjonal" -- only
+    consulted when `template` is "vietnamesisk"; controls whether the extra
+    personal-details section (photo/age/marital status) is shown. Ignored
+    (harmlessly) for every other template.
     Returns (combined_pdf_path, cv_only_pdf_path).
     """
 
@@ -2183,18 +2201,24 @@ def make_application_pdfs(
 
     doc_class = _FULL_WIDTH_DOC_CLASSES.get(t)
 
+    # Fase 3: only _VietnamesiskPdfDoc reads this; harmless for the other
+    # three full-width templates (klassisk/moderne/skandinavisk).
+    show_personal_details = (vietnam_company_type or "internasjonal").strip().lower() == "lokal"
+
     if doc_class is not None:
         # Full-width, no-sidebar templates (klassisk / moderne / skandinavisk)
         combined_doc = doc_class(
             combined_filename, profile, job,
             cover_letter, tailored_cv,
             include_photo=include_photo,
+            show_personal_details=show_personal_details,
         )
         cv_doc = doc_class(
             cv_filename, profile, job,
             "", tailored_cv,
             include_photo=include_photo,
             cv_only=True,
+            show_personal_details=show_personal_details,
         )
     else:
         theme = _SIDEBAR_THEMES[t]

@@ -125,6 +125,13 @@ class JobAnalysisOut(BaseModel):
     # user explicitly overrides it. Falls back to "no" when uncertain.
     detected_ad_language: str = "no"
 
+    # Fase 3: local vs. international Vietnamese-market employer
+    # ("lokal" | "internasjonal") -- only meaningful when cv_mal is
+    # "vietnamesisk"; controls whether the extra personal-details section
+    # (photo/age/marital status) is shown. "internasjonal" (no extra fields)
+    # is the safe fallback when uncertain or not applicable.
+    vietnam_company_type: str = "internasjonal"
+
     # Whether a generated CV already exists for each language (used by frontend confirm dialog).
     has_tailored_cv_no: bool = False
     has_tailored_cv_en: bool = False
