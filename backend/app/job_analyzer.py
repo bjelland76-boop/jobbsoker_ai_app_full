@@ -1175,6 +1175,21 @@ def analyze_job_url(
     # ai_matcher._normalize_result.
     vietnam_company_type = str(match.get("vietnam_company_type") or "internasjonal")
 
+    # Bugfix (predates Fase 1-4, confirmed absent at this branch's base
+    # commit): cv_mal was never copied from the match result into the
+    # persisted analysis, so the AI's per-job-type template recommendation
+    # -- and the language-based "vietnamesisk" forcing in
+    # ai_matcher._normalize_result -- never reached CvTemplatePickerModal's
+    # "Anbefalt" preselection. analysis.cv_mal silently defaulted to
+    # "profesjonell" for every job regardless of actual type. This is a hard
+    # precondition for Fase 3's vietnam_company_type to ever take effect
+    # automatically (rather than only via a manual template pick), so it's
+    # fixed here as part of this branch.
+    _VALID_CV_MAL = {"kreativ", "profesjonell", "klassisk", "moderne", "skandinavisk", "vietnamesisk"}
+    cv_mal = str(match.get("cv_mal") or "").strip().lower()
+    if cv_mal not in _VALID_CV_MAL:
+        cv_mal = "profesjonell"
+
     result: dict[str, Any] = {
         # Phase 5: lightweight analytics fields (stored in analysis_json).
         "analysis_version": 2,
@@ -1204,6 +1219,7 @@ def analyze_job_url(
         "recommended_style_reason": "Anbefalt av AI basert på stillingstype og bransje.",
         "detected_ad_language": detected_ad_language,
         "vietnam_company_type": vietnam_company_type,
+        "cv_mal": cv_mal,
         "__job_text": _compress_text(job_text, 3000),
     }
 

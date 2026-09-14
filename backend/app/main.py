@@ -1901,6 +1901,19 @@ def _preserve_cv_keys_on_reanalysis(
     except Exception:
         return
     for key in _CV_PRESERVE_KEYS:
+        if key == "cv_mal":
+            # cv_mal is now always populated by a fresh AI recommendation on
+            # every analysis (see job_analyzer.analyze_job_url), so the
+            # generic "only fill in if missing" rule below would never fire
+            # for it. Once a job has actually been tailored (a real
+            # "Generer CV" click resolved and persisted an effective
+            # template -- AI-recommended or manually overridden), that
+            # choice should stick across re-analysis, not get silently
+            # replaced by a new recommendation every time the profile is
+            # edited and the job re-analyzed.
+            if old.get("tailored_for_job") and old.get(key):
+                new_result[key] = old[key]
+            continue
         if old.get(key) and not new_result.get(key):
             new_result[key] = old[key]
 
