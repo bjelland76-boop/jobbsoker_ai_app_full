@@ -1085,7 +1085,7 @@ Candidate:
 def analyze_job_url(
     profile: Any,
     url: str,
-    application_style: str = "vanlig",
+    application_style: str | None = "vanlig",
     *,
     generate_documents: bool = False,
     language: str = "no",
@@ -1096,6 +1096,12 @@ def analyze_job_url(
 
     Default behavior is low-token matching only. Full document generation is
     optional and can be enabled by the caller.
+
+    `application_style` (Fase 2 auto-style-recommendation): when
+    `generate_documents=True`, an explicit override for the generated
+    documents' length/tone ("kort"/"vanlig"/"profesjonell"). None/empty (the
+    normal case) means "no override" -- use this same call's AI-recommended
+    `recommended_application_style` instead of a caller-chosen default.
 
     `language`: language for the ANALYSIS text itself (fit/advice/top_reason/
     main_risk) -- independent of the job ad's own language, e.g. driven by the
@@ -1124,9 +1130,14 @@ def analyze_job_url(
     job_title, company = _guess_job_title_company(job_text)
 
     allowed_styles = {"kort", "vanlig", "profesjonell"}
-    style_norm = (application_style or "vanlig").strip().lower()
-    if style_norm not in allowed_styles:
-        style_norm = "vanlig"
+
+    # Fase 2 auto-style-recommendation: the job ad's own recommended
+    # length/tone, as judged by this same match call (see
+    # ai_matcher._normalize_result). Falls back to "vanlig" there already if
+    # the model doesn't give an interpretable value, so this is never empty.
+    ai_recommended_style = str(match.get("recommended_application_style") or "vanlig")
+    if ai_recommended_style not in allowed_styles:
+        ai_recommended_style = "vanlig"
 
     missing = match.get("missing") or []
     strengths = match.get("strengths") or []
@@ -1182,8 +1193,8 @@ def analyze_job_url(
         "recommended_cv_changes": match.get("recommended_cv_changes") or [],
         "should_apply": bool(int(match.get("score", 0)) >= 60),
         "improvement_tips": match.get("advice") or [],
-        "recommended_application_style": style_norm,
-        "recommended_style_reason": "Bruker-valgt stil.",
+        "recommended_application_style": ai_recommended_style,
+        "recommended_style_reason": "Anbefalt av AI basert på stillingstype og bransje.",
         "detected_ad_language": detected_ad_language,
         "__job_text": _compress_text(job_text, 3000),
     }
@@ -1194,12 +1205,21 @@ def analyze_job_url(
             override_norm = ""
         doc_language = override_norm or detected_ad_language
 
+        # Fase 2 auto-style-recommendation: `application_style` is now an
+        # explicit override (same principle as `language_override` above),
+        # not the default -- empty/invalid falls back to the AI's own
+        # recommendation from this same match call.
+        style_override = (application_style or "").strip().lower()
+        if style_override not in allowed_styles:
+            style_override = ""
+        effective_style = style_override or ai_recommended_style
+
         docs = generate_application_texts(
             profile,
             job_title=job_title,
             company=company,
             job_text=job_text,
-            application_style=style_norm,
+            application_style=effective_style,
             match_context=match,
             language=doc_language,
         )

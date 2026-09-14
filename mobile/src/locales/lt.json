@@ -143,6 +143,8 @@
     "style_short": "Trumpas (1 pastraipa)",
     "style_normal": "Įprastas (2–3 pastraipos)",
     "style_professional": "Profesionalus (4–6 pastraipos)",
+    "style_detected_prefix": "Ilgis/tonas:",
+    "style_change_link": "Keisti",
     "send_to_email": "Siųsti el. paštu",
     "photo_in_pdf": "Nuotrauka PDF faile",
     "photo_in_pdf_help": "Galite pasirinkti, ar profilio nuotrauka bus įtraukta į šią paraišką/PDF (numatytąją reikšmę galima nustatyti Profilyje).",

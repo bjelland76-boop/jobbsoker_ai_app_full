@@ -143,6 +143,8 @@
     "style_short": "Ngắn (1 đoạn)",
     "style_normal": "Bình thường (2–3 đoạn)",
     "style_professional": "Chuyên nghiệp (4–6 đoạn)",
+    "style_detected_prefix": "Độ dài/giọng văn:",
+    "style_change_link": "Đổi",
     "send_to_email": "Gửi đến email",
     "photo_in_pdf": "Ảnh trong PDF",
     "photo_in_pdf_help": "Chọn xem ảnh hồ sơ có được đưa vào đơn/PDF này không (mặc định có thể đặt trong Hồ sơ).",

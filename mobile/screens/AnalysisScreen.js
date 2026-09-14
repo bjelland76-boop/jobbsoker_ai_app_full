@@ -70,6 +70,10 @@ export default function AnalysisScreen({
   // This just toggles visibility of the manual override chips -- collapsed
   // by default so it reads as a correction, not a required step.
   const [showLanguageOverride, setShowLanguageOverride] = React.useState(false);
+  // Fase 2 auto-style-recommendation: applicationStyle is now set
+  // automatically from the AI's length/tone recommendation (see
+  // analyzeJob() in useJobAnalysis.js). Same collapsed-by-default pattern.
+  const [showStyleOverride, setShowStyleOverride] = React.useState(false);
 
   function startEditingText() {
     setDraftCv(applicationPackage?.cv || '');
@@ -313,25 +317,45 @@ export default function AnalysisScreen({
           <View style={styles.aerligCard}>
             <Text style={styles.aerligCardEyebrow}>{t('analysis.section_application')}</Text>
 
-            <Text style={[styles.inputLabel, styles.aerligLabel, { marginTop: 6 }]}>{t('analysis.select_length')}</Text>
-            <View style={[styles.filterChipRow, styles.aerligFilterChipRow]}>
-              {[
+            {(() => {
+              const STYLE_OPTIONS = [
                 { key: 'kort', label: t('analysis.style_short') },
                 { key: 'vanlig', label: t('analysis.style_normal') },
                 { key: 'profesjonell', label: t('analysis.style_professional') },
-              ].map((opt) => {
-                const active = applicationStyle === opt.key;
-                return (
-                  <TouchableOpacity
-                    key={opt.key}
-                    style={[styles.filterChip, styles.aerligFilterChip, active && styles.aerligFilterChipActive]}
-                    onPress={() => setApplicationStyle(opt.key)}
-                  >
-                    <Text style={[styles.filterChipText, styles.aerligFilterChipText, active && styles.aerligFilterChipTextActive]}>{opt.label}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+              ];
+              const currentLabel = STYLE_OPTIONS.find((opt) => opt.key === applicationStyle)?.label
+                || t('analysis.style_normal');
+              return (
+                <View style={{ marginTop: 6, marginBottom: 4 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <Text style={{ fontSize: 12, color: '#6B7280' }}>
+                      {t('analysis.style_detected_prefix')} {currentLabel}
+                    </Text>
+                    <TouchableOpacity onPress={() => setShowStyleOverride((v) => !v)}>
+                      <Text style={{ fontSize: 12, color: THEME.colors.primary, fontWeight: '700' }}>
+                        {showStyleOverride ? t('common.cancel') : t('analysis.style_change_link')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  {showStyleOverride ? (
+                    <View style={[styles.filterChipRow, styles.aerligFilterChipRow, { marginTop: 8 }]}>
+                      {STYLE_OPTIONS.map((opt) => {
+                        const active = applicationStyle === opt.key;
+                        return (
+                          <TouchableOpacity
+                            key={opt.key}
+                            style={[styles.filterChip, styles.aerligFilterChip, active && styles.aerligFilterChipActive]}
+                            onPress={() => { setApplicationStyle(opt.key); setShowStyleOverride(false); }}
+                          >
+                            <Text style={[styles.filterChipText, styles.aerligFilterChipText, active && styles.aerligFilterChipTextActive]}>{opt.label}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  ) : null}
+                </View>
+              );
+            })()}
 
             <Text style={[styles.inputLabel, styles.aerligLabel, { marginTop: 6 }]}>{t('analysis.send_to_email')}</Text>
             <TextInput

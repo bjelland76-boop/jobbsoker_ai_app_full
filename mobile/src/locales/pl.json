@@ -143,6 +143,8 @@
     "style_short": "Krótki (1 akapit)",
     "style_normal": "Standardowy (2–3 akapity)",
     "style_professional": "Profesjonalny (4–6 akapitów)",
+    "style_detected_prefix": "Długość/ton:",
+    "style_change_link": "Zmień",
     "send_to_email": "Wyślij na e-mail",
     "photo_in_pdf": "Zdjęcie w PDF",
     "photo_in_pdf_help": "Możesz wybrać, czy zdjęcie profilowe ma być dołączone do tego podania/PDF.",

@@ -380,6 +380,14 @@ export default function useJobAnalysis({
       if (data?.detected_ad_language === 'en' || data?.detected_ad_language === 'no') {
         setCvLanguage(data.detected_ad_language);
       }
+      // Fase 2 auto-style-recommendation: replaces the old manual
+      // kort/vanlig/profesjonell pick as the default -- applicationStyle now
+      // follows the AI's own length/tone recommendation for this job type
+      // unless the user explicitly overrides it via the discreet "Endre"
+      // control in AnalysisScreen.
+      if (['kort', 'vanlig', 'profesjonell'].includes(data?.recommended_application_style)) {
+        setApplicationStyle(data.recommended_application_style);
+      }
       setProfileUpdatedSinceAnalysis(false);
       logEvent('analyze_job_completed');
       setActiveTab('analysis');

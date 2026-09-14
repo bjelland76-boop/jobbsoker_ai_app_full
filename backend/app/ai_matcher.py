@@ -41,6 +41,13 @@ class MatchResult(TypedDict):
     # tell confidently, never a hard failure.
     detected_ad_language: str
 
+    # Fase 2 auto-style-recommendation: suggested application length/tone
+    # based on job type/seniority/industry -- "kort" | "vanlig" |
+    # "profesjonell" (same three values _style_instructions() in
+    # job_analyzer.py already accepts). "vanlig" is the fallback when the
+    # model doesn't give an interpretable value.
+    recommended_application_style: str
+
 
 def _compress_text(text: str, max_len: int = 2500) -> str:
     # IMPORTANT: keep this helper exact/compatible for token reduction.
@@ -211,6 +218,7 @@ def _normalize_result(data: Any, *, lang: str = "no") -> MatchResult:
         "main_risk": "",
         "cv_mal": "profesjonell",
         "detected_ad_language": "no",
+        "recommended_application_style": "vanlig",
     }
 
     if not isinstance(data, dict):
@@ -263,6 +271,12 @@ def _normalize_result(data: Any, *, lang: str = "no") -> MatchResult:
     # than a broken generation step downstream.
     detected_lang_raw = str(data.get("detected_ad_language") or "").strip().lower()
     out["detected_ad_language"] = detected_lang_raw if detected_lang_raw in ("no", "en") else "no"
+
+    # Fase 2 auto-style-recommendation: same "never fail, fall back to the
+    # safe middle default" principle as detected_ad_language above.
+    _STYLE_VALID = {"kort", "vanlig", "profesjonell"}
+    style_raw = str(data.get("recommended_application_style") or "").strip().lower()
+    out["recommended_application_style"] = style_raw if style_raw in _STYLE_VALID else "vanlig"
 
     return out
 
@@ -465,7 +479,8 @@ def analyze_job_match(
         '"recommended_cv_changes":["max 3; actionable CV edits addressing missing requirements; <=120 chars; no generic"],'
         '"advice":["1-3 items — size, content and tone strictly per ADVICE TIERING above, based on the score field in this same response"],'
         '"cv_mal":"profesjonell (DEFAULT for de fleste stillinger: salg/kontor/service/logistikk/bygg/HR generelt) | kreativ (KUN for: designer/UX/grafisk/animasjon/reklame/media/innhold) | klassisk (KUN for: advokat/jurist/revisor/forsker/akademiker/offentlig forvaltning) | moderne (KUN for: tech/IT/startup/utvikler/data/produkt) | skandinavisk (KUN for: helse/omsorg/offentlig sektor/konservative bransjer — alternativ til klassisk) — velg basert på stillingstittelen i JOB-seksjonen (ignorer vietnamesisk — den velges automatisk basert på språk, ikke av deg)",'
-        '"detected_ad_language":"no or en — the language the JOB AD TEXT in the JOB section above is ACTUALLY WRITTEN IN, completely independent of what language you were told to write THIS response in. If the job ad is not clearly Norwegian or English, or you are not confident, answer no."'
+        '"detected_ad_language":"no or en — the language the JOB AD TEXT in the JOB section above is ACTUALLY WRITTEN IN, completely independent of what language you were told to write THIS response in. If the job ad is not clearly Norwegian or English, or you are not confident, answer no.",'
+        '"recommended_application_style":"kort (KUN for enkle/entry-level stillinger uten behov for grundig motivasjon: butikk/lager/kasse/rengjøring/enkel service/sesongarbeid) | vanlig (DEFAULT for de fleste stillinger) | profesjonell (KUN for akademiske/leder-/spesialist-/ekspertstillinger som krever grundig, formell dokumentasjon: forsker/advokat/direktør/senior rådgiver/fagspesialist med høye krav) — velg basert på stillingstype, senioritet og bransje i JOB-seksjonen, ikke basert på kandidatens CV"'
         "}"
         f"\n{lang_rule}"
     )

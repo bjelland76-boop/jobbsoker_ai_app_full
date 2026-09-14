@@ -801,7 +801,11 @@ class SendAnalysisIn(BaseModel):
     job_text: str = ""
     # Optional: when missing/empty, we only generate the package (no email send).
     to_email: str | None = None
-    application_style: str = "vanlig"  # kort | vanlig | profesjonell
+    # Fase 2 auto-style-recommendation: None (the normal case) means "no
+    # override" -- length/tone is the AI's own recommendation from this same
+    # call's match analysis. "kort"/"vanlig"/"profesjonell" forces that style
+    # instead, for the discreet manual-override control.
+    application_style: str | None = None
     include_photo: bool = True
     # Fase 1 auto-language-detection: None (the normal case) means "no
     # override" -- the generated documents are written in this same call's
@@ -2437,7 +2441,7 @@ def toggle_favorite_analysis(
 def generate_tailored_cv(
     job_id: int,
     profile_id: int = Query(..., ge=1),
-    application_style: str = Query(default="vanlig"),
+    application_style: str = Query(default=""),  # "kort"|"vanlig"|"profesjonell" override; empty (Fase 2 default) = use stored recommended_application_style
     include_photo: bool = Query(default=True),
     template: str = Query(default=""),  # "kreativ"|"profesjonell"|"klassisk"|"moderne"|"skandinavisk"|"vietnamesisk"; empty = use stored cv_mal
     language: str = Query(default=""),  # "no"|"en"|"vi" override; empty (Fase 1 default) = use stored detected_ad_language
@@ -2554,7 +2558,13 @@ def generate_tailored_cv(
             except Exception:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Kunne ikke hente jobbannonse")
 
-        style_norm = (application_style or "vanlig").strip().lower()
+        # Fase 2 auto-style-recommendation: an explicit `application_style`
+        # query param is a manual override; empty (the normal case) falls
+        # back to the AI-recommended style stored on the analysis.
+        style_override = (application_style or "").strip().lower()
+        if style_override not in {"kort", "vanlig", "profesjonell"}:
+            style_override = ""
+        style_norm = style_override or str(stored.get("recommended_application_style") or "vanlig")
         if style_norm not in {"kort", "vanlig", "profesjonell"}:
             style_norm = "vanlig"
 
@@ -2656,7 +2666,7 @@ def generate_tailored_cv(
 def stream_documents(
     job_id: int,
     profile_id: int = Query(..., ge=1),
-    application_style: str = Query(default="vanlig"),
+    application_style: str = Query(default=""),  # "kort"|"vanlig"|"profesjonell" override; empty (Fase 2 default) = use stored recommended_application_style
     include_photo: bool = Query(default=True),
     language: str = Query(default=""),  # "no"|"en"|"vi" override; empty (Fase 1 default) = use stored detected_ad_language
     template: str = Query(default=""),  # "kreativ"|"profesjonell"|"klassisk"|"moderne"|"skandinavisk"|"vietnamesisk"; empty = use stored cv_mal
@@ -2715,7 +2725,13 @@ def stream_documents(
         except Exception:
             raise HTTPException(status_code=400, detail="Kunne ikke hente jobbannonse")
 
-    style_norm = (application_style or "vanlig").strip().lower()
+    # Fase 2 auto-style-recommendation: an explicit `application_style` query
+    # param is a manual override; empty (the normal case) falls back to the
+    # AI-recommended style stored on the analysis.
+    style_override = (application_style or "").strip().lower()
+    if style_override not in {"kort", "vanlig", "profesjonell"}:
+        style_override = ""
+    style_norm = style_override or str(stored.get("recommended_application_style") or "vanlig")
     if style_norm not in {"kort", "vanlig", "profesjonell"}:
         style_norm = "vanlig"
 
@@ -2886,7 +2902,7 @@ def generateApplicationPackage(
     url: str,
     *,
     job_text: str = "",
-    application_style: str = "vanlig",
+    application_style: str | None = None,
     include_photo: bool = True,
     language: str = "no",
     language_override: str | None = None,
