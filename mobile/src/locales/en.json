@@ -54,7 +54,7 @@
   },
   "update": {
     "title": "Update required",
-    "body": "A newer version of Ærlig is available. Please update the app to continue.",
+    "body": "A newer version of ReadyCV is available. Please update the app to continue.",
     "play_store_btn": "Open Play Store"
   },
   "home": {
@@ -354,7 +354,7 @@
     "military_service_ongoing": "Ongoing"
   },
   "payment": {
-    "title": "Continue with Ærlig",
+    "title": "Continue with ReadyCV",
     "subtitle": "You've used your 3 free {{limitLabel}}",
     "subtitle_anon_shared": "You've used your 6 free actions",
     "limit_analyse": "analyses",

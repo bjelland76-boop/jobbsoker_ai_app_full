@@ -54,7 +54,7 @@
   },
   "update": {
     "title": "Cần cập nhật",
-    "body": "Có phiên bản mới hơn của Ærlig. Vui lòng cập nhật ứng dụng để tiếp tục.",
+    "body": "Có phiên bản mới hơn của ReadyCV. Vui lòng cập nhật ứng dụng để tiếp tục.",
     "play_store_btn": "Mở Play Store"
   },
   "home": {
@@ -355,7 +355,7 @@
     "military_service_ongoing": "Đang thực hiện"
   },
   "payment": {
-    "title": "Tiếp tục với Ærlig",
+    "title": "Tiếp tục với ReadyCV",
     "subtitle": "Bạn đã dùng hết 3 lượt {{limitLabel}} miễn phí",
     "subtitle_anon_shared": "Bạn đã dùng hết 6 lượt miễn phí",
     "limit_analyse": "phân tích",

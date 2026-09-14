@@ -54,7 +54,7 @@
   },
   "update": {
     "title": "Oppdatering nødvendig",
-    "body": "Det finnes en nyere versjon av Ærlig. Oppdater appen for å fortsette.",
+    "body": "Det finnes en nyere versjon av ReadyCV. Oppdater appen for å fortsette.",
     "play_store_btn": "Åpne Play Store"
   },
   "home": {
@@ -358,7 +358,7 @@
     "military_service_ongoing": "Pågående"
   },
   "payment": {
-    "title": "Fortsett med Ærlig",
+    "title": "Fortsett med ReadyCV",
     "subtitle": "Du har brukt dine 3 gratis {{limitLabel}}",
     "subtitle_anon_shared": "Du har brukt dine 6 gratis handlinger",
     "limit_analyse": "analyser",

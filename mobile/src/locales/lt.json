@@ -54,7 +54,7 @@
   },
   "update": {
     "title": "Reikalingas atnaujinimas",
-    "body": "Yra naujesnė Ærlig versija. Atnaujinkite programėlę, kad galėtumėte tęsti.",
+    "body": "Yra naujesnė ReadyCV versija. Atnaujinkite programėlę, kad galėtumėte tęsti.",
     "play_store_btn": "Atidaryti Play Store"
   },
   "home": {
@@ -354,7 +354,7 @@
     "military_service_ongoing": "Vykdoma"
   },
   "payment": {
-    "title": "Tęsti su Ærlig",
+    "title": "Tęsti su ReadyCV",
     "subtitle": "Išnaudojote savo 3 nemokamus {{limitLabel}}",
     "subtitle_anon_shared": "Išnaudojote savo 6 nemokamus veiksmus",
     "limit_analyse": "analizes",

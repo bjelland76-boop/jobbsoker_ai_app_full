@@ -54,7 +54,7 @@
   },
   "update": {
     "title": "Wymagana aktualizacja",
-    "body": "Dostępna jest nowsza wersja Ærlig. Zaktualizuj aplikację, aby kontynuować.",
+    "body": "Dostępna jest nowsza wersja ReadyCV. Zaktualizuj aplikację, aby kontynuować.",
     "play_store_btn": "Otwórz Play Store"
   },
   "home": {
@@ -354,7 +354,7 @@
     "military_service_ongoing": "W trakcie"
   },
   "payment": {
-    "title": "Kontynuuj z Ærlig",
+    "title": "Kontynuuj z ReadyCV",
     "subtitle": "Wykorzystałeś/aś swoje 3 darmowe {{limitLabel}}",
     "subtitle_anon_shared": "Wykorzystałeś/aś swoje 6 darmowych działań",
     "limit_analyse": "analizy",
