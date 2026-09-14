@@ -165,7 +165,11 @@
     "generate_cv_q": "Jak wygenerować CV i list motywacyjny?",
     "generate_cv_a": "Najpierw przeanalizuj ofertę pracy, otwórz analizę i naciśnij „Generuj CV i list motywacyjny”. Pojawi się wybór szablonu z 5 różnymi szablonami CV do wyboru — możesz dotknąć każdego szablonu, aby zobaczyć go w pełnym rozmiarze. Wybierz szablon lub pozwól AI polecić najlepszy dla tej konkretnej oferty.",
     "templates_q": "Jakie szablony CV są dostępne?",
-    "templates_a": "Możesz wybierać spośród 5 szablonów: Kreatywny (dwie kolumny z kolorowym paskiem bocznym), Profesjonalny (czysty, uporządkowany, jedna kolumna), Klasyczny (tradycyjny styl szeryfowy), Nowoczesny (pomarańczowy akcent, wyrazista typografia) i Skandynawski (minimalistyczny, dużo przestrzeni). Możesz też wybrać „Zalecany” — wtedy AI wybiera najlepszy szablon na podstawie oferty, na którą aplikujesz."
+    "templates_a": "Możesz wybierać spośród 5 szablonów: Kreatywny (dwie kolumny z kolorowym paskiem bocznym), Profesjonalny (czysty, uporządkowany, jedna kolumna), Klasyczny (tradycyjny styl szeryfowy), Nowoczesny (pomarańczowy akcent, wyrazista typografia) i Skandynawski (minimalistyczny, dużo przestrzeni). Możesz też wybrać „Zalecany” — wtedy AI wybiera najlepszy szablon na podstawie oferty, na którą aplikujesz.",
+    "pdf_vs_email_q": "Jaka jest różnica między PDF a e-mailem?",
+    "pdf_vs_email_a": "Naciskając „Generuj PDF”, otrzymasz plik PDF zawierający list motywacyjny i CV połączone w jeden dokument — wygodne do wysyłki cyfrowej. Po wygenerowaniu CV możesz dodatkowo nacisnąć „Wyślij aplikację”, aby otrzymać dokładnie tę samą aplikację i CV jako osobne pliki e-mailem.",
+    "cv_language_q": "Czy mogę otrzymać CV po angielsku?",
+    "cv_language_a": "Tak — język jest teraz wybierany automatycznie na podstawie języka, w jakim napisano ogłoszenie o pracę (norweski lub angielski). Jeśli chcesz w drugim języku, dotknij „Zmień język” na ekranie analizy. List motywacyjny jest w tym samym języku."
   },
   "cv_template": {
     "title": "Wybierz szablon CV",

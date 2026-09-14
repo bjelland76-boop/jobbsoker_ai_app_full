@@ -165,7 +165,11 @@
     "generate_cv_q": "How do I generate a CV and cover letter?",
     "generate_cv_a": "Analyze a job first, open the analysis and tap 'Generate CV and cover letter'. You'll then see a template picker with 5 different CV templates to choose from — tap any template to preview it in full size. Pick a template, or let AI recommend the best one for this specific job.",
     "templates_q": "Which CV templates are available?",
-    "templates_a": "You can choose between 5 templates: Creative (two-column with a colored sidebar), Professional (clean, tidy single column), Classic (traditional serif style), Modern (orange accent, bold typography), and Scandinavian (minimalist with lots of whitespace). You can also choose 'Recommended' — then AI picks the best template based on the job you're applying for."
+    "templates_a": "You can choose between 5 templates: Creative (two-column with a colored sidebar), Professional (clean, tidy single column), Classic (traditional serif style), Modern (orange accent, bold typography), and Scandinavian (minimalist with lots of whitespace). You can also choose 'Recommended' — then AI picks the best template based on the job you're applying for.",
+    "pdf_vs_email_q": "What's the difference between PDF and email?",
+    "pdf_vs_email_a": "Tapping 'Generate PDF' gives you a PDF containing both the cover letter and CV combined in one document — handy for digital submission. After the CV is generated, you can also tap 'Send application' to get that exact same application and CV sent to you as separate files by email.",
+    "cv_language_q": "Can I get the CV in English?",
+    "cv_language_a": "Yes — the language is now chosen automatically based on the language the job ad is written in (Norwegian or English). If you want it in the other language instead, tap 'Change language' on the analysis screen. The cover letter follows the same language."
   },
   "cv_template": {
     "title": "Choose CV template",

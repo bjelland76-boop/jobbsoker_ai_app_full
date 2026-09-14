@@ -166,7 +166,11 @@
     "generate_cv_q": "Sideen u sameeyaa CV iyo warqad codsi?",
     "generate_cv_a": "Marka hore falanqee shaqo, fur falanqaynta oo riix 'Samee CV iyo warqad codsi'. Waxaad arki doontaa doorasho qaab leh 5 qaabab oo CV kala duwan — riix qaab kasta si aad u aragto si buuxda. Dooro qaab ama u daa AI inuu kula talo galo kan ugu fiican shaqadan gaarka ah.",
     "templates_q": "Waa maxay qaababka CV-ga ee la heli karo?",
-    "templates_a": "Waxaad ka dooran kartaa 5 qaabab: Hal-abuur (laba tiir oo leh baar dhinac midab leh), Xirfad-yaqaan (hal tiir oo nadiif ah), Dhaqameed (qaab dhaqameed), Casri (midab oranji ah, far cad), iyo Iskandinaafi (fudud oo leh meel bannaan badan). Waxa kale oo aad dooran kartaa 'La talinayo' — markaas AI wuxuu doortaa qaabka ugu fiican iyadoo lagu saleynayo shaqada aad codsanayso."
+    "templates_a": "Waxaad ka dooran kartaa 5 qaabab: Hal-abuur (laba tiir oo leh baar dhinac midab leh), Xirfad-yaqaan (hal tiir oo nadiif ah), Dhaqameed (qaab dhaqameed), Casri (midab oranji ah, far cad), iyo Iskandinaafi (fudud oo leh meel bannaan badan). Waxa kale oo aad dooran kartaa 'La talinayo' — markaas AI wuxuu doortaa qaabka ugu fiican iyadoo lagu saleynayo shaqada aad codsanayso.",
+    "pdf_vs_email_q": "Waa maxay farqiga u dhexeeya PDF iyo iimaylka?",
+    "pdf_vs_email_a": "Marka aad riixdo 'Samee PDF' waxaad heli doontaa PDF ka kooban warqadda codsiga iyo CV-ga oo isku dhafan hal dukumeenti — waxtar u leh gudbinta dhijitaalka ah. Ka dib marka CV-ga la sameeyo, waxaad sidoo kale riixi kartaa 'Dir codsiga' si aad u hesho isla codsigaas iyo CV-ga sida faylal kala duwan oo lagugu soo diray iimayl.",
+    "cv_language_q": "Miyaan heli karaa CV-ga Ingiriisi ah?",
+    "cv_language_a": "Haa — luqadda hadda si otomaatig ah ayaa loo doortaa iyadoo lagu saleynayo luqadda uu ku qoran yahay xayeysiiska shaqada (Norwiijiga ama Ingiriisiga). Haddii aad rabto luqadda kale, riix 'Beddel luqadda' bogga falanqaynta. Warqadda codsiga waxay raacaysaa isla luqadda."
   },
   "cv_template": {
     "title": "Dooro qaabka CV-ga",

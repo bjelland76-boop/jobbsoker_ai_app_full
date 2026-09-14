@@ -660,12 +660,12 @@ function AppContent() {
       a: t('faq.templates_a'),
     },
     {
-      q: 'Hva er forskjellen på PDF og e-post?',
-      a: 'Når du trykker \'Generer CV og søknad\' får du en PDF som inneholder både søknadstekst og CV samlet i ett dokument — praktisk for digital innsending. Vil du ha søknadsteksten og CV-en som separate dokumenter, bruker du \'Send til e-post\' — da mottar du søknadsbrevet og CV-en som to separate filer i innboksen din.',
+      q: t('faq.pdf_vs_email_q'),
+      a: t('faq.pdf_vs_email_a'),
     },
     {
-      q: 'Kan jeg få CV-en på engelsk?',
-      a: 'Ja — når du genererer CV velger du norsk eller engelsk. Søknadsbrevet følger samme språkvalg.',
+      q: t('faq.cv_language_q'),
+      a: t('faq.cv_language_a'),
     },
     {
       q: 'Hvordan fungerer intervjutreningen?',
@@ -709,7 +709,7 @@ function AppContent() {
     },
     {
       q: 'CV theo mẫu Việt Nam khác gì so với CV thông thường trong app?',
-      a: 'Ở Việt Nam, CV thường có thêm ảnh, ngày sinh, chiều cao, tình trạng hôn nhân và tình trạng nghĩa vụ quân sự — những thông tin này không phổ biến trong CV ở Na Uy. Vào mục Profil, bạn sẽ thấy thẻ "CV tiếng Việt" nơi có thể điền thêm các thông tin này. Hoàn toàn tùy chọn, chỉ dùng khi bạn chọn tạo CV theo mẫu tiếng Việt.',
+      a: 'Ở Việt Nam, CV thường có thêm ảnh, ngày sinh, chiều cao, tình trạng hôn nhân và tình trạng nghĩa vụ quân sự — những thông tin này không phổ biến trong CV ở Na Uy. Vào mục Profil, bạn sẽ thấy thẻ "CV tiếng Việt" nơi có thể điền thêm các thông tin này. Ứng dụng sẽ tự động quyết định có nên đưa các thông tin này vào CV hay không, dựa trên việc nhà tuyển dụng có vẻ là công ty Việt Nam nội địa hay công ty quốc tế hoạt động tại Việt Nam — nếu không chắc chắn, ứng dụng sẽ mặc định KHÔNG hiển thị các thông tin này để bảo vệ sự riêng tư của bạn. Bạn luôn có thể tự chọn lại mẫu CV theo ý muốn.',
     },
     {
       q: 'Tôi có cần tạo tài khoản mới dùng thử được không?',
