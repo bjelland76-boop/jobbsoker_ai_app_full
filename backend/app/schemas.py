@@ -38,6 +38,7 @@ class ProfileOut(BaseModel):
     job_credits: int = 0
     subscription_status: Optional[str] = None
     subscription_end: Optional[str] = None
+    has_stripe_customer: bool = False
     show_inactivity_reminder: bool = False
 
     # Optional fields used only when generating a Vietnamese CV.

@@ -378,6 +378,29 @@ def _has_active_subscription(profile: Profile) -> bool:
     return True
 
 
+def _expire_stale_subscription(db: Session, profile: Profile, *, commit: bool = True) -> None:
+    """Self-heal a subscription_status that's still 'active' after its
+    subscription_end has passed.
+
+    Same expired-pass problem _has_active_subscription() already guards
+    against (a one-time pass has no recurring webhook to flip it when it
+    lapses) -- but that function is only ever consulted for *gating*
+    access, never for what profile_to_dict() actually serializes to the
+    client. Without this, a lapsed profile keeps showing "Abonnement
+    aktivt" in the app forever, even though access is correctly cut off.
+    Mirrors the mutate-then-commit-in-the-read-handler pattern
+    get_profiles() already uses for last_active_at.
+    """
+    if (
+        profile.subscription_status == "active"
+        and profile.subscription_end is not None
+        and profile.subscription_end < datetime.utcnow()
+    ):
+        profile.subscription_status = "expired"
+        if commit:
+            db.commit()
+
+
 def _check_free_limit(profile: Profile, limit_type: str) -> JSONResponse | None:
     """Read-only check: None if the action is allowed, else a 403 response.
 
@@ -628,6 +651,13 @@ def profile_to_dict(profile: Profile) -> dict:
         "subscription_end": (
             profile.subscription_end.date().isoformat() if getattr(profile, "subscription_end", None) else None
         ),
+        # Derived boolean, not the raw Stripe customer id -- the client only
+        # needs to know whether "Administrer abonnement" (Stripe's billing
+        # portal) is reachable for this profile. subscription_status=='active'
+        # alone isn't enough: Play Billing purchases and Stripe's one-time
+        # 7-day pass also set it to 'active' but never get a stripe_customer_id
+        # (see /create-portal-session, which requires one).
+        "has_stripe_customer": bool(getattr(profile, "stripe_customer_id", None)),
         "birth_date": (getattr(profile, "birth_date", "") or ""),
         "height_cm": getattr(profile, "height_cm", None),
         "civil_status": (getattr(profile, "civil_status", "") or ""),
@@ -1648,6 +1678,7 @@ def get_profiles(current_user: User | None = Depends(get_current_user_optional),
             and (now - profile.last_active_at).days >= 60
         )
         profile.last_active_at = now
+        _expire_stale_subscription(db, profile, commit=False)
         d = profile_to_dict(profile)
         d["show_inactivity_reminder"] = show_reminder
         out.append(d)
@@ -1661,6 +1692,7 @@ def get_profile(profile_id: int, current_user: User | None = Depends(get_current
     profile = db.get(Profile, profile_id)
     if not _owns_profile(profile, current_user):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profil ikke funnet")
+    _expire_stale_subscription(db, profile)
     return profile_to_dict(profile)
 
 
@@ -1698,6 +1730,7 @@ def update_profile(profile_id: int, data: ProfileIn, current_user: User | None =
 
     db.commit()
     db.refresh(profile)
+    _expire_stale_subscription(db, profile)
 
     return profile_to_dict(profile)
 
@@ -1710,6 +1743,7 @@ def mark_onboarding_seen(profile_id: int, current_user: User | None = Depends(ge
     profile.has_seen_onboarding = True
     db.commit()
     db.refresh(profile)
+    _expire_stale_subscription(db, profile)
     return profile_to_dict(profile)
 
 
