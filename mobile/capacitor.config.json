@@ -1,6 +1,6 @@
 {
   "appId": "com.aerlig.app",
-  "appName": "Ærlig",
+  "appName": "ReadyCV",
   "webDir": "dist",
   "backgroundColor": "#F7F5F0",
   "server": {
