@@ -84,6 +84,7 @@ export default function ProfileScreen({ onManageSubscription }) {
     applyCvImport,
     subscriptionStatus,
     subscriptionEnd,
+    hasStripeCustomer,
   } = useProfileContext();
 
   const [langOpen, setLangOpen] = useState(false);
@@ -1482,9 +1483,22 @@ export default function ProfileScreen({ onManageSubscription }) {
             {subscriptionEnd ? (
               <Text style={[styles.helpText, styles.aerligHelpText]}>{t('profile.subscription_next_payment', { date: subscriptionEnd })}</Text>
             ) : null}
-            <TouchableOpacity style={[styles.aerligSecondaryButton, { marginTop: 10 }]} onPress={onManageSubscription}>
-              <Text style={styles.aerligSecondaryButtonText}>{t('profile.subscription_manage')}</Text>
-            </TouchableOpacity>
+            {hasStripeCustomer ? (
+              <TouchableOpacity style={[styles.aerligSecondaryButton, { marginTop: 10 }]} onPress={onManageSubscription}>
+                <Text style={styles.aerligSecondaryButtonText}>{t('profile.subscription_manage')}</Text>
+              </TouchableOpacity>
+            ) : (
+              // No Stripe customer on this profile -- this purchase came via
+              // Google Play Billing or a one-time Stripe payment-mode
+              // checkout (7-day pass), neither of which ever gets a
+              // stripe_customer_id (see profile_to_dict()'s has_stripe_customer
+              // comment). /create-portal-session requires one and would just
+              // 400 with a confusing technical error, so don't offer the
+              // button at all -- explain where to actually look instead.
+              <Text style={[styles.helpText, styles.aerligHelpText, { marginTop: 10 }]}>
+                {t('profile.subscription_manage_unavailable')}
+              </Text>
+            )}
           </View>
         )}
 

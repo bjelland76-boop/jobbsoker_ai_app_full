@@ -336,6 +336,7 @@
     "subscription_active": "Aktivt abonnement — 79kr/mnd",
     "subscription_next_payment": "Neste betaling: {{date}}",
     "subscription_manage": "Administrer abonnement",
+    "subscription_manage_unavailable": "Dette kjøpet ble gjort via Google Play eller direkte kortkjøp. Se kvittering i Play Butikk-appen eller kontakt support ved spørsmål.",
     "logout_btn": "Logg ut",
     "login_prompt": "Du bruker appen uten konto. Logg inn for å lagre profilen din trygt, sende søknader på e-post og trene på intervju.",
     "delete_account_btn": "Slett konto",

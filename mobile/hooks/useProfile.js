@@ -60,6 +60,7 @@ export default function useProfile({ onProfileSaved } = {}) {
   const [jobCredits, setJobCredits] = useState(0);
   const [subscriptionStatus, setSubscriptionStatus] = useState(null);
   const [subscriptionEnd, setSubscriptionEnd] = useState(null);
+  const [hasStripeCustomer, setHasStripeCustomer] = useState(false);
   const [name, setName] = useState('Ærlig JobbCoach');
   const [profileEmail, setProfileEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -233,6 +234,7 @@ export default function useProfile({ onProfileSaved } = {}) {
           setJobCredits(profile.job_credits || 0);
           setSubscriptionStatus(profile.subscription_status || null);
           setSubscriptionEnd(profile.subscription_end || null);
+          setHasStripeCustomer(!!profile.has_stripe_customer);
           if (profile.show_inactivity_reminder) setShowInactivityReminder(true);
           setName(profile.name || 'Ærlig JobbCoach');
           setProfileEmail(profile.email || '');
@@ -369,6 +371,7 @@ export default function useProfile({ onProfileSaved } = {}) {
         const status = profile.subscription_status || null;
         setSubscriptionStatus(status);
         setSubscriptionEnd(profile.subscription_end || null);
+        setHasStripeCustomer(!!profile.has_stripe_customer);
         return status;
       }
     } catch (e) {
@@ -923,7 +926,7 @@ export default function useProfile({ onProfileSaved } = {}) {
     // Identity
     profileId, setProfileId,
     jobCredits, refreshJobCredits,
-    subscriptionStatus, subscriptionEnd, refreshSubscription,
+    subscriptionStatus, subscriptionEnd, hasStripeCustomer, refreshSubscription,
     name, setName,
     profileEmail, setProfileEmail,
     phone, setPhone,
