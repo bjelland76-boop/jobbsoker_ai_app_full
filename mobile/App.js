@@ -112,7 +112,6 @@ function AppContent() {
     showAuthScreen, openAuthScreen, closeAuthScreen,
     uiLanguage, setUiLanguage,
     activeTab, setActiveTab,
-    showOnboarding, setShowOnboarding,
     showInactivityReminder,
     showFaq, setShowFaq,
     faqOpenIndex, setFaqOpenIndex,
@@ -141,7 +140,6 @@ function AppContent() {
     experienceEntries,
     isProfileTooEmpty,
     flushAutoSave,
-    dismissOnboarding,
     saveProfile,
   } = profileHook;
 
@@ -870,54 +868,6 @@ function AppContent() {
     </View>
   );
 
-  const renderOnboarding = () => (
-    <View style={{
-      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.55)', zIndex: 999,
-      justifyContent: 'center', alignItems: 'center', padding: 20,
-    }}>
-      <View style={{
-        backgroundColor: '#F7F5F0', borderRadius: 16, padding: 28,
-        width: '100%', maxWidth: 420,
-        shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 16, elevation: 12,
-      }}>
-        <Text style={{ fontSize: 24, fontWeight: '800', color: '#0f172a', textAlign: 'center', marginBottom: 6 }}>
-          Velkommen til Ærlig!
-        </Text>
-        <Text style={{ fontSize: 14, color: '#64748b', textAlign: 'center', marginBottom: 24, lineHeight: 20 }}>
-          Din ærlige jobbcoach — her er hvordan du kommer i gang
-        </Text>
-
-        {[
-          { icon: '🔗', text: 'Lim inn en jobbannonse-URL og få en ærlig match-score' },
-          { icon: '📄', text: 'Generer CV og søknad tilpasset nettopp denne stillingen' },
-          { icon: '🎙️', text: 'Øv på intervju før den virkelige samtalen' },
-        ].map((step, i) => (
-          <View key={i} style={{
-            flexDirection: 'row', alignItems: 'flex-start', gap: 14,
-            backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10,
-            shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
-          }}>
-            <Text style={{ fontSize: 26 }}>{step.icon}</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 13, color: '#334155', lineHeight: 19 }}>{step.text}</Text>
-            </View>
-          </View>
-        ))}
-
-        <TouchableOpacity
-          onPress={dismissOnboarding}
-          style={{
-            backgroundColor: '#E8501A', borderRadius: 10, paddingVertical: 14,
-            alignItems: 'center', marginTop: 14,
-          }}
-        >
-          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Kom i gang</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
   // Login is optional: this is only shown when the user voluntarily taps
   // "Logg inn" somewhere in the app (see openAuthScreen), never forced.
   const renderAuthOverlay = () => (
@@ -1064,7 +1014,6 @@ function AppContent() {
     <ProfileContext.Provider value={profileHook}>
     <SafeAreaView style={styles.container}>
       {showFaq && renderFaq()}
-      {showOnboarding && renderOnboarding()}
       {showAuthScreen && renderAuthOverlay()}
       <PaymentModal
         visible={!!paymentModalLimitType}

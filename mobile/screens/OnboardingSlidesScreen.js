@@ -20,6 +20,20 @@ const SLIDES = [
     title: 'Øv på intervju',
     text: 'Tren på intervjuspørsmål tilpasset jobben — svar med tale eller tekst og få tilbakemelding fra AI',
   },
+  // Closing recap slide -- reinforces the actual order of operations (upload
+  // CV first, it's what the analysis/generation steps need) right before the
+  // user is dropped into the app, since this is the screen they'll actually
+  // remember. Rendered differently from the three slides above (see `type`
+  // below) instead of forcing the icon/title/text layout to fit a 3-item list.
+  {
+    type: 'summary',
+    title: 'Slik fungerer det',
+    steps: [
+      { icon: '📄', text: 'Last opp CV-en din' },
+      { icon: '🔗', text: 'Analyser en jobbannonse' },
+      { icon: '✨', text: 'Få skreddersydd CV og søknad' },
+    ],
+  },
 ];
 
 export default function OnboardingSlidesScreen({ onDone }) {
@@ -47,9 +61,26 @@ export default function OnboardingSlidesScreen({ onDone }) {
       </TouchableOpacity>
 
       <View style={st.content}>
-        <Text style={st.icon}>{slide.icon}</Text>
-        <Text style={st.title}>{slide.title}</Text>
-        <Text style={st.text}>{slide.text}</Text>
+        {slide.type === 'summary' ? (
+          <>
+            <Text style={st.summaryTitle}>{slide.title}</Text>
+            {slide.steps.map((step, i) => (
+              <View key={i} style={st.stepRow}>
+                <View style={st.stepNumber}>
+                  <Text style={st.stepNumberText}>{i + 1}</Text>
+                </View>
+                <Text style={st.stepIcon}>{step.icon}</Text>
+                <Text style={st.stepText}>{step.text}</Text>
+              </View>
+            ))}
+          </>
+        ) : (
+          <>
+            <Text style={st.icon}>{slide.icon}</Text>
+            <Text style={st.title}>{slide.title}</Text>
+            <Text style={st.text}>{slide.text}</Text>
+          </>
+        )}
       </View>
 
       <View style={st.dotsRow}>
@@ -110,6 +141,48 @@ const st = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     maxWidth: 320,
+  },
+  summaryTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#111827',
+    textAlign: 'center',
+    marginBottom: 28,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 320,
+    backgroundColor: '#FFF8F5',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  stepNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: ORANGE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  stepNumberText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  stepIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  stepText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#334155',
   },
   dotsRow: {
     flexDirection: 'row',

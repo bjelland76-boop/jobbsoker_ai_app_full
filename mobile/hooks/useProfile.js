@@ -51,7 +51,7 @@ export function serializeCvGaps(list) {
 
 // Accepts optional { onProfileSaved } callback for cross-hook notifications
 export default function useProfile({ onProfileSaved } = {}) {
-  const { authReady, authTokenState, logEvent, errText, t, setShowOnboarding, setShowInactivityReminder } = useApp();
+  const { authReady, authTokenState, logEvent, errText, t, setShowInactivityReminder } = useApp();
 
   // ---------------------------------------------------------------------------
   // State
@@ -252,7 +252,6 @@ export default function useProfile({ onProfileSaved } = {}) {
           setNationality(profile.nationality || '');
           setMilitaryService(profile.military_service || '');
           setConsentAnalytics(!!profile.consent_analytics);
-          if (!profile.has_seen_onboarding) setShowOnboarding(true);
           setLanguagesList((Array.isArray(profile.languages) ? profile.languages : (profile.languages ? [profile.languages] : [])).map(normalizeLangEntry));
           setCvGapsList(parseCvGapsText(profile.cv_gaps || ''));
 
@@ -394,16 +393,6 @@ export default function useProfile({ onProfileSaved } = {}) {
     if (!authTokenState) return;
     loadProfileDocuments();
   }, [authTokenState]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ---------------------------------------------------------------------------
-  // Onboarding
-  // ---------------------------------------------------------------------------
-  async function dismissOnboarding() {
-    setShowOnboarding(false);
-    if (profileId) {
-      try { await apiFetch(`/profiles/${profileId}/onboarding`, { method: 'PATCH' }); } catch (_) {}
-    }
-  }
 
   // ---------------------------------------------------------------------------
   // Inactivity reminder (subscribers who haven't used the app in 60+ days)
@@ -1020,7 +1009,6 @@ export default function useProfile({ onProfileSaved } = {}) {
 
     // Functions
     loadProfileDocuments,
-    dismissOnboarding,
     dismissInactivityReminder,
     importCvFromFile,
     importCvFromCamera,
