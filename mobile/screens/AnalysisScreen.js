@@ -444,12 +444,18 @@ export default function AnalysisScreen({
               </View>
             ) : null}
 
+            {/* Same filled-orange primary style as "Analyser jobb" on the home
+                screen (aerligPrimaryButton) -- this is the main action of this
+                screen, and it previously read as a low-priority grey/white
+                secondary button. aerligQuickButton (the outlined variant used
+                by "Analyser CV"/"Intervju-oving") is flex:1 and only works
+                inside that three-button row. */}
             <TouchableOpacity
-              style={[styles.aerligSecondaryButton, isGenerating ? { opacity: 0.6 } : null]}
+              style={[styles.aerligPrimaryButton, styles.cardElevated, { marginTop: 12 }, isGenerating ? { opacity: 0.6 } : null]}
               onPress={() => openTemplatePicker()}
               disabled={isGenerating}
             >
-              <Text style={styles.aerligSecondaryButtonText}>{generatingPdf ? t('analysis.generating') : t('analysis.generate_pdf')}</Text>
+              <Text style={styles.aerligPrimaryButtonText}>{generatingPdf ? t('analysis.generating') : t('analysis.generate_pdf')}</Text>
             </TouchableOpacity>
 
             <CvTemplatePickerModal

@@ -307,7 +307,10 @@ export default function CvTemplatePickerModal({ visible, onClose, onConfirm, rec
 
   useEffect(() => {
     if (visible) {
-      setPendingSelection(null);
+      // Pre-select the AI recommendation so the user can see and approve it
+      // immediately -- the six templates are the fallback, not the first
+      // decision they have to make.
+      setPendingSelection('anbefalt');
       setExpandedTemplate(null);
     }
   }, [visible]);
@@ -387,9 +390,35 @@ export default function CvTemplatePickerModal({ visible, onClose, onConfirm, rec
                   <Text style={st.closeX}>×</Text>
                 </TouchableOpacity>
               </View>
-              <Text style={sharedStyles.cvModalSubtitle}>{t('cv_template.subtitle')}</Text>
-
               <ScrollView style={{ maxHeight: 480 }} showsVerticalScrollIndicator={false}>
+                {/* The recommendation comes FIRST and pre-selected: the user
+                    should be able to approve it without scrolling past six
+                    templates to find it. */}
+                <TouchableOpacity
+                  style={[st.recommendedRow, pendingSelection === 'anbefalt' && st.recommendedRowSelected]}
+                  onPress={() => setPendingSelection('anbefalt')}
+                >
+                  <Text style={st.sparkle}>✨</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={st.recommendedTitle}>{t('cv_template.recommended_title')}</Text>
+                    {pendingSelection === 'anbefalt' ? (
+                      <Text style={st.recommendedResult}>
+                        {`${t('cv_template.recommended_result_prefix')} ${recommendedName}`}
+                      </Text>
+                    ) : null}
+                    <Text style={st.recommendedSubtitle}>{t('cv_template.recommended_subtitle')}</Text>
+                  </View>
+                  <Radio selected={pendingSelection === 'anbefalt'} />
+                </TouchableOpacity>
+
+                <View style={st.orRow}>
+                  <View style={st.orLine} />
+                  <Text style={st.orLabel}>{t('cv_template.or_choose_yourself')}</Text>
+                  <View style={st.orLine} />
+                </View>
+
+                <Text style={sharedStyles.cvModalSubtitle}>{t('cv_template.subtitle')}</Text>
+
                 <View style={st.grid}>
                   {TEMPLATES.map((tpl) => {
                     const isFullWidth = tpl.key === 'skandinavisk' || tpl.key === 'vietnamesisk';
@@ -412,24 +441,6 @@ export default function CvTemplatePickerModal({ visible, onClose, onConfirm, rec
                     );
                   })}
                 </View>
-
-                <View style={st.divider} />
-
-                <TouchableOpacity
-                  style={[st.recommendedRow, pendingSelection === 'anbefalt' && st.recommendedRowSelected]}
-                  onPress={() => setPendingSelection('anbefalt')}
-                >
-                  <Text style={st.sparkle}>✨</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={st.recommendedTitle}>{t('cv_template.recommended_title')}</Text>
-                    <Text style={st.recommendedSubtitle}>
-                      {pendingSelection === 'anbefalt'
-                        ? `${t('cv_template.recommended_result_prefix')} ${recommendedName}`
-                        : t('cv_template.recommended_subtitle')}
-                    </Text>
-                  </View>
-                  <Radio selected={pendingSelection === 'anbefalt'} />
-                </TouchableOpacity>
               </ScrollView>
 
               <TouchableOpacity
@@ -476,14 +487,18 @@ const st = StyleSheet.create({
   },
   radioSelected: { borderColor: ORANGE, backgroundColor: ORANGE },
   radioCheck: { color: '#fff', fontSize: 11, fontWeight: '900' },
-  divider: { height: 1, backgroundColor: '#e5e7eb', marginVertical: 14 },
+  orRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 14 },
+  orLine: { flex: 1, height: 1, backgroundColor: '#e5e7eb' },
+  orLabel: { fontSize: 12, color: '#6B7280', marginHorizontal: 10 },
   recommendedRow: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF8F5',
     borderWidth: 1.5, borderColor: '#FDE0D2', borderRadius: 12, padding: 12,
+    marginTop: 12,
   },
   recommendedRowSelected: { borderColor: ORANGE },
   sparkle: { fontSize: 20, marginRight: 10 },
   recommendedTitle: { fontSize: 14, fontWeight: '700', color: '#111827' },
+  recommendedResult: { fontSize: 13, fontWeight: '700', color: ORANGE, marginTop: 2 },
   recommendedSubtitle: { fontSize: 12, color: '#6B7280', marginTop: 2 },
   disabledButton: { opacity: 0.5 },
 

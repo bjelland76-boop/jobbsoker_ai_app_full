@@ -176,6 +176,7 @@
     "subtitle": "Tap a template to preview it in full — select it once you've decided.",
     "choose_this": "Choose this",
     "selected": "Selected",
+    "or_choose_yourself": "or pick a template yourself",
     "recommended_title": "Use recommended template",
     "recommended_subtitle": "AI picks the best template based on the job ad you analyzed",
     "recommended_result_prefix": "AI recommended:",
