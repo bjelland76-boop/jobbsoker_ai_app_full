@@ -7,10 +7,12 @@ import { useApp } from '../context/AppContext';
 import { styles } from '../styles/styles';
 import { THEME } from '../styles/theme';
 import CvTemplatePickerModal from '../components/CvTemplatePickerModal';
+import DeadlineReminderModal from '../components/DeadlineReminderModal';
 
 export default function AnalysisScreen({
   // analysis state
   analysis, justAnalyzed, jobUrl, setJobUrl, loading, analyzeJob,
+  deadlinePrompt, dismissDeadlinePrompt,
   jobAnalyses, jobAnalysesLoading, loadJobAnalyses,
   profileUpdatedSinceAnalysis,
   applicationStyle, setApplicationStyle,
@@ -620,6 +622,14 @@ export default function AnalysisScreen({
 
   return (
     <View style={styles.aerligHomeWrap}>
+      <DeadlineReminderModal
+        visible={!!deadlinePrompt?.visible}
+        jobId={deadlinePrompt?.jobId}
+        jobTitle={deadlinePrompt?.jobTitle}
+        company={deadlinePrompt?.company}
+        deadline={deadlinePrompt?.deadline}
+        onClose={dismissDeadlinePrompt}
+      />
       <Pressable
         android_ripple={{ color: 'rgba(26, 26, 46, 0.10)' }}
         style={styles.aerligBackButton}

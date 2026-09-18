@@ -1175,6 +1175,12 @@ def analyze_job_url(
     # ai_matcher._normalize_result.
     vietnam_company_type = str(match.get("vietnam_company_type") or "internasjonal")
 
+    # Fase 6 (isolert deadline-varsling): søknadsfrist as read directly out
+    # of the job ad text by this same match call, already validated to be a
+    # real YYYY-MM-DD date or None in ai_matcher._normalize_result -- no
+    # further parsing needed here.
+    application_deadline = match.get("application_deadline")
+
     # Bugfix (predates Fase 1-4, confirmed absent at this branch's base
     # commit): cv_mal was never copied from the match result into the
     # persisted analysis, so the AI's per-job-type template recommendation
@@ -1219,6 +1225,7 @@ def analyze_job_url(
         "recommended_style_reason": "Anbefalt av AI basert på stillingstype og bransje.",
         "detected_ad_language": detected_ad_language,
         "vietnam_company_type": vietnam_company_type,
+        "application_deadline": application_deadline,
         "cv_mal": cv_mal,
         "__job_text": _compress_text(job_text, 3000),
     }

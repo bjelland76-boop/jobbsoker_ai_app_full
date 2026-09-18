@@ -34,6 +34,15 @@ task clean(type: Delete) {
 
 // EAS build environment commonly uses JDK 17. Force Android modules to compile with Java 17,
 // even if some Capacitor modules default to a higher source/target level.
+//
+// @capacitor/local-notifications (added for the isolated deadline-reminder
+// feature) is the first Kotlin-based Capacitor module in this project --
+// its own build.gradle requests `kotlin { jvmToolchain(21) }`, which this
+// override did NOT previously touch (it only patched the Java
+// compileOptions above, a separate mechanism from Kotlin's own toolchain
+// DSL). Left unpatched, that mismatch fails the build with "Inconsistent
+// JVM-target compatibility detected... (17) and ...(21)". Pin the Kotlin
+// compile target down to the same 17 for the same EAS-compatibility reason.
 subprojects { subproject ->
     subproject.afterEvaluate {
         if (subproject.hasProperty('android')) {
@@ -43,6 +52,10 @@ subprojects { subproject ->
                     targetCompatibility JavaVersion.VERSION_17
                 }
             }
+        }
+        def kotlinExt = subproject.extensions.findByName('kotlin')
+        if (kotlinExt != null) {
+            kotlinExt.jvmToolchain(17)
         }
     }
 }

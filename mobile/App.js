@@ -150,6 +150,7 @@ function AppContent() {
     jobText, setJobText,
     jobInputMode, setJobInputMode,
     analysis, setAnalysis,
+    deadlinePrompt, dismissDeadlinePrompt,
     justAnalyzed, setJustAnalyzed,
     tailoredCvJobTitle, setTailoredCvJobTitle,
     cvTemplate, setCvTemplate,
@@ -1077,6 +1078,7 @@ function AppContent() {
           />}
           {activeTab === 'analysis' && <AnalysisScreen
             analysis={analysis} justAnalyzed={justAnalyzed} jobUrl={jobUrl} setJobUrl={setJobUrl}
+            deadlinePrompt={deadlinePrompt} dismissDeadlinePrompt={dismissDeadlinePrompt}
             loading={loading} analyzeJob={analyzeJob}
             jobAnalyses={jobAnalyses} jobAnalysesLoading={jobAnalysesLoading}
             loadJobAnalyses={loadJobAnalyses}

@@ -5,6 +5,7 @@ import os
 import re
 import traceback
 from collections import OrderedDict
+from datetime import datetime
 from threading import Lock
 from typing import Any, List, Optional, TypedDict
 
@@ -58,6 +59,11 @@ class MatchResult(TypedDict):
     # harmless either way since this field is only ever consulted when the
     # Vietnamese CV template is actually in use.
     vietnam_company_type: str
+
+    # Fase 6 (isolert deadline-varsling): søknadsfrist eksplisitt oppgitt i
+    # annonseteksten, ISO-format "YYYY-MM-DD". None if none is given, or the
+    # ad only says "snarest"/"løpende opptak" -- deliberately not a guess.
+    application_deadline: Optional[str]
 
 
 def _compress_text(text: str, max_len: int = 2500) -> str:
@@ -231,6 +237,7 @@ def _normalize_result(data: Any, *, lang: str = "no") -> MatchResult:
         "detected_ad_language": "no",
         "recommended_application_style": "vanlig",
         "vietnam_company_type": "internasjonal",
+        "application_deadline": None,
     }
 
     if not isinstance(data, dict):
@@ -295,6 +302,19 @@ def _normalize_result(data: Any, *, lang: str = "no") -> MatchResult:
     # Vietnam (this field is simply never consulted in that case).
     vn_type_raw = str(data.get("vietnam_company_type") or "").strip().lower()
     out["vietnam_company_type"] = vn_type_raw if vn_type_raw in ("lokal", "internasjonal") else "internasjonal"
+
+    # Fase 6 (isolert deadline-varsling): only trust a well-formed, real
+    # calendar date -- "snarest"/"løpende"/free text/malformed output all
+    # fall back to None (no deadline) rather than risk scheduling a
+    # reminder off a garbage date.
+    deadline_raw = str(data.get("application_deadline") or "").strip()
+    out["application_deadline"] = None
+    if deadline_raw and deadline_raw.lower() not in ("null", "none"):
+        try:
+            datetime.strptime(deadline_raw, "%Y-%m-%d")
+            out["application_deadline"] = deadline_raw
+        except ValueError:
+            pass
 
     return out
 
@@ -499,7 +519,8 @@ def analyze_job_match(
         '"cv_mal":"profesjonell (DEFAULT for de fleste stillinger: salg/kontor/service/logistikk/bygg/HR generelt) | kreativ (KUN for: designer/UX/grafisk/animasjon/reklame/media/innhold) | klassisk (KUN for: advokat/jurist/revisor/forsker/akademiker/offentlig forvaltning) | moderne (KUN for: tech/IT/startup/utvikler/data/produkt) | skandinavisk (KUN for: helse/omsorg/offentlig sektor/konservative bransjer — alternativ til klassisk) — velg basert på stillingstittelen i JOB-seksjonen (ignorer vietnamesisk — den velges automatisk basert på språk, ikke av deg)",'
         '"detected_ad_language":"no or en — the language the JOB AD TEXT in the JOB section above is ACTUALLY WRITTEN IN, completely independent of what language you were told to write THIS response in. If the job ad is not clearly Norwegian or English, or you are not confident, answer no.",'
         '"recommended_application_style":"kort (KUN for enkle/entry-level stillinger uten behov for grundig motivasjon: butikk/lager/kasse/rengjøring/enkel service/sesongarbeid) | vanlig (DEFAULT for de fleste stillinger) | profesjonell (KUN for akademiske/leder-/spesialist-/ekspertstillinger som krever grundig, formell dokumentasjon: forsker/advokat/direktør/senior rådgiver/fagspesialist med høye krav) — velg basert på stillingstype, senioritet og bransje i JOB-seksjonen, ikke basert på kandidatens CV",'
-        '"vietnam_company_type":"ONLY relevant if this job ad targets the Vietnamese market — written in Vietnamese, based in Vietnam, or otherwise clearly aimed at Vietnamese jobseekers; if not, just answer internasjonal. When it IS Vietnam-market-facing, judge from the JOB section: lokal = a local Vietnamese company (Vietnamese company name/branding, no reference to a foreign parent or global operations, Vietnam-only contact/address style) | internasjonal = an international company operating in Vietnam (recognizable global/foreign brand name, English mixed into an otherwise Vietnamese ad, mentions of a parent group/global offices/regional HQ, an international-style office address or domain). If genuinely unsure which of the two, answer internasjonal — the more private default."'
+        '"vietnam_company_type":"ONLY relevant if this job ad targets the Vietnamese market — written in Vietnamese, based in Vietnam, or otherwise clearly aimed at Vietnamese jobseekers; if not, just answer internasjonal. When it IS Vietnam-market-facing, judge from the JOB section: lokal = a local Vietnamese company (Vietnamese company name/branding, no reference to a foreign parent or global operations, Vietnam-only contact/address style) | internasjonal = an international company operating in Vietnam (recognizable global/foreign brand name, English mixed into an otherwise Vietnamese ad, mentions of a parent group/global offices/regional HQ, an international-style office address or domain). If genuinely unsure which of the two, answer internasjonal — the more private default.",'
+        '"application_deadline":"ISO 8601 date (YYYY-MM-DD) ONLY if the JOB section explicitly states an application deadline (e.g. \'søknadsfrist 15.10.2026\', \'apply by October 15\'); answer null if no deadline is mentioned, or if it only says something like \'snarest\'/\'løpende opptak\'/\'as soon as possible\' with no actual date."'
         "}"
         f"\n{lang_rule}"
     )

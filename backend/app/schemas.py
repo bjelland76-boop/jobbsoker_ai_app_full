@@ -133,6 +133,11 @@ class JobAnalysisOut(BaseModel):
     # is the safe fallback when uncertain or not applicable.
     vietnam_company_type: str = "internasjonal"
 
+    # Fase 6 (isolert deadline-varsling): søknadsfrist read directly out of
+    # the job ad text, "YYYY-MM-DD", or None if the ad states no deadline
+    # (or only "snarest"/"løpende opptak").
+    application_deadline: Optional[str] = None
+
     # Whether a generated CV already exists for each language (used by frontend confirm dialog).
     has_tailored_cv_no: bool = False
     has_tailored_cv_en: bool = False

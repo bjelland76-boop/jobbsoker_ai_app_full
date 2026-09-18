@@ -1,7 +1,36 @@
 import { useState, useEffect, useRef } from 'react';
 import { Alert, Platform, Linking } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { apiFetch, API, useApp } from '../context/AppContext';
+
+// Isolert Fase 6-leveranse (frist-varsling): husk per jobb-ID at brukeren
+// allerede har svart på deadline-pop-up-en, slik at den ikke spør på nytt
+// hver gang samme jobb re-analyseres/gjenåpnes. Rent klient-lokalt -- ingen
+// backend/DB-endring (det er en Jobbkalender (B)-oppgave).
+const DEADLINE_PROMPT_ANSWERED_KEY = 'deadlinePromptAnswered';
+
+async function hasAnsweredDeadlinePrompt(jobId) {
+  try {
+    const raw = await AsyncStorage.getItem(DEADLINE_PROMPT_ANSWERED_KEY);
+    const ids = raw ? JSON.parse(raw) : [];
+    return Array.isArray(ids) && ids.includes(jobId);
+  } catch (e) {
+    return false;
+  }
+}
+
+async function markDeadlinePromptAnswered(jobId) {
+  try {
+    const raw = await AsyncStorage.getItem(DEADLINE_PROMPT_ANSWERED_KEY);
+    const ids = raw ? JSON.parse(raw) : [];
+    const next = Array.isArray(ids) ? ids : [];
+    if (!next.includes(jobId)) next.push(jobId);
+    await AsyncStorage.setItem(DEADLINE_PROMPT_ANSWERED_KEY, JSON.stringify(next));
+  } catch (e) {
+    // Best-effort -- worst case the prompt reappears once more later.
+  }
+}
 
 export default function useJobAnalysis({
   profileId,
@@ -24,6 +53,11 @@ export default function useJobAnalysis({
   const [jobText, setJobText] = useState('');
   const [jobInputMode, setJobInputMode] = useState('url'); // 'url' | 'text'
   const [analysis, setAnalysis] = useState(null);
+  // Isolert Fase 6-leveranse: pop-up state for DeadlineReminderModal,
+  // shown right after a fresh analysis (see analyzeJob() below).
+  const [deadlinePrompt, setDeadlinePrompt] = useState({
+    visible: false, jobId: null, jobTitle: '', company: '', deadline: null,
+  });
   // Drives AnalysisScreen's render order: true right after a fresh analysis
   // (or opening the latest one from HomeScreen's "Siste analyse" card) so
   // the result appears before the history list, without scrolling. False
@@ -386,6 +420,23 @@ export default function useJobAnalysis({
       // control in AnalysisScreen.
       if (['kort', 'vanlig', 'profesjonell'].includes(data?.recommended_application_style)) {
         setApplicationStyle(data.recommended_application_style);
+      }
+      // Fase 6 (isolert deadline-varsling): pop-up rett etter analysen --
+      // forhåndsutfylt hvis AI-en fant en frist i annonseteksten, ellers en
+      // enkel fallback der brukeren kan legge inn en dato selv. Spør bare
+      // én gang per jobb (AsyncStorage-markering), ikke hver gang samme
+      // jobb re-analyseres/gjenåpnes.
+      if (data?.job_id != null) {
+        hasAnsweredDeadlinePrompt(data.job_id).then((answered) => {
+          if (answered) return;
+          setDeadlinePrompt({
+            visible: true,
+            jobId: data.job_id,
+            jobTitle: data.job_title || '',
+            company: data.company || '',
+            deadline: data.application_deadline || null,
+          });
+        });
       }
       setProfileUpdatedSinceAnalysis(false);
       logEvent('analyze_job_completed');
@@ -770,6 +821,16 @@ export default function useJobAnalysis({
     setTemplatePickerVisible(false);
   }
 
+  // Isolert Fase 6-leveranse: kalles av DeadlineReminderModal uansett om
+  // brukeren faktisk satte en påminnelse eller trykket "Nei takk" -- i
+  // begge tilfeller har de "svart", så pop-up-en skal ikke dukke opp igjen
+  // for akkurat denne jobben.
+  function dismissDeadlinePrompt() {
+    const { jobId } = deadlinePrompt;
+    setDeadlinePrompt({ visible: false, jobId: null, jobTitle: '', company: '', deadline: null });
+    if (jobId != null) markDeadlinePromptAnswered(jobId);
+  }
+
   function confirmTemplateAndGenerate(template, languageOverride) {
     setTemplatePickerVisible(false);
     generatePdf(template, languageOverride);
@@ -910,6 +971,7 @@ export default function useJobAnalysis({
     jobText, setJobText,
     jobInputMode, setJobInputMode,
     analysis, setAnalysis,
+    deadlinePrompt, dismissDeadlinePrompt,
     justAnalyzed, setJustAnalyzed,
     tailoredCvJobTitle, setTailoredCvJobTitle,
     cvTemplate, setCvTemplate,
