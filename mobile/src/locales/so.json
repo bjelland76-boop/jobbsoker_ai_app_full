@@ -163,6 +163,8 @@
     "analysis_language_notice": "Falanqaynta waxay ku muuqan kartaa Af-Noorweejian. Tani waa xaalad ku-meel-gaar ah."
   },
   "faq": {
+    "getting_started_q": "Sideen u bilaabaa?",
+    "getting_started_a": "Bilow adigoo buuxinaya profile-kaaga — xogta intii badan ee aad geliso, ayaa CV-ga iyo warqadda codsiga u fiicnaan doonaan. Kadibna ku dhaji link-ga FINN.no bogga hore oo riix 'Falanqee shaqo'. Android-ka, waxaad sidoo kale la wadaagi kartaa xayeysiiska shaqada si toos ah oo ka socota abka FINN.no, biraawsarka, ama abab kale adigoo isticmaalaya menu-ga 'Wadaag' oo dooro ReadyCV — link-ga ayaa markaas si otomaatig ah loogu buuxin doonaa bogga falanqaynta shaqada.",
     "generate_cv_q": "Sideen u sameeyaa CV iyo warqad codsi?",
     "generate_cv_a": "Marka hore falanqee shaqo, fur falanqaynta oo riix 'Samee CV iyo warqad codsi'. Waxaad arki doontaa doorasho qaab leh 5 qaabab oo CV kala duwan — riix qaab kasta si aad u aragto si buuxda. Dooro qaab ama u daa AI inuu kula talo galo kan ugu fiican shaqadan gaarka ah.",
     "templates_q": "Waa maxay qaababka CV-ga ee la heli karo?",

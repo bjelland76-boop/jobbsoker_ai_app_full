@@ -673,8 +673,8 @@ function AppContent() {
 
   const FAQ_ITEMS = [
     {
-      q: 'Hvordan kommer jeg i gang?',
-      a: 'Start med å fylle ut profilen din — jo mer informasjon du legger inn, jo bedre blir CV og søknad. Deretter limer du inn en FINN.no-lenke på hjemskjermen og trykker \'Analyser jobb\'.',
+      q: t('faq.getting_started_q'),
+      a: t('faq.getting_started_a'),
     },
     {
       q: 'Hva er match-score?',

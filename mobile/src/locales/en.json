@@ -162,6 +162,8 @@
     "no_text": "No text to show."
   },
   "faq": {
+    "getting_started_q": "How do I get started?",
+    "getting_started_a": "Start by filling out your profile — the more information you add, the better your CV and application will be. Then paste a FINN.no link on the home screen and tap 'Analyze job'. On Android, you can also share a job ad directly from the FINN.no app, your browser, or other apps via the 'Share' menu and select ReadyCV — the link is then filled in automatically on the job analysis screen.",
     "generate_cv_q": "How do I generate a CV and cover letter?",
     "generate_cv_a": "Analyze a job first, open the analysis and tap 'Generate CV and cover letter'. You'll then see a template picker with 5 different CV templates to choose from — tap any template to preview it in full size. Pick a template, or let AI recommend the best one for this specific job.",
     "templates_q": "Which CV templates are available?",

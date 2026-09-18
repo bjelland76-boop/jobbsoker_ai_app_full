@@ -162,6 +162,8 @@
     "no_text": "Brak tekstu do wyświetlenia."
   },
   "faq": {
+    "getting_started_q": "Jak zacząć?",
+    "getting_started_a": "Zacznij od uzupełnienia swojego profilu — im więcej informacji podasz, tym lepsze będzie CV i list motywacyjny. Następnie wklej link do ogłoszenia z FINN.no na ekranie głównym i naciśnij „Analizuj ofertę pracy”. Na Androidzie możesz też udostępnić ogłoszenie bezpośrednio z aplikacji FINN.no, przeglądarki lub innej aplikacji przez menu „Udostępnij” i wybrać ReadyCV — link zostanie wtedy automatycznie wklejony na ekranie analizy oferty.",
     "generate_cv_q": "Jak wygenerować CV i list motywacyjny?",
     "generate_cv_a": "Najpierw przeanalizuj ofertę pracy, otwórz analizę i naciśnij „Generuj CV i list motywacyjny”. Pojawi się wybór szablonu z 5 różnymi szablonami CV do wyboru — możesz dotknąć każdego szablonu, aby zobaczyć go w pełnym rozmiarze. Wybierz szablon lub pozwól AI polecić najlepszy dla tej konkretnej oferty.",
     "templates_q": "Jakie szablony CV są dostępne?",

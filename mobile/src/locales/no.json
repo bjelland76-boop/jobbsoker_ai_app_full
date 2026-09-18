@@ -162,6 +162,8 @@
     "no_text": "Ingen tekst å vise."
   },
   "faq": {
+    "getting_started_q": "Hvordan kommer jeg i gang?",
+    "getting_started_a": "Start med å fylle ut profilen din — jo mer informasjon du legger inn, jo bedre blir CV og søknad. Deretter limer du inn en FINN.no-lenke på hjemskjermen og trykker 'Analyser jobb'. På Android kan du også dele en jobbannonse direkte fra FINN.no-appen, nettleseren eller andre apper via 'Del'-menyen og velge ReadyCV — lenken fylles da automatisk inn på jobbanalyse-siden.",
     "generate_cv_q": "Hvordan genererer jeg CV og søknad?",
     "generate_cv_a": "Analyser en jobb først, åpne analysen og trykk 'Generer CV og søknad'. Du får da opp et malvalg med 5 forskjellige CV-maler å velge mellom — du kan trykke på hver mal for å se den i stort. Velg en mal eller la AI anbefale den beste for akkurat denne jobben.",
     "templates_q": "Hvilke CV-maler finnes?",

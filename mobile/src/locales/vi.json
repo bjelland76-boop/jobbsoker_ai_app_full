@@ -162,6 +162,8 @@
     "no_text": "Không có văn bản để hiển thị."
   },
   "faq": {
+    "getting_started_q": "Làm thế nào để bắt đầu?",
+    "getting_started_a": "Hãy bắt đầu bằng cách điền đầy đủ hồ sơ của bạn — càng nhiều thông tin, CV và đơn xin việc do AI tạo ra càng tốt. Sau đó dán link tin tuyển dụng từ FINN.no vào màn hình chính và nhấn 'Phân tích công việc'. Trên Android, bạn cũng có thể chia sẻ tin tuyển dụng trực tiếp từ ứng dụng FINN.no, trình duyệt hoặc ứng dụng khác qua menu 'Chia sẻ' và chọn ReadyCV — link sẽ tự động được điền vào màn hình phân tích công việc.",
     "generate_cv_q": "Làm thế nào để tạo CV và thư xin việc?",
     "generate_cv_a": "Trước tiên hãy phân tích một công việc, mở phân tích đó và nhấn 'Tạo CV và thư xin việc'. Bạn sẽ thấy trình chọn mẫu với 5 mẫu CV khác nhau — nhấn vào từng mẫu để xem trước ở kích thước đầy đủ. Chọn một mẫu hoặc để AI đề xuất mẫu phù hợp nhất cho công việc này.",
     "templates_q": "Có những mẫu CV nào?",
