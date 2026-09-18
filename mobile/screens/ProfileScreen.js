@@ -12,7 +12,7 @@ import { THEME } from '../styles/theme';
 import { schoolOptions } from '../constants/options';
 
 const FEEDBACK_EMAIL = 'fogvshop@gmail.com';
-const FEEDBACK_SUBJECT = 'Tilbakemelding — Ærlig Jobbcoach';
+const FEEDBACK_SUBJECT = 'Tilbakemelding — ReadyCV Jobbcoach';
 const FEEDBACK_BODY = 'Hei!\n\nHer er min tilbakemelding:\n\n';
 
 export default function ProfileScreen({ onManageSubscription }) {

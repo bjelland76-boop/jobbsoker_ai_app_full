@@ -41,7 +41,7 @@ import { ProfileContext } from './context/ProfileContext';
 const TIP_REFRESH_MS = 4 * 60 * 60 * 1000; // Rotate career tip every 4 hours
 
 const FEEDBACK_EMAIL = 'fogvshop@gmail.com';
-const FEEDBACK_SUBJECT = 'Tilbakemelding — Ærlig Jobbcoach';
+const FEEDBACK_SUBJECT = 'Tilbakemelding — ReadyCV Jobbcoach';
 const FEEDBACK_BODY = 'Hei!\n\nHer er min tilbakemelding:\n\n';
 
 
@@ -624,7 +624,7 @@ function AppContent() {
     if (!showInactivityReminder) return;
     Alert.alert(
       'Vi savner deg!',
-      'Du har ikke brukt Ærlig på en stund — husk at du kan avslutte abonnementet når som helst under Profil → Innstillinger',
+      'Du har ikke brukt ReadyCV på en stund — husk at du kan avslutte abonnementet når som helst under Profil → Innstillinger',
       [{ text: 'OK', onPress: dismissInactivityReminder }],
     );
   }, [showInactivityReminder]);
@@ -729,8 +729,8 @@ function AppContent() {
   // so it doesn't interfere with the general FAQ above it.
   const FAQ_ITEMS_VI_MARKET = [
     {
-      q: 'Ærlig giúp gì cho quá trình tìm việc tại Na Uy?',
-      a: 'Ærlig đồng hành với bạn từ đầu đến cuối: điền hồ sơ cá nhân, dán link tin tuyển dụng (ví dụ từ FINN.no), ứng dụng sẽ phân tích mức độ phù hợp, sau đó tạo CV và đơn xin việc riêng cho đúng công việc đó, và cuối cùng bạn có thể luyện phỏng vấn trước khi đi phỏng vấn thật.',
+      q: 'ReadyCV giúp gì cho quá trình tìm việc tại Na Uy?',
+      a: 'ReadyCV đồng hành với bạn từ đầu đến cuối: điền hồ sơ cá nhân, dán link tin tuyển dụng (ví dụ từ FINN.no), ứng dụng sẽ phân tích mức độ phù hợp, sau đó tạo CV và đơn xin việc riêng cho đúng công việc đó, và cuối cùng bạn có thể luyện phỏng vấn trước khi đi phỏng vấn thật.',
     },
     {
       q: 'Làm sao để có CV và bản phân tích chất lượng nhất?',
