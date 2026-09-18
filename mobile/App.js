@@ -13,6 +13,8 @@ import {
   Linking,
   Platform,
 } from 'react-native';
+import { Capacitor } from '@capacitor/core';
+import { CapacitorShareTarget } from '@capgo/capacitor-share-target';
 
 import { THEME } from './styles/theme';
 import { styles } from './styles/styles';
@@ -205,6 +207,34 @@ function AppContent() {
     flushAutoSave,
     saveProfile,
   });
+
+  // Receive a job ad link shared from another app (FINN.no, a browser, ...)
+  // via Android's "Share" sheet -- see AndroidManifest.xml's SEND
+  // intent-filter and @capgo/capacitor-share-target (no custom native code;
+  // auto-registered via capacitor.plugins.json). Registered unconditionally
+  // here, above any early-return branch (force-update/onboarding gate)
+  // below, so hooks still run on every render regardless of which screen
+  // ends up shown -- the plugin retains the event natively until this
+  // listener attaches, so it's captured correctly even on a cold start
+  // (app not running yet, launched fresh by the share) and only delivered
+  // to the analysis screen once the user gets past those gates, if any.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const handle = CapacitorShareTarget.addListener('shareReceived', (event) => {
+      const raw = (event?.texts && event.texts[0]) || '';
+      // FINN/browsers send the whole shared sentence, not a bare URL
+      // (e.g. "Sjekk denne stillingen: https://www.finn.no/... via FINN") --
+      // pull the link out instead of using the raw text as-is.
+      const match = raw.match(/https?:\/\/\S+/);
+      if (!match) return;
+      const url = match[0].replace(/[)\].,]+$/, '');
+      setJobInputMode('url');
+      setJobUrl(url);
+      setActiveTab('new');
+    });
+    return () => { handle.then((h) => h.remove()).catch(() => {}); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Keep profileSavedCbRef in sync with current analysis/jobUrl values
   profileSavedCbRef.current = () => {

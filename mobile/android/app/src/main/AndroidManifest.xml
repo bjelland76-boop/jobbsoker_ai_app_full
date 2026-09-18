@@ -39,6 +39,20 @@
                 <data android:scheme="com.aerlig.app" android:host="auth-callback" />
             </intent-filter>
 
+            <!-- Receive a shared job ad link from other apps (e.g. FINN.no,
+                 a browser) via Android's "Share" sheet. Handled natively by
+                 @capgo/capacitor-share-target (no custom Java needed;
+                 auto-registered via capacitor.plugins.json, see App.js for
+                 the shareReceived listener). text/plain (not a text/*
+                 wildcard) matches what FINN/browsers actually send for
+                 "share link", without making this app a share target for
+                 unrelated text content. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+
         </activity>
 
         <provider
