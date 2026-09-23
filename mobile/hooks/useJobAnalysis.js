@@ -43,7 +43,7 @@ export default function useJobAnalysis({
   flushAutoSave,
   saveProfile,
 } = {}) {
-  const { authTokenState, openAuthScreen, logEvent, errText, uiLanguage, activeTab, setActiveTab, showPaymentModal } = useApp();
+  const { authTokenState, openAuthScreen, logEvent, errText, uiLanguage, activeTab, setActiveTab, showPaymentModal, t } = useApp();
 
   // ---------------------------------------------------------------------------
   // State
@@ -152,39 +152,19 @@ export default function useJobAnalysis({
       || lower.includes('abort')
     );
 
-    const copy = (uiLanguage === 'en')
-      ? {
-        networkTitle: 'Connection issue',
-        networkBody: "I couldn't reach the server right now. Check Wi‑Fi and try again.",
-        genericTitle: 'Something went wrong',
-        genericBody: 'Please try again in a moment.',
-        retry: 'Try again',
-        cancel: 'Cancel',
-        ok: 'OK',
-      }
-      : {
-        networkTitle: 'Ingen forbindelse',
-        networkBody: 'Jeg fikk ikke kontakt med serveren akkurat nå. Sjekk Wi‑Fi og prøv igjen.',
-        genericTitle: 'Noe gikk galt',
-        genericBody: 'Prøv igjen om litt.',
-        retry: 'Prøv igjen',
-        cancel: 'Avbryt',
-        ok: 'OK',
-      };
-
     if (isNetworkish) {
       Alert.alert(
-        copy.networkTitle,
-        copy.networkBody,
+        t('errors.network_title'),
+        t('errors.network_body'),
         [
-          { text: copy.cancel, style: 'cancel' },
-          retry ? { text: copy.retry, onPress: retry } : { text: copy.ok },
+          { text: t('common.cancel'), style: 'cancel' },
+          retry ? { text: t('errors.retry'), onPress: retry } : { text: t('errors.ok') },
         ].filter(Boolean)
       );
       return;
     }
 
-    Alert.alert(copy.genericTitle, copy.genericBody);
+    Alert.alert(t('errors.generic_title'), t('errors.generic_body'));
   }
 
   // ---------------------------------------------------------------------------
@@ -245,7 +225,7 @@ export default function useJobAnalysis({
       if (activeTab === 'analysis') {
         showAssistantError(e, { retry: () => hideJobAnalysis(jobId) });
       } else {
-        Alert.alert('Feil', errText(e));
+        Alert.alert(t('common.error'), errText(e));
       }
     }
   }
@@ -273,7 +253,7 @@ export default function useJobAnalysis({
       if (activeTab === 'analysis') {
         showAssistantError(e, { retry: () => openSavedAnalysis(jobId, url) });
       } else {
-        Alert.alert('Feil', errText(e));
+        Alert.alert(t('common.error'), errText(e));
       }
     }
     setLoading(false);
@@ -286,8 +266,8 @@ export default function useJobAnalysis({
       // window.confirm() is the pattern already used for real
       // confirm-with-action dialogs elsewhere (AppContext.js's
       // deleteAccount()).
-      const title = (uiLanguage === 'en') ? 'Profile missing' : 'Mangler profil';
-      const body = (uiLanguage === 'en') ? 'Please save your profile first.' : 'Lagre profilen først.';
+      const title = t('errors.profile_missing_title');
+      const body = t('errors.profile_missing_body');
       if (window.confirm(`${title}\n\n${body}`)) {
         setActiveTab('profile');
       }
@@ -301,18 +281,14 @@ export default function useJobAnalysis({
         body: JSON.stringify({}),
       });
 
-      window.alert(
-        (uiLanguage === 'en')
-          ? 'Added\n\nThe job is now tracked under Applications.'
-          : 'Lagt til\n\nJobben er lagt til under Søknader.'
-      );
+      window.alert(`${t('applications.added_title')}\n\n${t('applications.added_body')}`);
       setActiveTab('applications');
     } catch (e) {
       console.error('[Assistant] moveAnalysisToApplications failed', e);
       if (activeTab === 'analysis') {
         showAssistantError(e, { retry: () => moveAnalysisToApplications(jobId) });
       } else {
-        Alert.alert('Feil', errText(e));
+        Alert.alert(t('common.error'), errText(e));
       }
     }
   }
@@ -340,19 +316,9 @@ export default function useJobAnalysis({
   // Analyze job
   // ---------------------------------------------------------------------------
   async function analyzeJob() {
-    const copy = (uiLanguage === 'en')
-      ? {
-        missingUrlTitle: 'Paste a job URL',
-        missingUrlBody: 'Paste a job ad URL so I can analyze it for you.',
-      }
-      : {
-        missingUrlTitle: 'Lim inn jobbannonse',
-        missingUrlBody: 'Lim inn en jobbannonse-URL, så analyserer jeg den for deg.',
-      };
-
     const hasJobInput = jobInputMode === 'text' ? !!jobText.trim() : !!jobUrl.trim();
     if (!hasJobInput) {
-      Alert.alert(copy.missingUrlTitle, copy.missingUrlBody);
+      Alert.alert(t('errors.missing_url_title'), t('errors.missing_url_body'));
       return;
     }
 
@@ -373,10 +339,8 @@ export default function useJobAnalysis({
     }
 
     if (isProfileTooEmpty?.()) {
-      const title = uiLanguage === 'en' ? 'Complete your profile' : 'Fyll ut profilen din';
-      const body = uiLanguage === 'en'
-        ? 'Add work experience or education to get a relevant analysis.'
-        : 'Legg til arbeidserfaring eller utdanning for å få en god analyse.';
+      const title = t('errors.complete_profile_title');
+      const body = t('errors.complete_profile_body_analysis');
       if (window.confirm(`${title}\n\n${body}`)) {
         setActiveTab('profile');
       }
@@ -448,7 +412,7 @@ export default function useJobAnalysis({
       if (e?.code === 'free_limit_reached') {
         showPaymentModal(e?.data?.limit_type || 'analyse');
       } else {
-        Alert.alert('Feil', errText(e));
+        Alert.alert(t('common.error'), errText(e));
       }
     } finally {
       setLoading(false);
@@ -475,37 +439,33 @@ export default function useJobAnalysis({
     // confirm-with-action dialogs elsewhere (AppContext.js's
     // deleteAccount(), and generatePdf()'s regenerate-CV confirm below).
     if (!authTokenState) {
-      const title = uiLanguage === 'en' ? 'Log in' : 'Logg inn';
-      const body = uiLanguage === 'en'
-        ? 'Log in to send your application by email.'
-        : 'Logg inn for å sende søknaden på e-post.';
+      const title = t('errors.login_required_title');
+      const body = t('errors.login_required_body_send');
       if (window.confirm(`${title}\n\n${body}`)) {
         openAuthScreen?.();
       }
       return;
     }
     if (!profileId) {
-      if (window.confirm('Feil\n\nLagre profilen før sending')) {
+      if (window.confirm(`${t('common.error')}\n\n${t('errors.save_profile_before_sending')}`)) {
         setActiveTab('profile');
       }
       return;
     }
     if (isProfileTooEmpty?.()) {
-      const title = uiLanguage === 'en' ? 'Complete your profile' : 'Fyll ut profilen din';
-      const body = uiLanguage === 'en'
-        ? 'Add work experience or education to generate a relevant application.'
-        : 'Legg til arbeidserfaring eller utdanning for å generere en god søknad.';
+      const title = t('errors.complete_profile_title');
+      const body = t('errors.complete_profile_body_application');
       if (window.confirm(`${title}\n\n${body}`)) {
         setActiveTab('profile');
       }
       return;
     }
     if (!applicationEmail || !applicationEmail.trim()) {
-      setGenerationBanner('Skriv inn e-postadressen din for å sende søknaden.');
+      setGenerationBanner(t('errors.enter_email_to_send'));
       return;
     }
     if (!analysis?.job_id || !applicationPackage) {
-      setGenerationBanner(uiLanguage === 'en' ? 'Generate a CV first.' : 'Generer en CV først.');
+      setGenerationBanner(t('errors.generate_cv_first'));
       return;
     }
     if (sending) return;
@@ -519,13 +479,10 @@ export default function useJobAnalysis({
         { method: 'POST' },
       );
       logEvent('application_sent');
-      Alert.alert(
-        'OK',
-        uiLanguage === 'en' ? `Application sent to ${applicationEmail}.` : `Søknaden ble sendt til ${applicationEmail}.`,
-      );
+      Alert.alert('OK', t('errors.application_sent', { email: applicationEmail }));
     } catch (e) {
       console.error('[Assistant] sendApplication failed', e);
-      setGenerationBanner(uiLanguage === 'en' ? 'Could not send, try again.' : 'Kunne ikke sende, prøv igjen.');
+      setGenerationBanner(t('errors.could_not_send'));
     } finally {
       setSending(false);
     }
@@ -543,16 +500,14 @@ export default function useJobAnalysis({
     // See sendApplication()'s identical checks above for why these use
     // window.confirm() rather than Alert.alert's no-op buttons array.
     if (!profileId) {
-      if (window.confirm('Feil\n\nLagre profilen først')) {
+      if (window.confirm(`${t('common.error')}\n\n${t('errors.save_profile_first')}`)) {
         setActiveTab('profile');
       }
       return;
     }
     if (isProfileTooEmpty?.()) {
-      const title = uiLanguage === 'en' ? 'Complete your profile' : 'Fyll ut profilen din';
-      const body = uiLanguage === 'en'
-        ? 'Add work experience or education to generate a relevant CV.'
-        : 'Legg til arbeidserfaring eller utdanning for å generere en god CV.';
+      const title = t('errors.complete_profile_title');
+      const body = t('errors.complete_profile_body_cv');
       if (window.confirm(`${title}\n\n${body}`)) {
         setActiveTab('profile');
       }
@@ -560,7 +515,7 @@ export default function useJobAnalysis({
     }
 
     if (jobInputMode === 'text' ? !jobText.trim() : !jobUrl.trim()) {
-      Alert.alert('Feil', 'Lim inn jobbannonse først.');
+      Alert.alert(t('common.error'), t('errors.paste_job_ad_first'));
       return;
     }
 
@@ -570,15 +525,11 @@ export default function useJobAnalysis({
     if (analysis?.job_id) {
       const alreadyExists = analysis?.[`has_tailored_cv_${lang}`];
       if (alreadyExists) {
-        const langLabel = lang === 'vi'
-          ? (uiLanguage === 'en' ? 'Vietnamese' : 'vietnamesisk')
-          : lang === 'en'
-          ? (uiLanguage === 'en' ? 'English' : 'engelsk')
-          : (uiLanguage === 'en' ? 'Norwegian' : 'norsk');
-        const title = uiLanguage === 'en' ? 'Regenerate CV?' : 'Generer ny CV?';
-        const body = uiLanguage === 'en'
-          ? `You already have a CV in ${langLabel}. Generate a new one? This will replace the existing one.`
-          : `Du har allerede en CV på ${langLabel}. Vil du generere en ny? Dette erstatter den eksisterende.`;
+        // Keyed by cvLanguage code, not uiLanguage -- the label names says
+        // which language the ALREADY-GENERATED CV/application is in.
+        const langLabel = t(`common.language_${lang}`) || lang;
+        const title = t('errors.regenerate_cv_title');
+        const body = t('errors.regenerate_cv_body', { language: langLabel });
 
         let confirmed;
         if (Platform.OS === 'web') {
@@ -589,8 +540,8 @@ export default function useJobAnalysis({
               title,
               body,
               [
-                { text: uiLanguage === 'en' ? 'Cancel' : 'Avbryt', style: 'cancel', onPress: () => resolve(false) },
-                { text: uiLanguage === 'en' ? 'Generate new' : 'Generer ny', onPress: () => resolve(true) },
+                { text: t('common.cancel'), style: 'cancel', onPress: () => resolve(false) },
+                { text: t('errors.generate_new'), onPress: () => resolve(true) },
               ]
             );
           });
@@ -607,7 +558,7 @@ export default function useJobAnalysis({
     logEvent('cv_template_' + cvTemplate);
 
     const prevPackage = applicationPackage;
-    const failMsg = (uiLanguage === 'en') ? 'Generation failed, try again' : 'Generering feilet, prøv igjen';
+    const failMsg = t('errors.generation_failed');
     const includePhoto = !!profilePhotoData && !!includePhotoInPdf;
 
     setGeneratingPdf(true);
@@ -761,7 +712,7 @@ export default function useJobAnalysis({
     } catch (e) {
       console.error('[Assistant] regeneratePdfWithTemplate failed', e);
       setCvTemplate(prevTemplate);
-      setGenerationBanner(uiLanguage === 'en' ? 'Could not switch template, try again.' : 'Kunne ikke bytte mal, prøv igjen.');
+      setGenerationBanner(t('errors.could_not_switch_template'));
     } finally {
       setIsGenerating(false);
       generationLockRef.current = false;
@@ -798,7 +749,7 @@ export default function useJobAnalysis({
       }
     } catch (e) {
       console.error('[Assistant] saveEditedTexts failed', e);
-      setGenerationBanner(uiLanguage === 'en' ? 'Could not save changes, try again.' : 'Kunne ikke lagre endringene, prøv igjen.');
+      setGenerationBanner(t('errors.could_not_save_changes'));
     } finally {
       setSavingEditedText(false);
       setIsGenerating(false);
@@ -870,7 +821,7 @@ export default function useJobAnalysis({
       const st = await apiFetch(`/stats/me?profile_id=${profileId}`);
       setStatsMe(st);
     } catch (e) {
-      Alert.alert('Feil', String(e));
+      Alert.alert(t('common.error'), String(e));
     }
   }
 
@@ -916,7 +867,7 @@ export default function useJobAnalysis({
         Alert.alert('Åpne PDF', authedUrl);
       }
     } catch (e) {
-      Alert.alert('Feil', String(e));
+      Alert.alert(t('common.error'), String(e));
     }
   }
 
@@ -956,7 +907,7 @@ export default function useJobAnalysis({
       if (e?.code === 'free_limit_reached') {
         showPaymentModal(e?.data?.limit_type || 'cv_analyse');
       } else {
-        Alert.alert('Feil', errText(e));
+        Alert.alert(t('common.error'), errText(e));
       }
     }
     setCvLoading(false);

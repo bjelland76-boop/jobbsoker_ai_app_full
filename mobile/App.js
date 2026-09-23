@@ -677,8 +677,8 @@ function AppContent() {
       a: t('faq.getting_started_a'),
     },
     {
-      q: 'Hva er match-score?',
-      a: 'Match-scoren viser hvor godt profilen din matcher kravene i jobbannonsen. Under 40% er svak match, 40–70% er god match, over 70% er sterk match.',
+      q: t('faq.match_score_q'),
+      a: t('faq.match_score_a'),
     },
     {
       q: t('faq.generate_cv_q'),
@@ -697,28 +697,28 @@ function AppContent() {
       a: t('faq.cv_language_a'),
     },
     {
-      q: 'Hvordan fungerer intervjutreningen?',
-      a: 'Åpne en jobbanalyse og trykk \'Intervju-øving\' der — intervjuet er tilpasset nettopp den stillingen du har analysert. Du får spørsmål én om gangen og kan svare ved å skrive eller snakke ved å trykke på mikrofon-knappen.',
+      q: t('faq.interview_practice_q'),
+      a: t('faq.interview_practice_a'),
     },
     {
-      q: 'Hva lagres i appen?',
-      a: 'Profilen din, CV-dokumenter, jobbanalyser og søknader lagres trygt og er tilgjengelige til du sletter kontoen. Se personvernerklæringen for detaljer.',
+      q: t('faq.what_is_stored_q'),
+      a: t('faq.what_is_stored_a'),
     },
     {
-      q: 'Hvordan legger jeg til erfaring og utdanning?',
-      a: 'Gå til Profil og trykk på \'Erfaring\' eller \'Utdanning\'-kortet for å ekspandere det. Trykk \'+ Legg til\' for å registrere en ny oppføring.',
+      q: t('faq.add_experience_q'),
+      a: t('faq.add_experience_a'),
     },
     {
-      q: 'Kan jeg laste opp en CV jeg allerede har, i stedet for å skrive alt inn selv?',
-      a: 'Ja — trykk \'Importer CV\' på hjemskjermen eller under Profil, og velg fil, ta bilde eller velg fra galleri. Vi leser CV-en automatisk og fyller ut profilen din med informasjonen vi finner.',
+      q: t('faq.upload_existing_cv_q'),
+      a: t('faq.upload_existing_cv_a'),
     },
     {
-      q: 'Hvilke filformater støttes når jeg laster opp CV?',
-      a: 'PDF og Word (.docx) som fil, eller et bilde (foto/galleri) av CV-en. Gammelt Word-format (.doc) støttes ikke — lagre den som PDF eller .docx først.',
+      q: t('faq.supported_file_formats_q'),
+      a: t('faq.supported_file_formats_a'),
     },
     {
-      q: 'Hva skjer etter at jeg har lastet opp CV-en?',
-      a: 'Vi leser innholdet og viser deg en forhåndsvisning av det vi fant (navn, erfaring, utdanning, ferdigheter osv.). Ingenting lagres i profilen din før du bekrefter forhåndsvisningen.',
+      q: t('faq.after_cv_upload_q'),
+      a: t('faq.after_cv_upload_a'),
     },
   ];
 

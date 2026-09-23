@@ -4,41 +4,46 @@ import { useApp } from '../context/AppContext';
 
 const ORANGE = '#E8501A';
 
-const SLIDES = [
-  {
-    icon: '🎯',
-    title: 'Ærlig match-score',
-    text: 'Lim inn en jobbannonse og få en ærlig vurdering av hvor godt du passer — ingen falsk oppmuntring',
-  },
-  {
-    icon: '📄',
-    title: 'Tilpasset CV på minutter',
-    text: 'AI lager CV og søknadsbrev skreddersydd til nettopp den jobben du søker — på norsk eller engelsk',
-  },
-  {
-    icon: '🎤',
-    title: 'Øv på intervju',
-    text: 'Tren på intervjuspørsmål tilpasset jobben — svar med tale eller tekst og få tilbakemelding fra AI',
-  },
-  // Closing recap slide -- reinforces the actual order of operations (upload
-  // CV first, it's what the analysis/generation steps need) right before the
-  // user is dropped into the app, since this is the screen they'll actually
-  // remember. Rendered differently from the three slides above (see `type`
-  // below) instead of forcing the icon/title/text layout to fit a 3-item list.
-  {
-    type: 'summary',
-    title: 'Slik fungerer det',
-    steps: [
-      { icon: '📄', text: 'Last opp CV-en din' },
-      { icon: '🔗', text: 'Analyser en jobbannonse' },
-      { icon: '✨', text: 'Få skreddersydd CV og søknad' },
-    ],
-  },
-];
-
 export default function OnboardingSlidesScreen({ onDone }) {
   const { t } = useApp();
   const [index, setIndex] = useState(0);
+
+  // Built inside the component (not a module-level constant) so it re-reads
+  // t() reactively -- a module-level array would freeze at whatever language
+  // was active when the JS bundle first loaded.
+  const SLIDES = [
+    {
+      icon: '🎯',
+      title: t('onboarding_intro.slide1_title'),
+      text: t('onboarding_intro.slide1_text'),
+    },
+    {
+      icon: '📄',
+      title: t('onboarding_intro.slide2_title'),
+      text: t('onboarding_intro.slide2_text'),
+    },
+    {
+      icon: '🎤',
+      title: t('onboarding_intro.slide3_title'),
+      text: t('onboarding_intro.slide3_text'),
+    },
+    // Closing recap slide -- reinforces the actual order of operations
+    // (upload CV first, it's what the analysis/generation steps need) right
+    // before the user is dropped into the app, since this is the screen
+    // they'll actually remember. Rendered differently from the three slides
+    // above (see `type` below) instead of forcing the icon/title/text layout
+    // to fit a 3-item list.
+    {
+      type: 'summary',
+      title: t('onboarding_intro.slide4_title'),
+      steps: [
+        { icon: '📄', text: t('onboarding_intro.slide4_step1') },
+        { icon: '🔗', text: t('onboarding_intro.slide4_step2') },
+        { icon: '✨', text: t('onboarding_intro.slide4_step3') },
+      ],
+    },
+  ];
+
   const isLast = index === SLIDES.length - 1;
   const slide = SLIDES[index];
 

@@ -1,4 +1,12 @@
 import { LocalNotifications } from '@capacitor/local-notifications';
+import i18n from '../src/i18n';
+
+// Plain utility function, not a React component -- no access to useApp()'s
+// t(), so this calls the raw i18next instance directly (same underlying
+// mechanism AppContext.js's own t() wraps).
+function t(key, options) {
+  try { return i18n.t(key, options) || key; } catch (e) { return key; }
+}
 
 // Isolert Fase 6-leveranse (frist/intervju-varsling): planlegg ETT lokalt
 // varsel for en søknadsfrist, helt device-lokalt -- ingen backend, ingen
@@ -30,11 +38,16 @@ export async function scheduleDeadlineReminder({ jobId, jobTitle, company, deadl
     fireAt = new Date(now.getTime() + 5 * 60 * 1000);
   }
 
+  const title = t('deadline_reminder.notification_title');
+  const body = company
+    ? t('deadline_reminder.notification_body_with_company', { job: jobTitle || t('deadline_reminder.notification_job_fallback'), company, date: deadlineDate })
+    : t('deadline_reminder.notification_body', { job: jobTitle || t('deadline_reminder.notification_job_fallback'), date: deadlineDate });
+
   await LocalNotifications.schedule({
     notifications: [{
       id: jobId,
-      title: 'Søknadsfrist nærmer seg',
-      body: `${jobTitle || 'Stillingen'}${company ? ' hos ' + company : ''} — frist ${deadlineDate}`,
+      title,
+      body,
       schedule: { at: fireAt, allowWhileIdle: true },
     }],
   });

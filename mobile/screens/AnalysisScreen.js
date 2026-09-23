@@ -381,7 +381,7 @@ export default function AnalysisScreen({
               <View style={{ marginTop: 6, marginBottom: 4 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   <Text style={{ fontSize: 12, color: '#6B7280' }}>
-                    {t('analysis.language_detected_prefix')} {cvLanguage === 'en' ? '🇬🇧 English' : '🇳🇴 Norsk'}
+                    {t('analysis.language_detected_prefix')} {cvLanguage === 'en' ? `🇬🇧 ${t('common.language_en')}` : `🇳🇴 ${t('common.language_no')}`}
                   </Text>
                   <TouchableOpacity onPress={() => setShowLanguageOverride((v) => !v)}>
                     <Text style={{ fontSize: 12, color: THEME.colors.primary, fontWeight: '700' }}>

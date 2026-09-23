@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 
+import { useApp } from '../context/AppContext';
 import { styles as sharedStyles } from '../styles/styles';
 import { scheduleDeadlineReminder } from '../utils/deadlineReminder';
 
@@ -24,6 +25,7 @@ function parseFreeTextDate(text) {
 }
 
 export default function DeadlineReminderModal({ visible, jobId, jobTitle, company, deadline, onClose }) {
+  const { t } = useApp();
   const [freeText, setFreeText] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -46,8 +48,8 @@ export default function DeadlineReminderModal({ visible, jobId, jobTitle, compan
     if (!result.ok) {
       setError(
         result.reason === 'permission_denied'
-          ? 'Du må tillate varsler for at vi skal kunne minne deg på fristen. Du kan endre dette i telefonens innstillinger.'
-          : 'Kunne ikke sette påminnelse -- ugyldig dato.',
+          ? t('deadline_reminder.permission_denied')
+          : t('deadline_reminder.invalid_date_error'),
       );
       return;
     }
@@ -57,7 +59,7 @@ export default function DeadlineReminderModal({ visible, jobId, jobTitle, compan
   function handleFallbackConfirm() {
     const iso = parseFreeTextDate(freeText);
     if (!iso) {
-      setError('Skriv datoen som DD/MM/ÅÅÅÅ.');
+      setError(t('deadline_reminder.fallback_format_error'));
       return;
     }
     confirm(iso);
@@ -69,22 +71,22 @@ export default function DeadlineReminderModal({ visible, jobId, jobTitle, compan
         <View style={[sharedStyles.cvModalCard, st.card]}>
           {deadline ? (
             <>
-              <Text style={sharedStyles.cvModalTitle}>Vi fant en søknadsfrist</Text>
+              <Text style={sharedStyles.cvModalTitle}>{t('deadline_reminder.found_title')}</Text>
               <Text style={sharedStyles.cvModalSubtitle}>
-                {`Fristen for denne stillingen er ${deadline}. Vil du bli påminnet dagen før?`}
+                {t('deadline_reminder.found_subtitle', { date: deadline })}
               </Text>
             </>
           ) : (
             <>
-              <Text style={sharedStyles.cvModalTitle}>Søknadsfrist?</Text>
+              <Text style={sharedStyles.cvModalTitle}>{t('deadline_reminder.fallback_title')}</Text>
               <Text style={sharedStyles.cvModalSubtitle}>
-                Vi fant ingen frist i annonsen. Vil du legge inn en dato selv, så minner vi deg på den?
+                {t('deadline_reminder.fallback_subtitle')}
               </Text>
               <TextInput
                 style={[st.input]}
                 value={freeText}
                 onChangeText={setFreeText}
-                placeholder="DD/MM/ÅÅÅÅ"
+                placeholder={t('deadline_reminder.fallback_placeholder')}
                 keyboardType="numeric"
               />
             </>
@@ -98,14 +100,14 @@ export default function DeadlineReminderModal({ visible, jobId, jobTitle, compan
             onPress={() => (deadline ? confirm(deadline) : handleFallbackConfirm())}
           >
             <Text style={sharedStyles.aerligSecondaryButtonText}>
-              {deadline ? 'Ja, påminn meg' : 'Legg inn og påminn meg'}
+              {deadline ? t('deadline_reminder.confirm_found') : t('deadline_reminder.confirm_fallback')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[sharedStyles.aerligDangerButton, { marginTop: 10 }]}
             onPress={() => onClose({ scheduled: false })}
           >
-            <Text style={sharedStyles.aerligDangerButtonText}>Nei takk</Text>
+            <Text style={sharedStyles.aerligDangerButtonText}>{t('common.no_thanks')}</Text>
           </TouchableOpacity>
         </View>
       </View>
