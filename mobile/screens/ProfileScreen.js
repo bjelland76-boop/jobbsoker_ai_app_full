@@ -92,6 +92,8 @@ export default function ProfileScreen({ onManageSubscription }) {
   const LANGS = [
     { code: 'no', flag: '🇳🇴', name: 'Norsk' },
     { code: 'en', flag: '🇬🇧', name: 'English' },
+    { code: 'sv', flag: '🇸🇪', name: 'Svenska' },
+    { code: 'da', flag: '🇩🇰', name: 'Dansk' },
     { code: 'vi', flag: '🇻🇳', name: 'Tiếng Việt' },
     { code: 'pl', flag: '🇵🇱', name: 'Polski' },
     { code: 'lt', flag: '🇱🇹', name: 'Lietuvių' },

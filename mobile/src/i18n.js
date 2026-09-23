@@ -5,13 +5,15 @@ import { I18nManager, Platform } from 'react-native';
 
 import no from './locales/no.json';
 import en from './locales/en.json';
+import sv from './locales/sv.json';
+import da from './locales/da.json';
 import vi from './locales/vi.json';
 import pl from './locales/pl.json';
 import lt from './locales/lt.json';
 import ar from './locales/ar.json';
 import so from './locales/so.json';
 
-export const SUPPORTED = ['no', 'en', 'vi', 'pl', 'lt', 'ar', 'so'];
+export const SUPPORTED = ['no', 'en', 'sv', 'da', 'vi', 'pl', 'lt', 'ar', 'so'];
 export const RTL_LANGUAGES = ['ar'];
 
 export function isRtlLanguage(lang) {
@@ -32,6 +34,8 @@ function detectDeviceLanguage() {
 const resources = {
   no: { translation: no },
   en: { translation: en },
+  sv: { translation: sv },
+  da: { translation: da },
   vi: { translation: vi },
   pl: { translation: pl },
   lt: { translation: lt },
