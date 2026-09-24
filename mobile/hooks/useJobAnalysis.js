@@ -554,7 +554,12 @@ export default function useJobAnalysis({
     generationLockRef.current = true;
     setIsGenerating(true);
     logEvent('generate_cv_started', { language: lang, template: cvTemplate });
-    logEvent(lang === 'vi' ? 'cv_language_vietnamese' : lang === 'en' ? 'cv_language_english' : 'cv_language_norwegian');
+    logEvent({
+      vi: 'cv_language_vietnamese',
+      en: 'cv_language_english',
+      sv: 'cv_language_swedish',
+      da: 'cv_language_danish',
+    }[lang] || 'cv_language_norwegian');
     logEvent('cv_template_' + cvTemplate);
 
     const prevPackage = applicationPackage;

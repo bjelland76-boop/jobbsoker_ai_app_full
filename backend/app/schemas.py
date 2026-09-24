@@ -142,6 +142,8 @@ class JobAnalysisOut(BaseModel):
     has_tailored_cv_no: bool = False
     has_tailored_cv_en: bool = False
     has_tailored_cv_vi: bool = False
+    has_tailored_cv_sv: bool = False
+    has_tailored_cv_da: bool = False
 
 
 class AnalyzeAndSendOut(BaseModel):

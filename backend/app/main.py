@@ -2223,6 +2223,8 @@ def get_job_analysis(
     data["has_tailored_cv_no"] = bool(_to_text(data.get("tailored_cv")))
     data["has_tailored_cv_en"] = bool(_to_text(data.get("tailored_cv_en")))
     data["has_tailored_cv_vi"] = bool(_to_text(data.get("tailored_cv_vi")))
+    data["has_tailored_cv_sv"] = bool(_to_text(data.get("tailored_cv_sv")))
+    data["has_tailored_cv_da"] = bool(_to_text(data.get("tailored_cv_da")))
     return data
 
 
@@ -2548,12 +2550,12 @@ def generate_tailored_cv(
     # manual override; empty (the normal case) falls back to the language
     # detected from the job ad itself at analysis time, not a client default.
     language_norm = (language or "").strip().lower()
-    if language_norm not in ("no", "en", "vi"):
+    if language_norm not in ("no", "en", "vi", "sv", "da"):
         language_norm = ""
     lang = language_norm or str(stored.get("detected_ad_language") or "no")
-    if lang not in ("no", "en", "vi"):
+    if lang not in ("no", "en", "vi", "sv", "da"):
         lang = "no"
-    _lang_suffix = {"no": "", "en": "_en", "vi": "_vi"}[lang]
+    _lang_suffix = {"no": "", "en": "_en", "vi": "_vi", "sv": "_sv", "da": "_da"}[lang]
     cv_key = f"tailored_cv{_lang_suffix}"
     letter_key = f"cover_letter{_lang_suffix}"
     email_key = f"email_text{_lang_suffix}"
@@ -2758,10 +2760,10 @@ def send_generated_application(
 
     # Same override-vs-stored resolution as generate-tailored-cv/stream-documents.
     language_norm = (language or "").strip().lower()
-    if language_norm not in ("no", "en", "vi"):
+    if language_norm not in ("no", "en", "vi", "sv", "da"):
         language_norm = ""
     lang = language_norm or str(stored.get("detected_ad_language") or "no")
-    if lang not in ("no", "en", "vi"):
+    if lang not in ("no", "en", "vi", "sv", "da"):
         lang = "no"
 
     generated = db.scalars(
@@ -2878,10 +2880,10 @@ def stream_documents(
     # manual override; empty (the normal case) falls back to the language
     # detected from the job ad itself at analysis time, not a client default.
     language_norm = (language or "").strip().lower()
-    if language_norm not in ("no", "en", "vi"):
+    if language_norm not in ("no", "en", "vi", "sv", "da"):
         language_norm = ""
     lang = language_norm or str(stored.get("detected_ad_language") or "no")
-    if lang not in ("no", "en", "vi"):
+    if lang not in ("no", "en", "vi", "sv", "da"):
         lang = "no"
 
     # Anonymous callers never have persisted documents (see upload_document),
@@ -2957,7 +2959,7 @@ def stream_documents(
         pdf_url = ""
         with _SessionLocal() as fresh_db:
             try:
-                _lang_suffix = {"no": "", "en": "_en", "vi": "_vi"}[lang]
+                _lang_suffix = {"no": "", "en": "_en", "vi": "_vi", "sv": "_sv", "da": "_da"}[lang]
                 cv_key = f"cover_letter{_lang_suffix}"
                 letter_key = f"tailored_cv{_lang_suffix}"
                 email_key = f"email_text{_lang_suffix}"
@@ -3779,6 +3781,8 @@ def analyze_url(
         result["has_tailored_cv_no"] = bool(_to_text(result.get("tailored_cv")))
         result["has_tailored_cv_en"] = bool(_to_text(result.get("tailored_cv_en")))
         result["has_tailored_cv_vi"] = bool(_to_text(result.get("tailored_cv_vi")))
+        result["has_tailored_cv_sv"] = bool(_to_text(result.get("tailored_cv_sv")))
+        result["has_tailored_cv_da"] = bool(_to_text(result.get("tailored_cv_da")))
 
         if current_user is not None:
             _consume_free_limit(db, profile, "analyse")

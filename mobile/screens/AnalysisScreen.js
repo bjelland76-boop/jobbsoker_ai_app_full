@@ -381,7 +381,12 @@ export default function AnalysisScreen({
               <View style={{ marginTop: 6, marginBottom: 4 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   <Text style={{ fontSize: 12, color: '#6B7280' }}>
-                    {t('analysis.language_detected_prefix')} {cvLanguage === 'en' ? `🇬🇧 ${t('common.language_en')}` : `🇳🇴 ${t('common.language_no')}`}
+                    {t('analysis.language_detected_prefix')} {{
+                      no: `🇳🇴 ${t('common.language_no')}`,
+                      en: `🇬🇧 ${t('common.language_en')}`,
+                      sv: `🇸🇪 ${t('common.language_sv')}`,
+                      da: `🇩🇰 ${t('common.language_da')}`,
+                    }[cvLanguage] || `🇳🇴 ${t('common.language_no')}`}
                   </Text>
                   <TouchableOpacity onPress={() => setShowLanguageOverride((v) => !v)}>
                     <Text style={{ fontSize: 12, color: THEME.colors.primary, fontWeight: '700' }}>
@@ -390,8 +395,20 @@ export default function AnalysisScreen({
                   </TouchableOpacity>
                 </View>
                 {showLanguageOverride ? (
+                  // KJENT, MIDLERTIDIG BEGRENSNING (Sverige/Danmark Steg 1):
+                  // sv/da er gyldige cvLanguage-verdier og lagres/vises riktig,
+                  // men backend (generate_application_texts()/
+                  // stream_application_texts() i job_analyzer.py) mangler
+                  // fortsatt egne svenske/danske prompt-blokker -- velger
+                  // brukeren sv/da her, kommer selve CV-/søknadsinnholdet
+                  // fortsatt ut på norsk inntil det er bygget i en egen runde.
                   <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                    {[{ key: 'no', label: '🇳🇴 Norsk' }, { key: 'en', label: '🇬🇧 English' }].map(({ key, label }) => {
+                    {[
+                      { key: 'no', label: '🇳🇴 Norsk' },
+                      { key: 'en', label: '🇬🇧 English' },
+                      { key: 'sv', label: '🇸🇪 Svenska' },
+                      { key: 'da', label: '🇩🇰 Dansk' },
+                    ].map(({ key, label }) => {
                       const active = cvLanguage === key;
                       return (
                         <TouchableOpacity
@@ -407,8 +424,8 @@ export default function AnalysisScreen({
                 ) : null}
               </View>
             )}
-            {(analysis?.has_tailored_cv_no || analysis?.has_tailored_cv_en || analysis?.has_tailored_cv_vi) ? (
-              <View style={{ flexDirection: 'row', gap: 6, marginBottom: 6 }}>
+            {(analysis?.has_tailored_cv_no || analysis?.has_tailored_cv_en || analysis?.has_tailored_cv_vi || analysis?.has_tailored_cv_sv || analysis?.has_tailored_cv_da) ? (
+              <View style={{ flexDirection: 'row', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
                 {analysis.has_tailored_cv_no ? (
                   <View style={{ backgroundColor: '#dcfce7', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
                     <Text style={{ fontSize: 11, color: '#15803d', fontWeight: '700' }}>🇳🇴 NO ✓</Text>
@@ -422,6 +439,16 @@ export default function AnalysisScreen({
                 {analysis.has_tailored_cv_vi ? (
                   <View style={{ backgroundColor: '#fef2f2', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
                     <Text style={{ fontSize: 11, color: '#991b1b', fontWeight: '700' }}>🇻🇳 VI ✓</Text>
+                  </View>
+                ) : null}
+                {analysis.has_tailored_cv_sv ? (
+                  <View style={{ backgroundColor: '#e0f2fe', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                    <Text style={{ fontSize: 11, color: '#075985', fontWeight: '700' }}>🇸🇪 SV ✓</Text>
+                  </View>
+                ) : null}
+                {analysis.has_tailored_cv_da ? (
+                  <View style={{ backgroundColor: '#fef3c7', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                    <Text style={{ fontSize: 11, color: '#92400e', fontWeight: '700' }}>🇩🇰 DA ✓</Text>
                   </View>
                 ) : null}
               </View>

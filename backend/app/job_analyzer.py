@@ -448,6 +448,16 @@ def generate_application_texts(
     lang = (language or "no").strip().lower()
     use_english = lang == "en"
     use_vietnamese = lang == "vi"
+    # KJENT, MIDLERTIDIG BEGRENSNING (Sverige/Danmark Steg 1, DEL D):
+    # detected_ad_language/cvLanguage aksepterer nå "sv"/"da" i hele resten
+    # av stacken (ai_matcher.py, main.py, schemas.py, AnalysisScreen.js), men
+    # DENNE funksjonen har ingen use_swedish/use_danish-gren -- lang="sv"
+    # eller "da" faller derfor rett gjennom til else-grenen under og
+    # genererer CV/søknad på NORSK, ikke svensk/dansk. Å fikse dette krever
+    # like grundig utarbeidede prompt-blokker (oversettelsesregler, anti-
+    # klisjé-lister, seksjonsstruktur) som de engelske/vietnamesiske under --
+    # bevisst utsatt til egen Steg 1b/2-runde, ikke gjort i fart her.
+    # Samme begrensning gjelder stream_application_texts() lenger ned.
 
     match_block = ""
     if match_context and isinstance(match_context, dict):
@@ -858,6 +868,8 @@ def stream_application_texts(
     lang = (language or "no").strip().lower()
     use_english = lang == "en"
     use_vietnamese = lang == "vi"
+    # Same known/temporary sv/da -> Norwegian-content fallback as
+    # generate_application_texts() above -- see the comment there.
     style_text = _style_instructions(application_style)
     job_comp = _compress_text(job_text, 8000)
     years = _estimate_years_experience(profile)
@@ -1109,10 +1121,16 @@ def analyze_job_url(
 
     `language_override` (Fase 1 auto-language-detection): when
     `generate_documents=True`, the language the generated CV/cover letter
-    documents are written in. "no"/"en"/"vi" to force a specific language;
-    None/empty (the normal case) means "no override" -- use this same call's
-    freshly detected `detected_ad_language` instead of a caller-chosen
-    default, per the auto-detection replacing the old manual cvLanguage pick.
+    documents are written in. "no"/"en"/"vi"/"sv"/"da" to force a specific
+    language; None/empty (the normal case) means "no override" -- use this
+    same call's freshly detected `detected_ad_language` instead of a
+    caller-chosen default, per the auto-detection replacing the old manual
+    cvLanguage pick. KNOWN LIMITATION (Sverige/Danmark Steg 1): "sv"/"da"
+    are accepted here and flow correctly through storage/metadata, but
+    generate_application_texts()/stream_application_texts() have no
+    Swedish/Danish prompt branch yet -- actual document content for those
+    two still comes out in Norwegian until that's built (see the comment
+    at the top of generate_application_texts()).
 
     `job_text_override`: when given (non-empty), used as the job ad content
     as-is instead of fetching/scraping `url` — lets callers support pasting
@@ -1232,7 +1250,7 @@ def analyze_job_url(
 
     if generate_documents:
         override_norm = (language_override or "").strip().lower()
-        if override_norm not in ("no", "en", "vi"):
+        if override_norm not in ("no", "en", "vi", "sv", "da"):
             override_norm = ""
         doc_language = override_norm or detected_ad_language
 

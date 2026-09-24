@@ -283,13 +283,14 @@ def _normalize_result(data: Any, *, lang: str = "no") -> MatchResult:
     if lang == "vi":
         out["cv_mal"] = "vietnamesisk"
 
-    # Fase 1 auto-language-detection: only "no"/"en" are trusted values for
-    # now (Norwegian job market coverage). Anything else the model returns --
+    # Fase 1 auto-language-detection, utvidet i Sverige/Danmark Steg 1 (DEL D)
+    # med "sv"/"da": only these four are trusted values (Norwegian/Swedish/
+    # Danish/English job market coverage). Anything else the model returns --
     # a typo, a third language, an empty/missing field -- falls back to "no"
     # rather than failing the whole analysis: better a wrong-but-safe default
     # than a broken generation step downstream.
     detected_lang_raw = str(data.get("detected_ad_language") or "").strip().lower()
-    out["detected_ad_language"] = detected_lang_raw if detected_lang_raw in ("no", "en") else "no"
+    out["detected_ad_language"] = detected_lang_raw if detected_lang_raw in ("no", "en", "sv", "da") else "no"
 
     # Fase 2 auto-style-recommendation: same "never fail, fall back to the
     # safe middle default" principle as detected_ad_language above.
@@ -517,7 +518,7 @@ def analyze_job_match(
         '"recommended_cv_changes":["max 3; actionable CV edits addressing missing requirements; <=120 chars; no generic"],'
         '"advice":["1-3 items — size, content and tone strictly per ADVICE TIERING above, based on the score field in this same response"],'
         '"cv_mal":"profesjonell (DEFAULT for de fleste stillinger: salg/kontor/service/logistikk/bygg/HR generelt) | kreativ (KUN for: designer/UX/grafisk/animasjon/reklame/media/innhold) | klassisk (KUN for: advokat/jurist/revisor/forsker/akademiker/offentlig forvaltning) | moderne (KUN for: tech/IT/startup/utvikler/data/produkt) | skandinavisk (KUN for: helse/omsorg/offentlig sektor/konservative bransjer — alternativ til klassisk) — velg basert på stillingstittelen i JOB-seksjonen (ignorer vietnamesisk — den velges automatisk basert på språk, ikke av deg)",'
-        '"detected_ad_language":"no or en — the language the JOB AD TEXT in the JOB section above is ACTUALLY WRITTEN IN, completely independent of what language you were told to write THIS response in. If the job ad is not clearly Norwegian or English, or you are not confident, answer no.",'
+        '"detected_ad_language":"no, en, sv, or da — the language the JOB AD TEXT in the JOB section above is ACTUALLY WRITTEN IN, completely independent of what language you were told to write THIS response in. no=Norwegian, en=English, sv=Swedish, da=Danish. If the job ad is not clearly one of these four, or you are not confident, answer no.",'
         '"recommended_application_style":"kort (KUN for enkle/entry-level stillinger uten behov for grundig motivasjon: butikk/lager/kasse/rengjøring/enkel service/sesongarbeid) | vanlig (DEFAULT for de fleste stillinger) | profesjonell (KUN for akademiske/leder-/spesialist-/ekspertstillinger som krever grundig, formell dokumentasjon: forsker/advokat/direktør/senior rådgiver/fagspesialist med høye krav) — velg basert på stillingstype, senioritet og bransje i JOB-seksjonen, ikke basert på kandidatens CV",'
         '"vietnam_company_type":"ONLY relevant if this job ad targets the Vietnamese market — written in Vietnamese, based in Vietnam, or otherwise clearly aimed at Vietnamese jobseekers; if not, just answer internasjonal. When it IS Vietnam-market-facing, judge from the JOB section: lokal = a local Vietnamese company (Vietnamese company name/branding, no reference to a foreign parent or global operations, Vietnam-only contact/address style) | internasjonal = an international company operating in Vietnam (recognizable global/foreign brand name, English mixed into an otherwise Vietnamese ad, mentions of a parent group/global offices/regional HQ, an international-style office address or domain). If genuinely unsure which of the two, answer internasjonal — the more private default.",'
         '"application_deadline":"ISO 8601 date (YYYY-MM-DD) ONLY if the JOB section explicitly states an application deadline (e.g. \'søknadsfrist 15.10.2026\', \'apply by October 15\'); answer null if no deadline is mentioned, or if it only says something like \'snarest\'/\'løpende opptak\'/\'as soon as possible\' with no actual date."'
