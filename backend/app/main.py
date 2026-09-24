@@ -3288,6 +3288,40 @@ def user_country(request: Request):
     return {"country": "VN" if country == "VN" else "NO"}
 
 
+# Sverige/Danmark Steg 1, DEL E: which app languages a country-level IP
+# lookup should default to. Deliberately narrow -- only countries where the
+# app language is realistically the language of someone physically located
+# there. "ar"/"so" are excluded on purpose: those languages exist for
+# Arabic-/Somali-speaking residents of Norway, not visitors from Arabic-
+# speaking countries or Somalia -- their IP would resolve to "NO" anyway,
+# so they were never reachable via this mechanism regardless, and manual
+# selection in the language picker remains completely unaffected.
+_COUNTRY_TO_LANG = {
+    "SE": "sv",
+    "DK": "da",
+    "NO": "no",
+    "VN": "vi",
+    "PL": "pl",
+    "LT": "lt",
+}
+
+
+@app.get("/detect-language", tags=["meta"])
+def detect_language(request: Request):
+    """Best-effort default UI language from the client's IP-derived country,
+    for a brand-new install that has never had an explicit language choice
+    (see AppContext.js's startup effect -- this is only ever consulted when
+    AsyncStorage's persisted 'uiLanguage' is empty, so it can never override
+    a choice the user has actually made).
+
+    Reuses the exact same _client_ip()/_lookup_country_by_ip() already
+    proven in production for /user-country's VN-pricing lookup -- same
+    fail-safe behaviour (unknown/unsupported country, or the lookup itself
+    failing, both fall back to "no", never block or error)."""
+    country = _lookup_country_by_ip(_client_ip(request))
+    return {"language": _COUNTRY_TO_LANG.get(country, "no")}
+
+
 @app.post("/create-checkout", tags=["billing"])
 def create_checkout(
     data: CreateCheckoutIn,

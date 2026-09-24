@@ -143,6 +143,29 @@ async function getOrCreateAnonId() {
 }
 
 // ---------------------------------------------------------------------------
+// Sverige/Danmark Steg 1, DEL E: IP-based default UI language
+// ---------------------------------------------------------------------------
+
+// Only ever consulted for a brand-new install with no persisted uiLanguage
+// choice yet -- see the startup effect below. Reuses the backend's existing,
+// production-proven IP->country lookup (same one already backing
+// /user-country's VN-pricing logic) via the new GET /detect-language.
+// Bounded client-side timeout so a slow/unreachable network never visibly
+// delays app startup beyond a couple of seconds -- 'no' (today's existing
+// hardcoded default) is always a safe fallback on any failure.
+async function detectDefaultLanguage() {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2500);
+    const res = await apiFetch('/detect-language', { signal: controller.signal });
+    clearTimeout(timeout);
+    return SUPPORTED.includes(res?.language) ? res.language : 'no';
+  } catch (e) {
+    return 'no';
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Context
 // ---------------------------------------------------------------------------
 
@@ -221,7 +244,13 @@ export function AppProvider({ children }) {
         }).catch(() => {});
 
         const lang = await AsyncStorage.getItem('uiLanguage');
-        const resolved = SUPPORTED.includes(lang) ? lang : 'no';
+        // Sverige/Danmark Steg 1, DEL E: only reached when the user has
+        // NEVER made an explicit language choice -- AsyncStorage.setItem for
+        // this key happens in exactly one place (setAndPersistUiLanguage
+        // below), only ever called from the language-picker UI. This can
+        // therefore never override a real user choice, only fill in a
+        // sensible default for a brand-new install that hasn't picked one.
+        const resolved = SUPPORTED.includes(lang) ? lang : await detectDefaultLanguage();
         setUiLanguage(resolved);
         loadSavedLanguage(resolved);
 
