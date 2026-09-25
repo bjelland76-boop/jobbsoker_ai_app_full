@@ -6,7 +6,7 @@ import * as DocumentPicker from 'expo-document-picker';
 
 import { apiFetch, API, useApp } from '../context/AppContext';
 
-export const PRIVACY_URL = 'https://aerlig.app/personvern';
+export const PRIVACY_URL = 'https://readycvapp.no/privacy-policy.html';
 export const DOC_TYPES = ['Fagbrev', 'Kursbevis', 'Karakterutskrift', 'Attest', 'Annet'];
 
 // Anonymous (not-logged-in) users have no account to look their profile up
