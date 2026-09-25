@@ -374,7 +374,7 @@ export default function useJobAnalysis({
       // pick as the default -- cvLanguage now follows the job ad's own
       // detected language unless the user explicitly overrides it via the
       // discreet "Endre språk" control in AnalysisScreen.
-      if (data?.detected_ad_language === 'en' || data?.detected_ad_language === 'no') {
+      if (['no', 'en', 'sv', 'da'].includes(data?.detected_ad_language)) {
         setCvLanguage(data.detected_ad_language);
       }
       // Fase 2 auto-style-recommendation: replaces the old manual
