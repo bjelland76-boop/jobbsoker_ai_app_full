@@ -607,7 +607,7 @@ def _inject_references_into_cv(profile: Profile, tailored_cv: str, language: str
 
     cv_out = tailored_cv or ""
     lower = cv_out.casefold()
-    if "referanser" not in lower and "references" not in lower:
+    if not any(w in lower for w in ("referanser", "references", "referenser", "referencer")):
         cv_out = (cv_out.rstrip() + "\n\n" + ref_block + "\n").lstrip("\n")
 
     return cv_out

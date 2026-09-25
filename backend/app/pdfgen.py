@@ -218,7 +218,7 @@ THEME = THEME_PROFESJONELL  # backward-compat alias
 # We only use these to improve rendering/layout; we do NOT change content.
 # Matches standalone year or year-range lines produced by the LLM, e.g. "2013–2016", "2022–nå"
 _YEAR_ONLY_RE = re.compile(
-    r'^(?:(?:19|20)\d{2})(?:\s*[–\-]\s*(?:(?:19|20)\d{2}|nå|Nå|present|Present))?\s*$'
+    r'^(?:(?:19|20)\d{2})(?:\s*[–\-]\s*(?:(?:19|20)\d{2}|nå|Nå|nu|Nu|present|Present))?\s*$'
 )
 
 
@@ -253,10 +253,28 @@ CV_SECTION_TITLES: list[str] = [
     "CHỨNG CHỈ",
     "NGOẠI NGỮ",
     "NGƯỜI THAM CHIẾU",
+    # Swedish / Danish equivalents (same exact-match requirement as above,
+    # for the "sv"/"da" prompt branches). "Profil", "Språk" and "Utbildning"
+    # are shared between languages and only listed once.
+    "Nyckelkvalifikationer",
+    "Profil",
+    "Kärnkompetenser",
+    "Arbetslivserfarenhet",
+    "Utbildning",
+    "Certifieringar",
+    "Referenser",
+    "Nøglekvalifikationer",
+    "Kernekompetencer",
+    "Erhvervserfaring",
+    "Uddannelse",
+    "Certificeringer",
+    "Sprog",
+    "Referencer",
 ]
 CV_SECTION_TITLES_CF = {t.casefold(): t for t in CV_SECTION_TITLES}
 
-# Section rendering category sets (Norwegian + English + Vietnamese). Keys
+# Section rendering category sets (Norwegian + English + Vietnamese +
+# Swedish + Danish). Keys
 # must exactly match (casefolded) the headings the "vi" prompt branch in
 # job_analyzer.py's generate_application_texts() actually generates --
 # otherwise these sections fall back to generic paragraph rendering instead
@@ -264,11 +282,14 @@ CV_SECTION_TITLES_CF = {t.casefold(): t for t in CV_SECTION_TITLES}
 _SEC_EXPERIENCE = {
     "arbeidserfaring", "utdanning", "work experience", "education",
     "kinh nghiệm làm việc", "học vấn",
+    "arbetslivserfarenhet", "utbildning", "erhvervserfaring", "uddannelse",
 }
 _SEC_BULLETS = {
     "nøkkelkvalifikasjoner", "kjerneferdigheter", "språk", "sertifiseringer", "referanser",
     "key qualifications", "core skills", "languages", "certifications", "references",
     "năng lực nổi bật", "kỹ năng chuyên môn", "ngoại ngữ", "chứng chỉ", "người tham chiếu",
+    "nyckelkvalifikationer", "kärnkompetenser", "certifieringar", "referenser",
+    "nøglekvalifikationer", "kernekompetencer", "sprog", "certificeringer", "referencer",
 }
 
 
@@ -371,12 +392,16 @@ REFERENCES_FALLBACK_TEXT = {
     "no": "Referanser oppgis ved forespørsel.",
     "en": "References available upon request.",
     "vi": "Tham khảo được cung cấp theo yêu cầu.",
+    "sv": "Referenser lämnas på begäran.",
+    "da": "Referencer oplyses på forespørgsel.",
 }
 
 REFERENCES_HEADER_TEXT = {
     "no": "Referanser:",
     "en": "References:",
     "vi": "Người tham khảo:",
+    "sv": "Referenser:",
+    "da": "Referencer:",
 }
 
 

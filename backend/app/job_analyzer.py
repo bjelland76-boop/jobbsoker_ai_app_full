@@ -11,7 +11,12 @@ from dotenv import load_dotenv
 
 from .ai_matcher import analyze_job_match, _compress_text
 from .pdfgen import _is_probably_job_title
-from .prompt_rules import SHARED_ANTI_HALLUCINATION_RULES, SHARED_ANTI_HALLUCINATION_RULES_EN
+from .prompt_rules import (
+    SHARED_ANTI_HALLUCINATION_RULES,
+    SHARED_ANTI_HALLUCINATION_RULES_DA,
+    SHARED_ANTI_HALLUCINATION_RULES_EN,
+    SHARED_ANTI_HALLUCINATION_RULES_SV,
+)
 
 load_dotenv(".env")
 
@@ -40,8 +45,26 @@ def fetch_job_text(url: str) -> str:
     return text[:12000]
 
 
-def _style_instructions(application_style: str) -> str:
+_STYLE_INSTRUCTIONS_SV_DA = {
+    "sv": {
+        "kort": "Kort ansökan: 1 stycke, ca 4–8 meningar.",
+        "profesjonell": "Professionell ansökan: 4–6 korta stycken, mer formell och detaljerad.",
+        "vanlig": "Vanlig ansökan: 2–3 stycken, naturlig svensk stil.",
+    },
+    "da": {
+        "kort": "Kort ansøgning: 1 afsnit, ca. 4–8 sætninger.",
+        "profesjonell": "Professionel ansøgning: 4–6 korte afsnit, mere formel og detaljeret.",
+        "vanlig": "Almindelig ansøgning: 2–3 afsnit, naturlig dansk stil.",
+    },
+}
+
+
+def _style_instructions(application_style: str, language: str = "no") -> str:
     style = (application_style or "").strip().lower()
+
+    sv_da = _STYLE_INSTRUCTIONS_SV_DA.get((language or "").strip().lower())
+    if sv_da:
+        return sv_da.get(style, sv_da["vanlig"])
 
     if style == "kort":
         return "Kort søknad: 1 avsnitt, ca. 4–8 setninger."
@@ -120,6 +143,11 @@ def _format_education_for_prompt(edu_raw: Any) -> str:
         status = str(it.get("status") or "fullfort").strip().lower()
         parts = [x for x in [degree, school] if x]
         period = "–".join([x for x in [_from, _to] if x])
+        # An ongoing entry with only a start year must read "2024–", not a
+        # bare "2024" -- the latter looks like a completion year and the
+        # model will happily write "finishes in 2024".
+        if status == "pagaende" and _from and not _to:
+            period = f"{_from}–"
         if period:
             parts.append(period)
         parts.append("STATUS: " + ("PÅGÅENDE" if status == "pagaende" else "FULLFØRT"))
@@ -409,7 +437,7 @@ def generate_application_texts(
     default /analyze-url endpoint low-cost.
     """
 
-    style_text = _style_instructions(application_style)
+    style_text = _style_instructions(application_style, language)
 
     # Keep prompt inputs compact to reduce tokens.
     job_comp = _compress_text(job_text, 8000)
@@ -448,16 +476,8 @@ def generate_application_texts(
     lang = (language or "no").strip().lower()
     use_english = lang == "en"
     use_vietnamese = lang == "vi"
-    # KJENT, MIDLERTIDIG BEGRENSNING (Sverige/Danmark Steg 1, DEL D):
-    # detected_ad_language/cvLanguage aksepterer nå "sv"/"da" i hele resten
-    # av stacken (ai_matcher.py, main.py, schemas.py, AnalysisScreen.js), men
-    # DENNE funksjonen har ingen use_swedish/use_danish-gren -- lang="sv"
-    # eller "da" faller derfor rett gjennom til else-grenen under og
-    # genererer CV/søknad på NORSK, ikke svensk/dansk. Å fikse dette krever
-    # like grundig utarbeidede prompt-blokker (oversettelsesregler, anti-
-    # klisjé-lister, seksjonsstruktur) som de engelske/vietnamesiske under --
-    # bevisst utsatt til egen Steg 1b/2-runde, ikke gjort i fart her.
-    # Samme begrensning gjelder stream_application_texts() lenger ned.
+    use_swedish = lang == "sv"
+    use_danish = lang == "da"
 
     match_block = ""
     if match_context and isinstance(match_context, dict):
@@ -496,6 +516,36 @@ def generate_application_texts(
                 lines.append("- Những kỹ năng này nên được nhấn mạnh trong CV: " + "; ".join(strengths))
             if missing:
                 lines.append("- Những yêu cầu này còn thiếu — giảm nhẹ hoặc bù đắp bằng kinh nghiệm có thể chuyển đổi: " + "; ".join(missing))
+        elif use_swedish:
+            lines = [
+                "BAKGRUNDSINFORMATION FÖR ANPASSNING (får INTE skrivas ut i CV eller personligt brev):",
+                "Använd detta ENBART för att veta vad som ska lyftas fram. Dessa uppgifter får aldrig synas i resultatet.",
+            ]
+            if score is not None:
+                lines.append(f"- Matchningsgrad: {int(score)} % (endast intern referens, visa aldrig i resultatet)")
+            if top_reason:
+                lines.append(f"- Kandidatens starkaste sida för den här tjänsten: {top_reason}")
+            if main_risk:
+                lines.append(f"- Viktigaste gapet att kompensera för: {main_risk}")
+            if strengths:
+                lines.append("- Dessa färdigheter bör lyftas fram i CV:t: " + "; ".join(strengths))
+            if missing:
+                lines.append("- Dessa krav saknas — tona ned eller kompensera med överförbar erfarenhet: " + "; ".join(missing))
+        elif use_danish:
+            lines = [
+                "BAGGRUNDSINFORMATION TIL TILPASNING (må IKKE skrives ud i CV eller ansøgning):",
+                "Brug dette UDELUKKENDE til at vide, hvad der skal fremhæves. Disse data må aldrig fremgå af resultatet.",
+            ]
+            if score is not None:
+                lines.append(f"- Matchprocent: {int(score)} % (kun intern reference, vis aldrig i resultatet)")
+            if top_reason:
+                lines.append(f"- Kandidatens stærkeste side til denne stilling: {top_reason}")
+            if main_risk:
+                lines.append(f"- Vigtigste mangel at kompensere for: {main_risk}")
+            if strengths:
+                lines.append("- Disse kompetencer bør fremhæves i CV'et: " + "; ".join(strengths))
+            if missing:
+                lines.append("- Disse krav mangler — ton ned eller kompensér med overførbar erfaring: " + "; ".join(missing))
         else:
             lines = [
                 "BAKGRUNNSINFORMASJON FOR TILPASNING (skal IKKE skrives ut i CV eller søknadsbrev):",
@@ -715,6 +765,192 @@ NGOẠI NGỮ:
 cover_letter:
 - KHÔNG BAO GIỜ đề cập đến trình độ ngôn ngữ (ví dụ không viết "thành thạo tiếng Anh", "tiếng mẹ đẻ là tiếng Na Uy") — bỏ qua hoàn toàn phần trình độ ngôn ngữ.
 """.strip()
+    elif use_swedish:
+        prompt = f"""
+Svara ENDAST med giltig JSON med fälten:
+cover_letter, tailored_cv, email_text
+
+Job:
+Title: {job_title}
+Company: {company}
+Text: {job_comp}
+
+Candidate:
+{cand_comp}
+
+{match_block + chr(10) if match_block else ""}Regler:
+- VIKTIGAST: Oavsett vilket språk jobbannonsen eller kandidatens profil är skriven på (norska, engelska eller annat), ska HELA resultatet skrivas på svenska. Översätt allt — inga norska ord, fraser eller meningar får finnas kvar.
+- Skriv idiomatisk svenska som en svensk rekryterare skriver, inte norska med utbytta ord. Undvik norska ord och stavningar: "erfarenhet" (inte "erfaring"), "arbetsgivare" (inte "arbeidsgiver"), "tjänsten" (inte "stillingen"), "företag" (inte "bedrift"), "ansvarig för" (inte "ansvarlig for"), "utbildning" (inte "utdanning"), "kunskaper" (inte "kunnskaper"), "sjukvård" (inte "helsevesen"), "plockrutt" (inte "plukkrute"), "felplock" (inte "felplukk"/"felpluck"), "upplärning" eller "introduktion" (inte "opplärning"), "truckkort" (inte "truckförerbevis"/"truckförarbevis" — ett norskt truckførerbevis skrivs "Norskt truckkort (T1 och T4)", och påstå aldrig TLP10-behörighet om den inte står i datan), "dokumenterat fokus" (fokus är ett ett-ord, inte "dokumenterad fokus"), "i högt tempo" (skriv inte ihop till "högtempo-" och upprepa aldrig ordled som i "högtempotempo"), "inventering" (inte "vareopptelling"/"varuräkning"). Kongruens med ett-ord: "ert centrallager", "ert fokus", "ert företag", "ert team" (inte "er centrallager"/"er fokus"); "er" endast med en-ord ("er tjänst", "er organisation"). Använd ä/ö, aldrig æ/ø. Läs igenom texten och rätta norska ordformer och stavfel innan du svarar.
+- Hitta inte på erfarenhet eller utbildning.
+- Använd inte platshållare som [telefon] eller [adress].
+- {style_text}
+- Använd nyckelord från jobbannonsen i CV:t där kandidaten faktiskt har relevant erfarenhet.
+- Lyft fram kandidatens starkaste sidor för tjänsten i avsnittet Nyckelkvalifikationer (se instruktion nedan).
+- VIKTIGT: Skriv ALDRIG ut matchningsgrad, matchningspoäng, analysmetadata eller bakgrundsinformationen i själva CV:t eller det personliga brevet. Endast vanligt CV-innehåll är tillåtet i resultatet.
+
+{SHARED_ANTI_HALLUCINATION_RULES_SV}
+
+cover_letter (personligt brev):
+- Skriv på svenska, professionell och naturlig ton — inte maskinöversatt stil. Svenska personliga brev är raka och personliga; skriv i jagform utan överdriven formalitet.
+- 3–4 stycken. Inga punktlistor.
+- Strukturera brevet i tre tydliga delar:
+  1) Varför just DEN HÄR tjänsten: måste hänvisa till något konkret ur själva annonstexten (en arbetsuppgift, ett krav, en formulering ur annonsen) — inte en generisk inledning som "Härmed söker jag tjänsten som ..." eller "Jag skriver för att söka ...".
+  2) Varför kandidaten passar: 2–3 konkreta exempel ur kandidatens erfarenhet som matchar de faktiska arbetsuppgifterna/kraven i annonsen.
+  3) Personlig motivation / vad kandidaten tillför: kort och äkta — inga klyschiga adjektiv (se anti-klyschregeln nedan).
+- Ta INTE med kontaktuppgifter eller datum i brevtexten.
+- Pågående utbildning: skriv att den pågår ("jag läser just nu ..."), ange ALDRIG ett år då den avslutas.
+
+tailored_cv:
+- Ren text (ATS-vänlig): ingen markdown, inga tabeller, inga emojis.
+- Ta INTE med kontaktuppgifter i tailored_cv.
+- Använd ENDAST information från Candidate-blocket. Om något saknas: skriv neutralt, gissa inte.
+- Struktur (avsnittsrubriker på egna rader, i denna ordning, exakt med dessa rubriker):
+  Nyckelkvalifikationer\nProfil\nKärnkompetenser\nArbetslivserfarenhet\nUtbildning\nCertifieringar (om tillgängligt)\nSpråk\nReferenser
+
+Nyckelkvalifikationer (viktigt, kommer FÖRST i CV:t, före Profil):
+- 3–4 korta, skumbara punkter (•), inte hela meningar.
+- Ska täcka: kärnkompetens, en sak som skiljer kandidaten från andra sökande, och en antydan om arbetssätt.
+- Identifiera 3–5 nyckelord/fraser som arbetsgivaren själv använder i annonsen (Job: Text ovan), och använd dem ordagrant eller nästan ordagrant där de faktiskt stämmer med kandidatens bakgrund.
+- Bygg vidare på kandidatens starkaste sida och eventuella styrkor i bakgrundsinformationen ovan (starkaste sida / färdigheter att lyfta fram) — skriv om dem till konkreta CV-punkter, inte analystext.
+- Upprepa inte ordagrant innehållet från Profil.
+
+Profil (viktigt):
+- 3–5 meningar (inte punktlista).
+- Måste läsas som skriven för en verklig kandidat: konkret, faktabaserad och relevant för tjänsten.
+- Prioritera i denna ordning när det finns stöd i Candidate-data:
+  1) antal års erfarenhet (använd "Estimated total years experience" om angivet, annars nämn inga årtal)
+  2) bransch (vilken bransch/vilket område erfarenheten kommer från)
+  3) ansvarsområden (drift, kundkontakt, logistik/lagerstyrning, inköp, godsmottagning etc.)
+  4) dokumenterade resultat / förbättringar (använd "Evidence"-punkterna först)
+  5) system- och processförbättringar, svinn/effektivitet, logistik
+  6) ledarskap/särskilt ansvar (om angivet)
+- Anti-klyschregel (gäller Nyckelkvalifikationer, Profil OCH det personliga brevet ovan): undvik dessa ord/fraser om de inte omedelbart följs av ett konkret exempel ur Candidate-data — "driven", "motiverad", "engagerad", "flexibel", "lagspelare", "social", "noggrann", "strukturerad", "lösningsorienterad", "positiv", "ansvarstagande", "stresstålig", "självgående", "prestigelös", "resultatinriktad", "brinner för", "god samarbetsförmåga". Ett naket adjektiv utan belägg är inte tillåtet.
+- Om Candidate-data innehåller konkreta prestationer (siffror, förbättringar, system), använd dessa före generiska beskrivningar.
+
+Kärnkompetenser:
+- 8–12 punkter (•), främst yrkesmässiga/konkreta färdigheter och system.
+- Mjuka färdigheter endast om de stöds av konkreta exempel eller ansvar.
+- Översätt varje färdighet till svenska (t.ex. "journalføring" → "journalföring", "regnskapsføring" → "bokföring", "varemottak" → "godsmottagning", "plukking" → "plock"). Lämna aldrig ett norskt ord i listan.
+
+Arbetslivserfarenhet:
+- Endast roller som finns i Candidate Experience.
+- Översätt norska yrkestitlar till naturlig svensk motsvarighet (t.ex. "Butikkmedarbeider" → "Butiksmedarbetare", "Lagermedarbeider" → "Lagermedarbetare", "Sykepleier" → "Sjuksköterska", "Helsefagarbeider" → "Undersköterska", "Renholder" → "Lokalvårdare", "Daglig leder" → "VD" eller "Verksamhetschef" beroende på sammanhang). Lämna aldrig en yrkestitel oöversatt.
+- Företagsnamn: behåll kända varumärken/företagsnamn som de är (t.ex. "Rema 1000", "Equinor"). Offentliga arbetsgivare skrivs på svenska (t.ex. "Kristiansand kommune" → "Kristiansands kommun").
+- För varje roll: 2–5 korta punkter (hitta inte på). Skilj tydligt mellan:
+  1) Uppgift — vad tjänsten faktiskt innebar (ansvar, omfattning, system som användes).
+  2) Resultat — vad som konkret uppnåddes (siffror, förbättring, omfattning, effektivisering).
+  Minst 1–2 punkter per roll ska prioritera Resultat där kandidatdata faktiskt stöder det; hitta inte på ett resultat om det inte är dokumenterat — skriv då en uppgiftsfokuserad punkt i stället.
+
+Utbildning:
+- Endast lärosäten/skolor som finns i Candidate Education.
+- Översätt examens- och utbildningsbenämningar till svenska motsvarigheter (t.ex. "Bachelor i sykepleie" → "Sjuksköterskeexamen (kandidatnivå)", "Bachelor i økonomi og administrasjon" → "Kandidatexamen i ekonomi och administration", "Master i ..." → "Masterexamen i ...", "Fagbrev som ..." → "Yrkesbevis som ...", "Videregående skole" → "Gymnasieskola", "Fagskole" → "Yrkeshögskola").
+- Namn på lärosäten: behåll det norska egennamnet (t.ex. "Universitetet i Agder", "NTNU", "Handelshøyskolen BI") — det är ett egennamn och förstås i Sverige. Översätt bara generiska beskrivningar (t.ex. "Kristiansand videregående skole" → "gymnasieskola i Kristiansand").
+- För perioder: använd EXAKTA årtal från datan (t.ex. "2022–2025").
+- Om STATUS är PÅGÅENDE: skriv perioden som t.ex. "2023– (pågående)". Om STATUS är FULLFØRT: skriv ENDAST årtalen (t.ex. "2022–2025"), lägg ALDRIG till "pågående" eller liknande.
+
+Språk:
+- Skriv varje språk som "Språk (Nivå)" t.ex. "Norska (modersmål)", "Engelska (flytande)", "Svenska (goda kunskaper)".
+- Använd nivån exakt som den anges i Candidate-datan, översatt till svenska.
+
+email_text:
+- 3–4 meningar, artig, på svenska, hänvisa till tjänsten och företaget.
+
+cover_letter:
+- Nämn ALDRIG språknivå i det personliga brevet — varken direkt ("flytande svenska") eller indirekt ("norska är mitt modersmål"). Utelämna språkkunskaper helt ur brevtexten.
+""".strip()
+    elif use_danish:
+        prompt = f"""
+Svar KUN med gyldig JSON med felterne:
+cover_letter, tailored_cv, email_text
+
+Job:
+Title: {job_title}
+Company: {company}
+Text: {job_comp}
+
+Candidate:
+{cand_comp}
+
+{match_block + chr(10) if match_block else ""}Regler:
+- VIGTIGST: Uanset hvilket sprog jobopslaget eller kandidatens profil er skrevet på (norsk, engelsk eller andet), skal HELE resultatet skrives på dansk. Oversæt alt — ingen norske ord, vendinger eller sætninger må blive stående.
+- Skriv idiomatisk dansk, som en dansk rekrutteringskonsulent skriver, ikke norsk med udskiftede ord. Undgå norske ord og stavemåder: "ansøgning" (ikke "søknad"), "arbejdsgiver" (ikke "arbeidsgiver"), "uddannelse" (ikke "utdanning"), "virksomhed" (ikke "bedrift"), "arbejde" (ikke "arbeide"), "kompetencer" (ikke "kompetanse"), bløde konsonanter som på dansk ("uge", "tage", "gade" — ikke "uke", "ta", "gate"), "nogle" (ikke "noen"), "hvordan", "også", "sygepleje" (ikke "sykepleie"), "sårpleje" (ikke "sårstell"), "medicinsk" (ikke "medisinsk", også i afdelingsnavne som "medicinsk afdeling"), "sygehus" (ikke "sykehus", undtagen i et officielt egennavn), "plejeplanlægning" (ikke "plejeplanering"), "planlægning" (ikke "planering"). Læs teksten igennem og ret norske ordformer og stavefejl, før du svarer.
+- Opfind ikke erfaring eller uddannelse.
+- Brug ikke pladsholdere som [telefon] eller [adresse].
+- {style_text}
+- Brug nøgleord fra jobopslaget i CV'et, hvor kandidaten faktisk har relevant erfaring.
+- Fremhæv kandidatens stærkeste sider til stillingen i afsnittet Nøglekvalifikationer (se instruks nedenfor).
+- VIGTIGT: Skriv ALDRIG matchprocent, matchscore, analysemetadata eller baggrundsinformationen ud i selve CV'et eller ansøgningen. Kun almindeligt CV-indhold er tilladt i resultatet.
+
+{SHARED_ANTI_HALLUCINATION_RULES_DA}
+
+cover_letter (ansøgning):
+- Skriv på dansk, professionel og naturlig tone — ikke maskinoversat stil. Danske ansøgninger er direkte og personlige; skriv i jeg-form uden unødig formalitet.
+- 3–4 afsnit. Ingen punktopstillinger.
+- Strukturér ansøgningen i tre tydelige dele:
+  1) Hvorfor netop DENNE stilling: skal henvise til noget konkret fra selve opslagsteksten (en arbejdsopgave, et krav, en formulering fra opslaget) — ikke en generisk indledning som "Hermed søger jeg stillingen som ..." eller "Jeg skriver for at søge ...".
+  2) Hvorfor kandidaten passer: 2–3 konkrete eksempler fra kandidatens erfaring, der matcher de faktiske opgaver/krav i opslaget.
+  3) Personlig motivation / hvad kandidaten bidrager med: kort og ægte — ingen klichéagtige tillægsord (se anti-kliché-reglen nedenfor).
+- Medtag IKKE kontaktoplysninger eller dato i ansøgningsteksten.
+- Igangværende uddannelse: skriv, at den er i gang ("jeg er i gang med ..."), angiv ALDRIG et år, hvor den afsluttes.
+
+tailored_cv:
+- Ren tekst (ATS-venlig): ingen markdown, ingen tabeller, ingen emojis.
+- Medtag IKKE kontaktoplysninger i tailored_cv.
+- Brug KUN information fra Candidate-blokken. Hvis noget mangler: skriv neutralt, gæt ikke.
+- Struktur (afsnitsoverskrifter på egne linjer, i denne rækkefølge, præcis med disse overskrifter):
+  Nøglekvalifikationer\nProfil\nKernekompetencer\nErhvervserfaring\nUddannelse\nCertificeringer (hvis tilgængeligt)\nSprog\nReferencer
+
+Nøglekvalifikationer (vigtigt, kommer FØRST i CV'et, før Profil):
+- 3–4 korte punkter (•), der er lette at skimme, ikke hele sætninger.
+- Skal dække: kernekompetence, én ting der adskiller kandidaten fra andre ansøgere, og et hint om arbejdsstil.
+- Identificér 3–5 nøgleord/vendinger, som arbejdsgiveren selv bruger i opslaget (Job: Text ovenfor), og brug dem ordret eller næsten ordret, hvor de faktisk passer til kandidatens baggrund.
+- Byg videre på kandidatens stærkeste side og eventuelle styrker i baggrundsinformationen ovenfor (stærkeste side / kompetencer der bør fremhæves) — omskriv dem til konkrete CV-punkter, ikke analysetekst.
+- Gentag ikke ordret indholdet fra Profil.
+
+Profil (vigtigt):
+- 3–5 sætninger (ikke punktopstilling).
+- Skal fremstå som skrevet til en rigtig kandidat: konkret, faktabaseret og relevant for stillingen.
+- Prioritér i denne rækkefølge, når der er grundlag i Candidate-data:
+  1) antal års erfaring (brug "Estimated total years experience" hvis angivet, ellers nævn ikke årstal)
+  2) branche (hvilken branche/hvilket område erfaringen stammer fra)
+  3) ansvarsområder (drift, kundekontakt, logistik/lagerstyring, indkøb, varemodtagelse osv.)
+  4) dokumenterede resultater / forbedringer (brug "Evidence"-punkterne først)
+  5) system- og procesforbedringer, svind/effektivitet, logistik
+  6) ledelse/særligt ansvar (hvis angivet)
+- Anti-kliché-regel (gælder Nøglekvalifikationer, Profil OG ansøgningen ovenfor): undgå disse ord/vendinger, medmindre de straks efterfølges af et konkret eksempel fra Candidate-data — "engageret", "motiveret", "fleksibel", "teamplayer", "omstillingsparat", "struktureret", "løsningsorienteret", "positiv", "ansvarsbevidst", "mødestabil", "selvstændig", "god til at samarbejde", "brænder for", "vedholdende", "resultatorienteret", "høj arbejdsmoral", "kan arbejde under pres". Et nøgent tillægsord uden belæg er ikke tilladt.
+- Hvis Candidate-data indeholder konkrete præstationer (tal, forbedringer, systemer), så brug dem før generiske beskrivelser.
+
+Kernekompetencer:
+- 8–12 punkter (•), primært faglige/konkrete kompetencer og systemer.
+- Bløde kompetencer kun hvis de understøttes af konkrete eksempler eller ansvar.
+- Oversæt hver kompetence til dansk (f.eks. "journalføring" → "journalføring", "regnskapsføring" → "bogføring", "varemottak" → "varemodtagelse", "plukking" → "pluk", "pleieplanlegging" → "plejeplanlægning" — aldrig "plejeplanering"). Efterlad aldrig et norsk ord på listen.
+
+Erhvervserfaring:
+- Kun roller, der findes i Candidate Experience.
+- Oversæt norske stillingsbetegnelser til den naturlige danske pendant (f.eks. "Butikkmedarbeider" → "Butiksmedarbejder", "Lagermedarbeider" → "Lagermedarbejder", "Sykepleier" → "Sygeplejerske", "Helsefagarbeider" → "Social- og sundhedsassistent", "Renholder" → "Rengøringsassistent", "Daglig leder" → "Direktør" eller "Administrerende direktør" afhængigt af sammenhæng). Efterlad aldrig en stillingsbetegnelse uoversat.
+- Virksomhedsnavne: behold kendte brands/virksomhedsnavne som de er (f.eks. "Rema 1000", "Equinor"). Offentlige arbejdsgivere skrives på dansk (f.eks. "Kristiansand kommune" → "Kristiansand Kommune").
+- For hver rolle: 2–5 korte punkter (opfind ikke). Skeln tydeligt mellem:
+  1) Opgave — hvad stillingen faktisk indebar (ansvar, omfang, anvendte systemer).
+  2) Resultat — hvad der konkret blev opnået (tal, forbedring, omfang, effektivisering).
+  Mindst 1–2 punkter pr. rolle skal prioritere Resultat, hvor kandidatdata faktisk understøtter det; opfind ikke et resultat, hvis det ikke er dokumenteret — skriv i så fald et opgavefokuseret punkt i stedet.
+
+Uddannelse:
+- Kun uddannelsesinstitutioner, der findes i Candidate Education.
+- Oversæt grads- og uddannelsesbetegnelser til danske pendanter (f.eks. "Bachelor i sykepleie" → "Professionsbachelor i sygepleje", "Bachelor i økonomi og administrasjon" → "Bachelor i økonomi og administration", "Master i ..." → "Kandidat i ..." eller "Master i ...", "Fagbrev som ..." → "Svendebrev som ...", "Videregående skole" → "Gymnasial uddannelse", "Fagskole" → "Erhvervsakademiuddannelse").
+- Navne på uddannelsesinstitutioner: behold det norske egennavn (f.eks. "Universitetet i Agder", "NTNU", "Handelshøyskolen BI") — det er et egennavn og forstås i Danmark. Oversæt kun generiske beskrivelser (f.eks. "Kristiansand videregående skole" → "gymnasium i Kristiansand").
+- For perioder: brug de NØJAGTIGE årstal fra dataene (f.eks. "2022–2025").
+- Hvis STATUS er PÅGÅENDE: skriv perioden som f.eks. "2023– (igangværende)". Hvis STATUS er FULLFØRT: skriv KUN årstallene (f.eks. "2022–2025"), tilføj ALDRIG "igangværende" eller lignende.
+
+Sprog:
+- Skriv hvert sprog som "Sprog (Niveau)" f.eks. "Norsk (modersmål)", "Engelsk (flydende)", "Dansk (gode kundskaber)".
+- Brug niveauet præcis som angivet i Candidate-dataene, oversat til dansk.
+
+email_text:
+- 3–4 sætninger, høflig, på dansk, henvis til stillingen og virksomheden.
+
+cover_letter:
+- Nævn ALDRIG sprogniveau i ansøgningen — hverken direkte ("flydende dansk") eller indirekte ("norsk er mit modersmål"). Udelad sprogkundskaber helt fra ansøgningsteksten.
+""".strip()
     else:
         prompt = f"""
 Svar KUN med gyldig JSON med feltene:
@@ -831,10 +1067,12 @@ cover_letter:
 _MARKERS_NO = ("###SØKNADSBREV", "###CV", "###EPOST")
 _MARKERS_EN = ("###COVER_LETTER", "###TAILORED_CV", "###EMAIL")
 _MARKERS_VI = ("###THU_XIN_VIEC", "###CV", "###EMAIL")
+_MARKERS_SV = ("###PERSONLIGT_BREV", "###CV", "###E_POST")
+_MARKERS_DA = ("###ANSOEGNING", "###CV", "###E_MAIL")
 
 
 def _parse_marker_output(text: str, language: str) -> dict[str, str]:
-    markers = {"en": _MARKERS_EN, "vi": _MARKERS_VI}.get(language, _MARKERS_NO)
+    markers = {"en": _MARKERS_EN, "vi": _MARKERS_VI, "sv": _MARKERS_SV, "da": _MARKERS_DA}.get(language, _MARKERS_NO)
     fields = ("cover_letter", "tailored_cv", "email_text")
     result: dict[str, str] = {f: "" for f in fields}
     positions = [text.find(m) for m in markers]
@@ -868,9 +1106,9 @@ def stream_application_texts(
     lang = (language or "no").strip().lower()
     use_english = lang == "en"
     use_vietnamese = lang == "vi"
-    # Same known/temporary sv/da -> Norwegian-content fallback as
-    # generate_application_texts() above -- see the comment there.
-    style_text = _style_instructions(application_style)
+    use_swedish = lang == "sv"
+    use_danish = lang == "da"
+    style_text = _style_instructions(application_style, language)
     job_comp = _compress_text(job_text, 8000)
     years = _estimate_years_experience(profile)
     evidence = _extract_evidence_snippets(profile)
@@ -930,6 +1168,30 @@ def stream_application_texts(
                 mb.append("- Nhấn mạnh: " + "; ".join(strengths))
             if missing:
                 mb.append("- Giảm nhẹ/bù đắp: " + "; ".join(missing))
+        elif use_swedish:
+            mb = ["BAKGRUNDSINFORMATION (får INTE skrivas ut i CV eller personligt brev):"]
+            if score is not None:
+                mb.append(f"- Matchningsgrad: {int(score)} % (endast intern referens)")
+            if top_reason:
+                mb.append(f"- Starkaste sida för tjänsten: {top_reason}")
+            if main_risk:
+                mb.append(f"- Gap att kompensera för: {main_risk}")
+            if strengths:
+                mb.append("- Lyft fram: " + "; ".join(strengths))
+            if missing:
+                mb.append("- Tona ned/kompensera: " + "; ".join(missing))
+        elif use_danish:
+            mb = ["BAGGRUNDSINFORMATION (må IKKE skrives ud i CV eller ansøgning):"]
+            if score is not None:
+                mb.append(f"- Matchprocent: {int(score)} % (kun intern reference)")
+            if top_reason:
+                mb.append(f"- Stærkeste side til stillingen: {top_reason}")
+            if main_risk:
+                mb.append(f"- Mangel at kompensere for: {main_risk}")
+            if strengths:
+                mb.append("- Fremhæv: " + "; ".join(strengths))
+            if missing:
+                mb.append("- Ton ned/kompensér: " + "; ".join(missing))
         else:
             mb = ["BAKGRUNNSINFORMASJON (skal IKKE skrives ut i CV eller søknadsbrev):"]
             if score is not None:
@@ -944,7 +1206,7 @@ def stream_application_texts(
                 mb.append("- Tone ned/kompenser: " + "; ".join(missing))
         match_block = "\n".join(mb)
 
-    m1, m2, m3 = {"en": _MARKERS_EN, "vi": _MARKERS_VI}.get(lang, _MARKERS_NO)
+    m1, m2, m3 = {"en": _MARKERS_EN, "vi": _MARKERS_VI, "sv": _MARKERS_SV, "da": _MARKERS_DA}.get(lang, _MARKERS_NO)
 
     if use_english:
         prompt = f"""Output EXACTLY these three sections with their headers and NO other text:
@@ -1033,6 +1295,76 @@ Candidate:
 {m1}: {style_text} Không dùng gạch đầu dòng. Ba phần rõ ràng: 1) tại sao lại là công việc NÀY — nhắc đến điều cụ thể từ chính tin tuyển dụng; 2) tại sao ứng viên phù hợp — 2–3 ví dụ cụ thể khớp với nhiệm vụ/yêu cầu thực tế trong tin; 3) động lực cá nhân/điều ứng viên mang lại — ngắn gọn, chân thật, không dùng tính từ sáo rỗng. Không có thông tin liên hệ hoặc ngày tháng.
 {m2}: Văn bản thuần (thân thiện với ATS), không markdown, không bảng. Các mục theo thứ tự: NĂNG LỰC NỔI BẬT / TÓM TẮT BẢN THÂN / KỸ NĂNG CHUYÊN MÔN / KINH NGHIỆM LÀM VIỆC / HỌC VẤN / NGOẠI NGỮ / NGƯỜI THAM CHIẾU. NĂNG LỰC NỔI BẬT: 3–4 gạch đầu dòng (•) ngắn gọn — năng lực cốt lõi, một điểm khác biệt, một gợi ý về phong cách làm việc; xác định 3–5 từ khóa/cụm từ nhà tuyển dụng dùng trong tin tuyển dụng và sử dụng chúng khi thực sự phù hợp; dựa trên điểm mạnh nhất/thế mạnh của ứng viên từ thông tin nền ở trên; không lặp lại nguyên văn TÓM TẮT BẢN THÂN. TÓM TẮT BẢN THÂN: 3–5 câu cụ thể. KỸ NĂNG CHUYÊN MÔN: 8–12 gạch đầu dòng (•); dịch mọi kỹ năng sang tiếng Việt (ví dụ "journalføring" → "ghi chép hồ sơ lâm sàng") — không để sót từ tiếng Na Uy hay tiếng Anh nào. KINH NGHIỆM LÀM VIỆC: chỉ những vị trí có thật trong dữ liệu Candidate, 2–5 gạch đầu dòng mỗi vị trí, phân biệt Nhiệm vụ (công việc bao gồm những gì) và Kết quả (con số/cải tiến/quy mô cụ thể đạt được) — ít nhất 1–2 gạch đầu dòng mỗi vị trí phải ưu tiên Kết quả khi dữ liệu có căn cứ, nếu không thì viết gạch đầu dòng về nhiệm vụ thay thế; dịch chức danh sang tiếng Việt tự nhiên (ví dụ "Butikkmedarbeider" → "Nhân viên bán hàng") — không để sót chức danh chưa dịch; giữ nguyên tên thương hiệu/công ty nổi tiếng nhưng dịch tên nhà tuyển dụng khu vực công chung chung (ví dụ "Kristiansand kommune" → "Chính quyền thành phố Kristiansand"). HỌC VẤN: dịch tên bằng cấp/chương trình sang tiếng Việt (ví dụ "Bachelor i sykepleie" → "Cử nhân Điều dưỡng"); dịch tên cơ sở đào tạo nhất quán sang tiếng Việt (ví dụ "Universitetet i Agder" → "Đại học Agder"); dùng CHÍNH XÁC các năm trong dữ liệu; nếu STATUS là PÅGÅENDE viết ví dụ "2023– (đang học)"; nếu STATUS là FULLFØRT chỉ viết các năm (ví dụ "2022–2025"). NGOẠI NGỮ: định dạng "Tên ngôn ngữ (Trình độ)" ví dụ "Tiếng Na Uy (Bản ngữ)".
 {m3}: 3–4 câu, lịch sự, nhắc đến vị trí và công ty. KHÔNG BAO GIỜ đề cập đến trình độ ngôn ngữ trong thư xin việc.""".strip()
+    elif use_swedish:
+        prompt = f"""Svara med EXAKT dessa tre avsnitt med rubriker, ingenting annat:
+
+{m1}
+[personligt brev här]
+
+{m2}
+[anpassat CV här]
+
+{m3}
+[kort e-post här]
+
+Job:
+Title: {job_title}
+Company: {company}
+Text: {job_comp}
+
+Candidate:
+{cand_comp}
+
+{match_block + chr(10) if match_block else ""}Regler:
+- VIKTIGAST: Oavsett vilket språk jobbannonsen eller kandidatens profil är skriven på (norska, engelska eller annat), ska HELA resultatet skrivas på svenska. Översätt allt — inga norska ord, fraser eller meningar får finnas kvar.
+- Skriv idiomatisk svenska som en svensk rekryterare skriver, inte norska med utbytta ord. Undvik norska ord och stavningar: "erfarenhet" (inte "erfaring"), "arbetsgivare" (inte "arbeidsgiver"), "tjänsten" (inte "stillingen"), "företag" (inte "bedrift"), "ansvarig för" (inte "ansvarlig for"), "utbildning" (inte "utdanning"), "kunskaper" (inte "kunnskaper"), "sjukvård" (inte "helsevesen"), "plockrutt" (inte "plukkrute"), "felplock" (inte "felplukk"/"felpluck"), "upplärning" eller "introduktion" (inte "opplärning"), "truckkort" (inte "truckförerbevis"/"truckförarbevis" — ett norskt truckførerbevis skrivs "Norskt truckkort (T1 och T4)", och påstå aldrig TLP10-behörighet om den inte står i datan), "dokumenterat fokus" (fokus är ett ett-ord, inte "dokumenterad fokus"), "i högt tempo" (skriv inte ihop till "högtempo-" och upprepa aldrig ordled som i "högtempotempo"), "inventering" (inte "vareopptelling"/"varuräkning"). Kongruens med ett-ord: "ert centrallager", "ert fokus", "ert företag", "ert team" (inte "er centrallager"/"er fokus"); "er" endast med en-ord ("er tjänst", "er organisation"). Använd ä/ö, aldrig æ/ø. Läs igenom texten och rätta norska ordformer och stavfel innan du svarar.
+- Hitta inte på erfarenhet eller utbildning.
+- Använd inte platshållare som [telefon] eller [adress].
+- {style_text}
+- Använd nyckelord från jobbannonsen i CV:t där kandidaten faktiskt har relevant erfarenhet.
+- Skriv ALDRIG ut matchningsgrad, analysmetadata eller bakgrundsinformation i CV eller personligt brev.
+- Anti-klyschregel (gäller Nyckelkvalifikationer, Profil OCH det personliga brevet): undvik dessa ord/fraser om de inte omedelbart följs av ett konkret exempel ur Candidate-data — "driven", "motiverad", "engagerad", "flexibel", "lagspelare", "social", "noggrann", "strukturerad", "lösningsorienterad", "positiv", "ansvarstagande", "stresstålig", "självgående", "prestigelös", "resultatinriktad", "brinner för", "god samarbetsförmåga". Ett naket adjektiv utan belägg är inte tillåtet.
+
+{SHARED_ANTI_HALLUCINATION_RULES_SV}
+
+{m1}: {style_text} Inga punktlistor. Tre tydliga delar: 1) varför just DEN HÄR tjänsten — hänvisa till något konkret ur själva annonstexten, inte en generisk inledning som "Härmed söker jag tjänsten som ..."; 2) varför kandidaten passar — 2–3 konkreta exempel som matchar annonsens faktiska uppgifter/krav; 3) personlig motivation/vad kandidaten tillför — kort, äkta, inga klyschiga adjektiv. Rak, personlig jagform som i svenska personliga brev. Pågående utbildning: skriv att den pågår, ange ALDRIG ett avslutningsår. Inga kontaktuppgifter eller datum.
+{m2}: Ren text (ATS-vänlig), ingen markdown, inga tabeller. Avsnitt i ordning, exakt med dessa rubriker: Nyckelkvalifikationer / Profil / Kärnkompetenser / Arbetslivserfarenhet / Utbildning / Språk / Referenser. Nyckelkvalifikationer: 3–4 korta punkter (•) — kärnkompetens, en särskiljande styrka, en antydan om arbetssätt; identifiera 3–5 nyckelord/fraser arbetsgivaren använder i annonsen och använd dem där de faktiskt stämmer; bygg på kandidatens starkaste sida/styrkor från bakgrundsinformationen ovan; upprepa inte Profil ordagrant. Profil: 3–5 konkreta meningar. Kärnkompetenser: 8–12 punkter (•); översätt varje färdighet till svenska (t.ex. "regnskapsføring" → "bokföring", "varemottak" → "godsmottagning") — lämna aldrig ett norskt ord i listan. Arbetslivserfarenhet: endast roller från Candidate-data, 2–5 punkter var, skilj mellan Uppgift (vad tjänsten innebar) och Resultat (konkreta siffror/förbättring/omfattning) — minst 1–2 punkter per roll ska prioritera Resultat där datan stöder det, annars en uppgiftsfokuserad punkt; översätt norska yrkestitlar till naturlig svenska (t.ex. "Butikkmedarbeider" → "Butiksmedarbetare", "Sykepleier" → "Sjuksköterska", "Helsefagarbeider" → "Undersköterska") — lämna aldrig en titel oöversatt; behåll kända varumärken/företagsnamn men skriv offentliga arbetsgivare på svenska (t.ex. "Kristiansand kommune" → "Kristiansands kommun"). Utbildning: översätt examensbenämningar till svenska motsvarigheter (t.ex. "Bachelor i sykepleie" → "Sjuksköterskeexamen (kandidatnivå)", "Fagbrev som ..." → "Yrkesbevis som ...", "Videregående skole" → "Gymnasieskola"); behåll norska egennamn på lärosäten (t.ex. "Universitetet i Agder", "NTNU"); använd EXAKTA årtal; om STATUS är PÅGÅENDE skriv t.ex. "2023– (pågående)"; om STATUS är FULLFØRT skriv endast årtalen (t.ex. "2022–2025"). Språk: skriv som "Språk (Nivå)" t.ex. "Norska (modersmål)".
+{m3}: 3–4 meningar, artig, hänvisa till tjänsten och företaget. Nämn ALDRIG språknivå i det personliga brevet.""".strip()
+    elif use_danish:
+        prompt = f"""Svar med PRÆCIS disse tre afsnit med overskrifter, intet andet:
+
+{m1}
+[ansøgning her]
+
+{m2}
+[tilpasset CV her]
+
+{m3}
+[kort e-mail her]
+
+Job:
+Title: {job_title}
+Company: {company}
+Text: {job_comp}
+
+Candidate:
+{cand_comp}
+
+{match_block + chr(10) if match_block else ""}Regler:
+- VIGTIGST: Uanset hvilket sprog jobopslaget eller kandidatens profil er skrevet på (norsk, engelsk eller andet), skal HELE resultatet skrives på dansk. Oversæt alt — ingen norske ord, vendinger eller sætninger må blive stående.
+- Skriv idiomatisk dansk, som en dansk rekrutteringskonsulent skriver, ikke norsk med udskiftede ord. Undgå norske ord og stavemåder: "ansøgning" (ikke "søknad"), "arbejdsgiver" (ikke "arbeidsgiver"), "uddannelse" (ikke "utdanning"), "virksomhed" (ikke "bedrift"), "arbejde" (ikke "arbeide"), "kompetencer" (ikke "kompetanse"), bløde konsonanter som på dansk ("uge", "tage", "gade" — ikke "uke", "ta", "gate"), "nogle" (ikke "noen"), "hvordan", "også", "sygepleje" (ikke "sykepleie"), "sårpleje" (ikke "sårstell"), "medicinsk" (ikke "medisinsk", også i afdelingsnavne som "medicinsk afdeling"), "sygehus" (ikke "sykehus", undtagen i et officielt egennavn), "plejeplanlægning" (ikke "plejeplanering"), "planlægning" (ikke "planering"). Læs teksten igennem og ret norske ordformer og stavefejl, før du svarer.
+- Opfind ikke erfaring eller uddannelse.
+- Brug ikke pladsholdere som [telefon] eller [adresse].
+- {style_text}
+- Brug nøgleord fra jobopslaget i CV'et, hvor kandidaten faktisk har relevant erfaring.
+- Skriv ALDRIG matchprocent, analysemetadata eller baggrundsinformation ud i CV eller ansøgning.
+- Anti-kliché-regel (gælder Nøglekvalifikationer, Profil OG ansøgningen): undgå disse ord/vendinger, medmindre de straks efterfølges af et konkret eksempel fra Candidate-data — "engageret", "motiveret", "fleksibel", "teamplayer", "omstillingsparat", "struktureret", "løsningsorienteret", "positiv", "ansvarsbevidst", "mødestabil", "selvstændig", "god til at samarbejde", "brænder for", "vedholdende", "resultatorienteret", "høj arbejdsmoral", "kan arbejde under pres". Et nøgent tillægsord uden belæg er ikke tilladt.
+
+{SHARED_ANTI_HALLUCINATION_RULES_DA}
+
+{m1}: {style_text} Ingen punktopstillinger. Tre tydelige dele: 1) hvorfor netop DENNE stilling — henvis til noget konkret fra selve opslagsteksten, ikke en generisk indledning som "Hermed søger jeg stillingen som ..."; 2) hvorfor kandidaten passer — 2–3 konkrete eksempler, der matcher opslagets faktiske opgaver/krav; 3) personlig motivation/hvad kandidaten bidrager med — kort, ægte, ingen klichéagtige tillægsord. Direkte, personlig jeg-form som i danske ansøgninger. Igangværende uddannelse: skriv, at den er i gang, angiv ALDRIG et afslutningsår. Ingen kontaktoplysninger eller dato.
+{m2}: Ren tekst (ATS-venlig), ingen markdown, ingen tabeller. Afsnit i rækkefølge, præcis med disse overskrifter: Nøglekvalifikationer / Profil / Kernekompetencer / Erhvervserfaring / Uddannelse / Sprog / Referencer. Nøglekvalifikationer: 3–4 korte punkter (•) — kernekompetence, én særlig styrke, et hint om arbejdsstil; identificér 3–5 nøgleord/vendinger, arbejdsgiveren bruger i opslaget, og brug dem, hvor de faktisk passer; byg på kandidatens stærkeste side/styrker fra baggrundsinformationen ovenfor; gentag ikke Profil ordret. Profil: 3–5 konkrete sætninger. Kernekompetencer: 8–12 punkter (•); oversæt hver kompetence til dansk (f.eks. "regnskapsføring" → "bogføring", "varemottak" → "varemodtagelse", "pleieplanlegging" → "plejeplanlægning" — aldrig "plejeplanering") — efterlad aldrig et norsk ord på listen. Erhvervserfaring: kun roller fra Candidate-data, 2–5 punkter hver, skeln mellem Opgave (hvad stillingen indebar) og Resultat (konkrete tal/forbedring/omfang) — mindst 1–2 punkter pr. rolle skal prioritere Resultat, hvor data understøtter det, ellers et opgavefokuseret punkt; oversæt norske stillingsbetegnelser til naturligt dansk (f.eks. "Butikkmedarbeider" → "Butiksmedarbejder", "Sykepleier" → "Sygeplejerske", "Helsefagarbeider" → "Social- og sundhedsassistent") — efterlad aldrig en titel uoversat; behold kendte brands/virksomhedsnavne, men skriv offentlige arbejdsgivere på dansk (f.eks. "Kristiansand kommune" → "Kristiansand Kommune"). Uddannelse: oversæt gradsbetegnelser til danske pendanter (f.eks. "Bachelor i sykepleie" → "Professionsbachelor i sygepleje", "Fagbrev som ..." → "Svendebrev som ...", "Videregående skole" → "Gymnasial uddannelse"); behold norske egennavne på institutioner (f.eks. "Universitetet i Agder", "NTNU"); brug NØJAGTIGE årstal; hvis STATUS er PÅGÅENDE skriv f.eks. "2023– (igangværende)"; hvis STATUS er FULLFØRT skriv kun årstallene (f.eks. "2022–2025"). Sprog: skriv som "Sprog (Niveau)" f.eks. "Norsk (modersmål)".
+{m3}: 3–4 sætninger, høflig, henvis til stillingen og virksomheden. Nævn ALDRIG sprogniveau i ansøgningen.""".strip()
     else:
         prompt = f"""Svar med NØYAKTIG disse tre seksjonene med overskrifter, ingenting annet:
 
@@ -1078,6 +1410,10 @@ Candidate:
             if use_english
             else "Bạn là trợ lý viết hồ sơ xin việc chuyên nghiệp. Chỉ viết các mục được yêu cầu, bằng tiếng Việt."
             if use_vietnamese
+            else "Du är en professionell assistent för jobbansökningar. Skriv endast de efterfrågade avsnitten, på idiomatisk svenska."
+            if use_swedish
+            else "Du er en professionel assistent til jobansøgninger. Skriv kun de efterspurgte afsnit, på idiomatisk dansk."
+            if use_danish
             else "Du er en profesjonell jobbsøknad-assistent. Skriv kun de forespurte seksjonene."
         ),
         messages=[{"role": "user", "content": prompt}],

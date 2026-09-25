@@ -395,13 +395,6 @@ export default function AnalysisScreen({
                   </TouchableOpacity>
                 </View>
                 {showLanguageOverride ? (
-                  // KJENT, MIDLERTIDIG BEGRENSNING (Sverige/Danmark Steg 1):
-                  // sv/da er gyldige cvLanguage-verdier og lagres/vises riktig,
-                  // men backend (generate_application_texts()/
-                  // stream_application_texts() i job_analyzer.py) mangler
-                  // fortsatt egne svenske/danske prompt-blokker -- velger
-                  // brukeren sv/da her, kommer selve CV-/søknadsinnholdet
-                  // fortsatt ut på norsk inntil det er bygget i en egen runde.
                   <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
                     {[
                       { key: 'no', label: '🇳🇴 Norsk' },
