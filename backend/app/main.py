@@ -3743,7 +3743,7 @@ def analyze_url(
     current_user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
-    from .job_analyzer import analyze_job_url
+    from .job_analyzer import JobTextUnavailableError, analyze_job_url, job_text_unavailable_message
 
     profile = db.get(Profile, data.profile_id)
     if not _owns_profile(profile, current_user):
@@ -3825,6 +3825,14 @@ def analyze_url(
         _log_usage(db, current_user, "job_analysis_completed")
 
         return result
+    except JobTextUnavailableError:
+        # The page was fetched but held no ad text (JS-rendered/cookie wall):
+        # tell the user to paste it instead. Nothing was sent to the AI, and
+        # no analysis quota was consumed.
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=job_text_unavailable_message(data.language),
+        )
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 

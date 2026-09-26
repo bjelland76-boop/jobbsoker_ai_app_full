@@ -31,7 +31,98 @@ def _get_client() -> anthropic.Anthropic:
     return anthropic.Anthropic(api_key=api_key)
 
 
+JOB_TEXT_UNAVAILABLE_MESSAGES = {
+    "no": "Klarte ikke å hente annonseteksten fra denne siden - lim inn teksten i stedet.",
+    "en": "Could not retrieve the job ad text from this page - please paste the text instead.",
+    "sv": "Det gick inte att hämta annonstexten från den här sidan - klistra in texten i stället.",
+    "da": "Kunne ikke hente annonceteksten fra denne side - indsæt teksten i stedet.",
+}
+
+
+class JobTextUnavailableError(Exception):
+    """The URL was fetched, but the page did not contain the job ad itself
+    (JavaScript-rendered shell, cookie wall, etc.). Callers should ask the
+    user to paste the text instead -- never analyse what was fetched."""
+
+    def __init__(self, message: str = JOB_TEXT_UNAVAILABLE_MESSAGES["no"]):
+        super().__init__(message)
+
+
+def job_text_unavailable_message(language: str) -> str:
+    return JOB_TEXT_UNAVAILABLE_MESSAGES.get((language or "").strip().lower(), JOB_TEXT_UNAVAILABLE_MESSAGES["no"])
+
+
+# A real job ad is practically never this short once page chrome is included
+# (FINN ~6000, Jobindex ~2800 chars); a JS-rendered shell is (Platsbanken: 379).
+_MIN_JOB_TEXT_CHARS = 600
+# Below this length, cookie/JS-notice wording means we most likely only got
+# the consent banner or an empty app shell, not the ad.
+_COOKIE_SHELL_MAX_CHARS = 1500
+_COOKIE_SHELL_RE = re.compile(
+    r"cookies?|kakor|informasjonskapsler|godkänn|accept all|aktiver javascript|enable javascript",
+    re.IGNORECASE,
+)
+
+_PLATSBANKEN_AD_RE = re.compile(r"arbetsformedlingen\.se/platsbanken/annonser/(\d+)", re.IGNORECASE)
+
+
+def _fetch_platsbanken_ad(ad_id: str) -> str:
+    """Arbetsförmedlingen's Platsbanken renders ads client-side, so the HTML
+    has no ad text. Use the official, key-less JobTech API instead."""
+    r = requests.get(
+        f"https://jobsearch.api.jobtechdev.se/ad/{ad_id}",
+        headers={"accept": "application/json"},
+        timeout=15,
+    )
+    if r.status_code == 404:
+        raise JobTextUnavailableError()
+    r.raise_for_status()
+    ad = r.json()
+
+    def _label(obj: Any) -> str:
+        return str((obj or {}).get("label") or "").strip() if isinstance(obj, dict) else ""
+
+    headline = str(ad.get("headline") or "").strip()
+    employer = str((ad.get("employer") or {}).get("name") or "").strip()
+    address = ad.get("workplace_address") or {}
+    place = ", ".join(x for x in [address.get("municipality"), address.get("region")] if x)
+    description = str((ad.get("description") or {}).get("text") or "").strip()
+
+    lines = [" - ".join(x for x in [headline, employer] if x)]
+    for label, value in [
+        ("Ort", place),
+        ("Anställningsform", _label(ad.get("employment_type"))),
+        ("Omfattning", _label(ad.get("working_hours_type"))),
+        ("Varaktighet", _label(ad.get("duration"))),
+        ("Lön", _label(ad.get("salary_type"))),
+        ("Sista ansökningsdag", str(ad.get("application_deadline") or "")[:10]),
+    ]:
+        if value:
+            lines.append(f"{label}: {value}")
+    lines.append("")
+    lines.append(description)
+    text = "\n".join(lines).strip()
+    if not description:
+        raise JobTextUnavailableError()
+    return text[:12000]
+
+
+def _looks_like_empty_or_cookie_page(text: str) -> bool:
+    if len(text) < _MIN_JOB_TEXT_CHARS:
+        return True
+    return len(text) < _COOKIE_SHELL_MAX_CHARS and bool(_COOKIE_SHELL_RE.search(text))
+
+
 def fetch_job_text(url: str) -> str:
+    """Fetch a job ad's text from its URL.
+
+    Raises JobTextUnavailableError when the page didn't contain the ad
+    (e.g. JavaScript-rendered or cookie-walled), so it's never sent to the AI.
+    """
+    m = _PLATSBANKEN_AD_RE.search(url or "")
+    if m:
+        return _fetch_platsbanken_ad(m.group(1))
+
     headers = {"User-Agent": "Mozilla/5.0"}
     r = requests.get(url, headers=headers, timeout=15)
     r.raise_for_status()
@@ -42,6 +133,8 @@ def fetch_job_text(url: str) -> str:
         tag.decompose()
 
     text = " ".join(soup.get_text("\n").split())
+    if _looks_like_empty_or_cookie_page(text):
+        raise JobTextUnavailableError()
     return text[:12000]
 
 
@@ -389,6 +482,18 @@ def _extract_evidence_snippets(profile: Any, *, max_items: int = 5) -> list[str]
 
 
 def _guess_job_title_company(job_text: str) -> tuple[str, str]:
+    # Text with real line breaks (API-sourced ads, pasted text) often has
+    # "Title - Company" alone on the first line -- split that line only, so
+    # the company doesn't run on into the next line once whitespace is
+    # compressed below.
+    first_line = (job_text or "").strip().split("\n", 1)[0].strip()
+    if len(first_line) <= 150:
+        for sep in [" - ", " | ", " – ", " — "]:
+            if sep in first_line:
+                left, right = first_line.split(sep, 1)
+                if len(left.strip()) >= 3:
+                    return left.strip()[:120], right.strip()[:120]
+
     t = _compress_text(job_text, 800)
 
     # Common patterns: "Title - Company", "Title | Company", etc.
