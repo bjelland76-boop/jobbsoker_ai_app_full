@@ -10,6 +10,7 @@ import traceback
 import requests
 import stripe
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 logger = logging.getLogger(__name__)
 from contextlib import asynccontextmanager
@@ -52,6 +53,7 @@ from .auth import (
 )
 from .db import Base, SessionLocal, engine, get_db
 from .emailer import send_email
+from .stats_report import maybe_send_scheduled_report, send_stats_report
 from .models import (
     AppSetting,
     ApplicationProgress,
@@ -749,6 +751,16 @@ async def lifespan(app: FastAPI):
         next_run_time=datetime.utcnow(),
         id="day7_feedback_email",
     )
+    # Admin stats report Mon/Thu 07:00 Oslo. The startup run catches up a slot
+    # missed by a deploy/restart; admin_report_log prevents double sends.
+    scheduler.add_job(
+        maybe_send_scheduled_report,
+        CronTrigger(day_of_week="mon,thu", hour=7, minute=0, timezone="Europe/Oslo"),
+        id="admin_stats_report",
+        misfire_grace_time=3600,
+        coalesce=True,
+    )
+    scheduler.add_job(maybe_send_scheduled_report, id="admin_stats_report_startup")
     scheduler.start()
 
     yield
@@ -4297,3 +4309,13 @@ def event_stats(
     templates = [{"template": r[0].replace("cv_template_", ""), "count": r[1]} for r in template_rows]
 
     return {"top_actions": top_actions, "daily_users": daily_users, "templates": templates}
+
+
+@app.post("/admin/stats-report/send-now", tags=["admin"])
+def admin_send_stats_report_now(current_user: User = Depends(get_current_user)):
+    if current_user.email != _ADMIN_EMAIL:
+        raise HTTPException(status_code=403, detail="Ikke tilgang")
+    result = send_stats_report("manual")
+    if not result.get("sent"):
+        raise HTTPException(status_code=502, detail=result.get("reason") or "Sending feilet")
+    return result

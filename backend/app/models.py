@@ -229,3 +229,17 @@ class PlayBillingPurchase(Base):
     product_id: Mapped[str] = mapped_column(String(100))
     status: Mapped[str] = mapped_column(String(20), default="verified")
     verified_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class AdminReportLog(Base):
+    """One row per sent admin statistics report. Makes the scheduled report
+    idempotent across restarts/deploys, and each report's period_end is the
+    next report's "since last report" start.
+    """
+
+    __tablename__ = "admin_report_log"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    kind: Mapped[str] = mapped_column(String(20), default="scheduled")  # scheduled | manual
+    period_start: Mapped[datetime] = mapped_column(DateTime)
+    period_end: Mapped[datetime] = mapped_column(DateTime)
+    sent_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
