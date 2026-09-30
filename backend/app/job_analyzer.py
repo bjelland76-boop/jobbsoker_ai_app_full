@@ -1181,19 +1181,33 @@ _MARKERS_SV = ("###PERSONLIGT_BREV", "###CV", "###E_POST")
 _MARKERS_DA = ("###ANSOEGNING", "###CV", "###E_MAIL")
 
 
+def _marker_regex(marker: str) -> re.Pattern:
+    # Tolerates the header variations the model sometimes emits instead of
+    # the exact "###NAME" we ask for: "## NAME", "### NAME", "**###NAME**",
+    # "### **NAME**:", "### Tailored CV" (space instead of underscore, any
+    # case). An exact-string find() missed all of these, so all three fields
+    # silently parsed as "" and got persisted as an empty CV.
+    name = marker.lstrip("#")
+    name_re = r"[ _]".join(re.escape(part) for part in name.split("_"))
+    return re.compile(
+        r"(?:\*\*)?#{2,3}[ \t]*(?:\*\*)?" + name_re + r"\b(?:\*\*)?[ \t]*:?(?:\*\*)?",
+        re.IGNORECASE,
+    )
+
+
 def _parse_marker_output(text: str, language: str) -> dict[str, str]:
     markers = {"en": _MARKERS_EN, "vi": _MARKERS_VI, "sv": _MARKERS_SV, "da": _MARKERS_DA}.get(language, _MARKERS_NO)
     fields = ("cover_letter", "tailored_cv", "email_text")
     result: dict[str, str] = {f: "" for f in fields}
-    positions = [text.find(m) for m in markers]
-    for i, (marker, field) in enumerate(zip(markers, fields)):
-        if positions[i] < 0:
+    matches = [_marker_regex(m).search(text) for m in markers]
+    for i, field in enumerate(fields):
+        if matches[i] is None:
             continue
-        start = positions[i] + len(marker)
+        start = matches[i].end()
         end = len(text)
         for j in range(i + 1, len(markers)):
-            if positions[j] > positions[i]:
-                end = positions[j]
+            if matches[j] is not None and matches[j].start() > matches[i].start():
+                end = matches[j].start()
                 break
         result[field] = text[start:end].strip()
     return result

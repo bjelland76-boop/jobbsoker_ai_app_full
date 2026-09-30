@@ -2933,6 +2933,7 @@ def stream_documents(
         cover_letter = ""
         tailored_cv = ""
         email_text_val = ""
+        raw_chunks: list[str] = []
 
         try:
             for event_type, data in stream_application_texts(
@@ -2946,13 +2947,31 @@ def stream_documents(
                 document_context=doc_context,
             ):
                 if event_type == "chunk":
+                    raw_chunks.append(data)
                     yield f"data: {json.dumps({'t': 'c', 'v': data})}\n\n"
                 elif event_type == "done":
                     cover_letter = data.get("cover_letter", "")
                     tailored_cv = data.get("tailored_cv", "")
                     email_text_val = data.get("email_text", "")
         except Exception as exc:
+            logger.exception(
+                "stream-documents: generation failed job_id=%s profile_id=%s lang=%s",
+                job_id_val, profile_id_val, lang,
+            )
             yield f"data: {json.dumps({'t': 'e', 'msg': str(exc)})}\n\n"
+            return
+
+        # The model answered but no section markers could be parsed (or it
+        # returned nothing). Treat as a failure: no credit consumed, nothing
+        # persisted (would overwrite a previous good CV with ""), no
+        # cv_generation_completed event.
+        if not tailored_cv.strip() and not cover_letter.strip():
+            logger.error(
+                "stream-documents: empty parse result job_id=%s profile_id=%s lang=%s raw_len=%d raw_head=%r",
+                job_id_val, profile_id_val, lang,
+                sum(len(c) for c in raw_chunks), "".join(raw_chunks)[:500],
+            )
+            yield f"data: {json.dumps({'t': 'e', 'msg': 'Genereringen ga tomt innhold. Prøv igjen.'})}\n\n"
             return
 
         with _SessionLocal() as _consume_db:
@@ -3033,6 +3052,10 @@ def stream_documents(
                     fresh_db.commit()
                     pdf_url = f"/generated-applications/{existing.id}/pdf/cover"
             except Exception:
+                logger.exception(
+                    "stream-documents: persist/PDF failed job_id=%s profile_id=%s lang=%s template=%s",
+                    job_id_val, profile_id_val, lang, effective_template,
+                )
                 try:
                     fresh_db.rollback()
                 except Exception:
