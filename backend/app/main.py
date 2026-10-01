@@ -2743,7 +2743,10 @@ def send_generated_application(
     profile_id: int = Query(..., ge=1),
     language: str = Query(default=""),  # "no"|"en"|"vi" override; empty (Fase 1 default) = use stored detected_ad_language
     to_email: str = Query(...),
-    current_user: User | None = Depends(get_current_user_optional),
+    # Login required: this sends email from our domain to an arbitrary
+    # address, and anonymous callers had no rate limit or credit check at
+    # all. The app itself already requires login before sending.
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Fase 4: email the ALREADY generated cover letter + CV for this job and
@@ -2790,12 +2793,18 @@ def send_generated_application(
     if lang not in ("no", "en", "vi", "sv", "da"):
         lang = "no"
 
+    # Only rows with actual content: before the empty-parse fix (38e981c),
+    # a failed generation could store a row with an empty CV and cover
+    # letter, and picking "the latest row" would then email an empty
+    # application with an empty CV PDF.
     generated = db.scalars(
         select(GeneratedApplication)
         .where(
             GeneratedApplication.job_id == job_id,
             GeneratedApplication.profile_id == profile_id,
             GeneratedApplication.language == lang,
+            func.trim(func.coalesce(GeneratedApplication.tailored_cv, "")) != "",
+            func.trim(func.coalesce(GeneratedApplication.cover_letter, "")) != "",
         )
         .order_by(GeneratedApplication.created_at.desc())
     ).first()
@@ -2810,6 +2819,11 @@ def send_generated_application(
     # employer), attachment is the CV-only PDF.
     body_raw = (generated.cover_letter or "").strip() or (generated.email_text or "").strip()
     body = sanitize_employer_text(body_raw)
+    if not body.strip():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Søknaden er tom -- generer CV på nytt før du sender.",
+        )
 
     attachments: list[str] = []
     if generated.cv_pdf_path:
