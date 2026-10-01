@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Alert, Platform, Linking } from 'react-native';
+import { Platform, Linking } from 'react-native';
+import { showAlert } from '../utils/showAlert';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { apiFetch, API, useApp } from '../context/AppContext';
@@ -153,7 +154,7 @@ export default function useJobAnalysis({
     );
 
     if (isNetworkish) {
-      Alert.alert(
+      showAlert(
         t('errors.network_title'),
         t('errors.network_body'),
         [
@@ -164,7 +165,7 @@ export default function useJobAnalysis({
       return;
     }
 
-    Alert.alert(t('errors.generic_title'), t('errors.generic_body'));
+    showAlert(t('errors.generic_title'), t('errors.generic_body'));
   }
 
   // ---------------------------------------------------------------------------
@@ -225,7 +226,7 @@ export default function useJobAnalysis({
       if (activeTab === 'analysis') {
         showAssistantError(e, { retry: () => hideJobAnalysis(jobId) });
       } else {
-        Alert.alert(t('common.error'), errText(e));
+        showAlert(t('common.error'), errText(e));
       }
     }
   }
@@ -253,7 +254,7 @@ export default function useJobAnalysis({
       if (activeTab === 'analysis') {
         showAssistantError(e, { retry: () => openSavedAnalysis(jobId, url) });
       } else {
-        Alert.alert(t('common.error'), errText(e));
+        showAlert(t('common.error'), errText(e));
       }
     }
     setLoading(false);
@@ -288,7 +289,7 @@ export default function useJobAnalysis({
       if (activeTab === 'analysis') {
         showAssistantError(e, { retry: () => moveAnalysisToApplications(jobId) });
       } else {
-        Alert.alert(t('common.error'), errText(e));
+        showAlert(t('common.error'), errText(e));
       }
     }
   }
@@ -318,7 +319,7 @@ export default function useJobAnalysis({
   async function analyzeJob() {
     const hasJobInput = jobInputMode === 'text' ? !!jobText.trim() : !!jobUrl.trim();
     if (!hasJobInput) {
-      Alert.alert(t('errors.missing_url_title'), t('errors.missing_url_body'));
+      showAlert(t('errors.missing_url_title'), t('errors.missing_url_body'));
       return;
     }
 
@@ -412,7 +413,7 @@ export default function useJobAnalysis({
       if (e?.code === 'free_limit_reached') {
         showPaymentModal(e?.data?.limit_type || 'analyse');
       } else {
-        Alert.alert(t('common.error'), errText(e));
+        showAlert(t('common.error'), errText(e));
       }
     } finally {
       setLoading(false);
@@ -479,7 +480,7 @@ export default function useJobAnalysis({
         { method: 'POST' },
       );
       logEvent('application_sent');
-      Alert.alert('OK', t('errors.application_sent', { email: applicationEmail }));
+      showAlert('OK', t('errors.application_sent', { email: applicationEmail }));
     } catch (e) {
       console.error('[Assistant] sendApplication failed', e);
       setGenerationBanner(t('errors.could_not_send'));
@@ -515,7 +516,7 @@ export default function useJobAnalysis({
     }
 
     if (jobInputMode === 'text' ? !jobText.trim() : !jobUrl.trim()) {
-      Alert.alert(t('common.error'), t('errors.paste_job_ad_first'));
+      showAlert(t('common.error'), t('errors.paste_job_ad_first'));
       return;
     }
 
@@ -536,7 +537,7 @@ export default function useJobAnalysis({
           confirmed = window.confirm(`${title}\n\n${body}`);
         } else {
           confirmed = await new Promise(resolve => {
-            Alert.alert(
+            showAlert(
               title,
               body,
               [
@@ -597,6 +598,11 @@ export default function useJobAnalysis({
         const decoder = new TextDecoder();
         let buf = '';
         let accumulated = '';
+        // Backend 'e' event (AI call failed, or it answered with nothing
+        // parseable). Captured here instead of thrown: a throw inside the
+        // per-line try/catch below was swallowed as a "malformed SSE line",
+        // so the actual failure was never surfaced or logged.
+        let streamError = null;
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -615,12 +621,24 @@ export default function useJobAnalysis({
               } else if (ev.t === 'd') {
                 pkg = { cv: ev.cv, coverLetter: ev.coverLetter, pdfUrl: ev.pdfUrl, cvMal: ev.cvMal };
               } else if (ev.t === 'e') {
-                throw new Error(ev.msg || 'Generering feilet');
+                streamError = ev.msg || 'unknown';
               }
             } catch (parseErr) { /* ignore malformed SSE lines */ }
           }
         }
         setStreamingProgress('');
+        if (streamError) {
+          // The backend never charges a credit on an 'e' event (neither the
+          // AI-error nor the empty-output path consumes one), so the banner
+          // can say so. The raw message (may be an English API error) is
+          // only logged, not shown.
+          logEvent('generate_cv_failed', {
+            language: lang, template: cvTemplate, reason: 'stream_error', detail: String(streamError).slice(0, 200),
+          });
+          if (prevPackage) setApplicationPackage(prevPackage);
+          setGenerationBanner(t('errors.generation_failed_no_charge'));
+          return;
+        }
       } else {
         pkg = await apiFetch('/analyze-url-and-send', {
           method: 'POST',
@@ -662,11 +680,10 @@ export default function useJobAnalysis({
 
           if (safePkg.pdfUrl && safePkg.pdfUrl.trim()) {
             await loadDocuments();
-            if (analysis?.job_id) {
-              Alert.alert('OK', 'PDF er generert. Bytt mal under, eller åpne under Dokumenter.');
-            } else {
+            // No "PDF er generert" dialog: the finished result is already on
+            // screen, a blocking confirmation on top of it is just noise.
+            if (!analysis?.job_id) {
               setActiveTab('documents');
-              Alert.alert('OK', 'PDF er generert. Se under Dokumenter.');
             }
           }
 
@@ -674,6 +691,7 @@ export default function useJobAnalysis({
         }
       }
 
+      logEvent('generate_cv_failed', { language: lang, template: cvTemplate, reason: 'empty_package' });
       if (prevPackage) setApplicationPackage(prevPackage);
       setGenerationBanner(failMsg);
     } catch (e) {
@@ -681,6 +699,9 @@ export default function useJobAnalysis({
       if (e?.code === 'free_limit_reached') {
         showPaymentModal(e?.data?.limit_type || 'cv');
       } else {
+        logEvent('generate_cv_failed', {
+          language: lang, template: cvTemplate, reason: 'exception', detail: String(e?.message || e).slice(0, 200),
+        });
         if (prevPackage) setApplicationPackage(prevPackage);
         setGenerationBanner(failMsg);
       }
@@ -826,7 +847,7 @@ export default function useJobAnalysis({
       const st = await apiFetch(`/stats/me?profile_id=${profileId}`);
       setStatsMe(st);
     } catch (e) {
-      Alert.alert(t('common.error'), String(e));
+      showAlert(t('common.error'), String(e));
     }
   }
 
@@ -869,10 +890,10 @@ export default function useJobAnalysis({
       try {
         await Linking.openURL(authedUrl);
       } catch (e) {
-        Alert.alert('Åpne PDF', authedUrl);
+        showAlert('Åpne PDF', authedUrl);
       }
     } catch (e) {
-      Alert.alert(t('common.error'), String(e));
+      showAlert(t('common.error'), String(e));
     }
   }
 
@@ -912,7 +933,7 @@ export default function useJobAnalysis({
       if (e?.code === 'free_limit_reached') {
         showPaymentModal(e?.data?.limit_type || 'cv_analyse');
       } else {
-        Alert.alert(t('common.error'), errText(e));
+        showAlert(t('common.error'), errText(e));
       }
     }
     setCvLoading(false);

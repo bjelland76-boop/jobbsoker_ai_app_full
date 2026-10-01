@@ -1,7 +1,6 @@
 import React from 'react';
-import {
-  View, Text, TouchableOpacity, Pressable, Platform,
-} from 'react-native';
+import { View, Text, TouchableOpacity, Pressable, Platform } from 'react-native';
+import { showAlert } from '../utils/showAlert';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp, apiFetch } from '../context/AppContext';
 import { useProfileContext } from '../context/ProfileContext';
@@ -15,7 +14,7 @@ function AdminStats({ adminStats, adminStatsLoading, setAdminStats, setAdminStat
       setAdminStats(data);
     } catch (e) {
       const { Alert } = require('react-native');
-      Alert.alert('Feil', 'Kunne ikke hente statistikk');
+      showAlert('Feil', 'Kunne ikke hente statistikk');
     } finally {
       setAdminStatsLoading(false);
     }

@@ -238,7 +238,10 @@
     "no_documents": "No documents yet. Use \"Send application\" on the Analysis page to generate a PDF.",
     "open_pdf_full": "Open PDF (Cover letter + CV)",
     "back_to_profile": "Back to Profile",
-    "unknown_application": "Application"
+    "unknown_application": "Application",
+    "login_required_title": "Log in to upload documents",
+    "login_required_body": "Documents are saved to your account, so you need to be logged in to upload them.",
+    "upload_failed": "Could not upload the document"
   },
   "settings": {
     "title": "Email settings",
@@ -448,5 +451,8 @@
     "skip": "Skip",
     "next": "Next",
     "get_started": "Get started"
+  },
+  "errors": {
+    "generation_failed_no_charge": "Generation failed – you were not charged a credit. Please try again."
   }
 }

@@ -1,12 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert, Platform, NativeModules } from 'react-native';
+import { Platform, NativeModules } from 'react-native';
+import { showAlert } from '../utils/showAlert';
 
 import i18n, { loadSavedLanguage, changeLanguage as i18nChange, SUPPORTED } from '../src/i18n';
 import { getCurrentVersionCode } from '../constants/appVersion';
 
 // Keep legacy I18N import for backward compat with any remaining direct usages
 import { I18N } from '../i18n/no';
+// Imported for its side effect: snapshots install state at app start (see file).
+import '../utils/consentMigration';
 
 // ---------------------------------------------------------------------------
 // API setup (module-level so apiFetch works without React)
@@ -332,7 +335,7 @@ export function AppProvider({ children }) {
   }
 
   async function doAuth() {
-    if (!authEmail) { Alert.alert(i18n.t('common.error'), i18n.t('auth.error_no_email')); return; }
+    if (!authEmail) { showAlert(i18n.t('common.error'), i18n.t('auth.error_no_email')); return; }
     setAuthLoading(true);
     try {
       if (!codeSent) {
@@ -344,10 +347,10 @@ export function AppProvider({ children }) {
         setCodeSent(true);
         setAuthCode('');
         setResendCooldown(30);
-        Alert.alert(i18n.t('auth.code_sent_title'), i18n.t('auth.code_sent_body'));
+        showAlert(i18n.t('auth.code_sent_title'), i18n.t('auth.code_sent_body'));
       } else {
         if (!authCode || String(authCode).trim().length < 4) {
-          Alert.alert(i18n.t('common.error'), i18n.t('auth.error_no_code'));
+          showAlert(i18n.t('common.error'), i18n.t('auth.error_no_code'));
           setAuthLoading(false);
           return;
         }
@@ -361,8 +364,8 @@ export function AppProvider({ children }) {
         await applyAuthToken(token);
       }
     } catch (e) {
-      if (e.status === 429) Alert.alert(i18n.t('common.too_many_attempts_title'), i18n.t('common.too_many_attempts_body'));
-      else Alert.alert(i18n.t('common.error'), errText(e));
+      if (e.status === 429) showAlert(i18n.t('common.too_many_attempts_title'), i18n.t('common.too_many_attempts_body'));
+      else showAlert(i18n.t('common.error'), errText(e));
     }
     setAuthLoading(false);
   }
@@ -380,7 +383,7 @@ export function AppProvider({ children }) {
       if (!token) throw new Error('Mangler token fra server');
       await applyAuthToken(token);
     } catch (e) {
-      Alert.alert(i18n.t('common.error'), errText(e));
+      showAlert(i18n.t('common.error'), errText(e));
     }
     setGoogleAuthLoading(false);
   }
@@ -397,10 +400,10 @@ export function AppProvider({ children }) {
     const doDelete = async () => {
       try {
         await apiFetch('/me', { method: 'DELETE' });
-        Alert.alert('Slettet', 'Kontoen og alle data er slettet.');
+        showAlert('Slettet', 'Kontoen og alle data er slettet.');
         await logout();
       } catch (e) {
-        Alert.alert('Feil', errText(e));
+        showAlert('Feil', errText(e));
       }
     };
     if (Platform.OS === 'web') {
@@ -408,7 +411,7 @@ export function AppProvider({ children }) {
       if (window.confirm('Slett konto og data\n\n' + msg)) await doDelete();
       return;
     }
-    Alert.alert('Slett konto og data', msg, [
+    showAlert('Slett konto og data', msg, [
       { text: 'Avbryt', style: 'cancel' },
       { text: 'Slett', style: 'destructive', onPress: doDelete },
     ]);

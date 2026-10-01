@@ -260,7 +260,10 @@
     "no_documents": "Ingen dokumenter ennå. Bruk \"Send søknad\" på Analyse-siden for å generere PDF.",
     "open_pdf_full": "Åpne PDF (Søknad + CV)",
     "back_to_profile": "Tilbake til Profil",
-    "unknown_application": "Søknad"
+    "unknown_application": "Søknad",
+    "login_required_title": "Logg inn for å laste opp dokumenter",
+    "login_required_body": "Dokumenter lagres på kontoen din, så du må være innlogget for å laste dem opp.",
+    "upload_failed": "Kunne ikke laste opp dokumentet"
   },
   "settings": {
     "title": "E-postinnstillinger",
@@ -536,6 +539,7 @@
     "paste_job_ad_first": "Lim inn jobbannonse først.",
     "save_profile_before_sending": "Lagre profilen før sending",
     "enter_email_to_send": "Skriv inn e-postadressen din for å sende søknaden.",
-    "save_profile_first": "Lagre profilen først"
+    "save_profile_first": "Lagre profilen først",
+    "generation_failed_no_charge": "Generering feilet – du ble ikke trukket for kreditt. Prøv igjen."
   }
 }

@@ -239,7 +239,10 @@
     "no_documents": "Weli dukumeenti ma jiraan. Isticmaal \"Dir codsiga\" ee bogga Falanqaynta si aad u abuurto PDF.",
     "open_pdf_full": "Fur PDF (Codsi + CV)",
     "back_to_profile": "Ku noqo Profaylka",
-    "unknown_application": "Codsi"
+    "unknown_application": "Codsi",
+    "login_required_title": "Gal si aad dukumentiyo u soo geliso",
+    "login_required_body": "Dukumentiyada waxaa lagu kaydiyaa akoonkaaga, sidaa darteed waa inaad gashaa si aad u soo geliso.",
+    "upload_failed": "Dukumentiga lama soo gelin karin"
   },
   "settings": {
     "title": "Dejinta iimeelka",
@@ -449,5 +452,8 @@
     "skip": "Bood",
     "next": "Xiga",
     "get_started": "Bilow"
+  },
+  "errors": {
+    "generation_failed_no_charge": "Abuuristu way fashilantay – laguma jarin wax dhibco ah. Fadlan isku day mar kale."
   }
 }

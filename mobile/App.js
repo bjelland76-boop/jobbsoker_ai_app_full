@@ -1,18 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  SafeAreaView,
-  ScrollView,
-  KeyboardAvoidingView,
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Pressable,
-  Alert,
-  Linking,
-  Platform,
-} from 'react-native';
+import { SafeAreaView, ScrollView, KeyboardAvoidingView, View, Text, TextInput, TouchableOpacity, Pressable, Linking, Platform } from 'react-native';
+import { showAlert } from './utils/showAlert';
 import { Capacitor } from '@capacitor/core';
 import { CapacitorShareTarget } from '@capgo/capacitor-share-target';
 
@@ -402,7 +391,7 @@ function AppContent() {
       setInterviewError('');
       setInterviewActiveJobId(jobId);
     } catch (e) {
-      Alert.alert('Feil', errText(e));
+      showAlert('Feil', errText(e));
     }
   }
 
@@ -420,7 +409,7 @@ function AppContent() {
       }
       return;
     }
-    Alert.alert(
+    showAlert(
       t('interview.end_confirm_title'),
       t('interview.end_confirm_body'),
       [
@@ -454,7 +443,7 @@ function AppContent() {
       return;
     }
 
-    Alert.alert(
+    showAlert(
       t('interview.end_confirm_title'),
       t('interview.end_confirm_body'),
       [
@@ -592,9 +581,9 @@ function AppContent() {
       setNotificationEmail(saved?.notification_email || '');
       setAutoEmail(saved?.auto_email !== false);
 
-      Alert.alert('Lagret', 'E-postinnstillinger er lagret.');
+      showAlert('Lagret', 'E-postinnstillinger er lagret.');
     } catch (e) {
-      Alert.alert('Feil', String(e));
+      showAlert('Feil', String(e));
     }
     setSettingsSaving(false);
   }
@@ -622,7 +611,7 @@ function AppContent() {
 
   useEffect(() => {
     if (!showInactivityReminder) return;
-    Alert.alert(
+    showAlert(
       'Vi savner deg!',
       'Du har ikke brukt ReadyCV på en stund — husk at du kan avslutte abonnementet når som helst under Profil → Innstillinger',
       [{ text: 'OK', onPress: dismissInactivityReminder }],
@@ -886,7 +875,7 @@ function AppContent() {
               try {
                 await Linking.openURL(url);
               } catch (e) {
-                Alert.alert('E-post', FEEDBACK_EMAIL);
+                showAlert('E-post', FEEDBACK_EMAIL);
               }
             }}
           >

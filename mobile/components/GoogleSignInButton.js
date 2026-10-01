@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Platform, Text, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, Image, Platform, Text, TouchableOpacity } from 'react-native';
+import { showAlert } from '../utils/showAlert';
 import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
@@ -111,7 +112,7 @@ export default function GoogleSignInButton() {
         (token) => { applyAuthToken(token); },
         (reason) => {
           if (reason === 'access_denied') return; // user cancelled — not an error
-          Alert.alert(t('common.error'), t('auth.google_signin_failed'));
+          showAlert(t('common.error'), t('auth.google_signin_failed'));
         },
       );
       return;
@@ -155,7 +156,7 @@ export default function GoogleSignInButton() {
         }).toString();
         await Browser.open({ url: authUrl });
       } catch (e) {
-        Alert.alert(t('common.error'), errText(e));
+        showAlert(t('common.error'), errText(e));
       }
       return;
     }
@@ -164,11 +165,11 @@ export default function GoogleSignInButton() {
       window.google.accounts.id.prompt((notification) => {
         const skipped = notification?.isNotDisplayed?.() || notification?.isSkippedMoment?.();
         if (skipped) {
-          Alert.alert(t('common.error'), t('auth.google_signin_failed'));
+          showAlert(t('common.error'), t('auth.google_signin_failed'));
         }
       });
     } catch (e) {
-      Alert.alert(t('common.error'), errText(e));
+      showAlert(t('common.error'), errText(e));
     }
   }
 

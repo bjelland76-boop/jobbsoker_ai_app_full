@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import { showAlert } from '../utils/showAlert';
+import { consentMigrationDone } from '../utils/consentMigration';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 
@@ -474,7 +476,7 @@ export default function useProfile({ onProfileSaved } = {}) {
       const result = await apiFetch('/profile/import-cv', { method: 'POST', body: formData });
       setCvImportPreview(result);
     } catch (e) {
-      Alert.alert('Feil', 'Kunne ikke lese CV-en: ' + (e.message || 'Ukjent feil'));
+      showAlert('Feil', 'Kunne ikke lese CV-en: ' + (e.message || 'Ukjent feil'));
     } finally {
       setCvImportLoading(false);
     }
@@ -500,7 +502,7 @@ export default function useProfile({ onProfileSaved } = {}) {
       const result = await apiFetch('/profile/import-cv', { method: 'POST', body: formData });
       setCvImportPreview(result);
     } catch (e) {
-      Alert.alert('Feil', 'Kunne ikke lese CV-en: ' + (e.message || 'Ukjent feil'));
+      showAlert('Feil', 'Kunne ikke lese CV-en: ' + (e.message || 'Ukjent feil'));
     } finally {
       setCvImportLoading(false);
     }
@@ -519,14 +521,14 @@ export default function useProfile({ onProfileSaved } = {}) {
       const asset = result.assets[0];
       await _sendCvFile({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType, nativeFile: asset.file });
     } catch (e) {
-      Alert.alert('Feil', 'Kunne ikke velge fil: ' + (e.message || 'Ukjent feil'));
+      showAlert('Feil', 'Kunne ikke velge fil: ' + (e.message || 'Ukjent feil'));
     }
   }
 
   async function importCvFromCamera() {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Tillatelse mangler', 'Kameratilgang er nødvendig for å ta bilde av CV-en.');
+      showAlert('Tillatelse mangler', 'Kameratilgang er nødvendig for å ta bilde av CV-en.');
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -541,7 +543,7 @@ export default function useProfile({ onProfileSaved } = {}) {
   async function importCvFromGallery() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Tillatelse mangler', 'Galleritilgang er nødvendig for å velge bilde av CV-en.');
+      showAlert('Tillatelse mangler', 'Galleritilgang er nødvendig for å velge bilde av CV-en.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -598,7 +600,7 @@ export default function useProfile({ onProfileSaved } = {}) {
   // ---------------------------------------------------------------------------
   async function saveProfile({ silent = false, override = {} } = {}) {
     if (!name) {
-      Alert.alert('Feil', 'Navn må være utfylt');
+      showAlert('Feil', 'Navn må være utfylt');
       return;
     }
 
@@ -649,10 +651,10 @@ export default function useProfile({ onProfileSaved } = {}) {
       }
       if (onProfileSaved) onProfileSaved();
       if (!silent) {
-        Alert.alert('Profil lagret', 'Din profil er lagret til backend.');
+        showAlert('Profil lagret', 'Din profil er lagret til backend.');
       }
     } catch (e) {
-      Alert.alert('Feil', errText(e));
+      showAlert('Feil', errText(e));
     }
 
     setSavingProfile(false);
@@ -735,6 +737,7 @@ export default function useProfile({ onProfileSaved } = {}) {
       if (!profileId) return;
 
       try {
+        await consentMigrationDone;
         const prompted = await AsyncStorage.getItem('analyticsConsentPrompted');
 
         const legacy = await AsyncStorage.getItem('analyticsConsent');
@@ -755,9 +758,32 @@ export default function useProfile({ onProfileSaved } = {}) {
           return;
         }
 
-        Alert.alert(
-          'Anonym statistikk',
-          'Vil du tillate at appen samler inn anonym statistikk (kun status på søknader/intervju/tilbud) for å se om appen virker?\n\nDu kan endre dette når som helst i Profil.',
+        const consentTitle = 'Anonym statistikk';
+        const consentBody = 'Vil du tillate at appen samler inn anonym statistikk (kun status på søknader/intervju/tilbud) for å se om appen virker?\n\nDu kan endre dette når som helst i Profil.';
+        const answer = async (v) => {
+          if (!mounted) return;
+          setConsentAnalytics(v);
+          await AsyncStorage.setItem('analyticsConsentPrompted', 'yes');
+          await saveProfile({ silent: true, override: { consent_analytics: v } });
+        };
+
+        if (Platform.OS === 'web') {
+          // window.confirm() has only OK/Cancel, so the "read the privacy
+          // policy" button becomes a link in the text instead.
+          showAlert(
+            consentTitle,
+            `${consentBody}\n\nPersonvern: ${PRIVACY_URL}\n\nOK = Ja, Avbryt = Nei`,
+            [
+              { text: 'Nei', style: 'cancel', onPress: () => answer(false) },
+              { text: 'Ja', onPress: () => answer(true) },
+            ]
+          );
+          return;
+        }
+
+        showAlert(
+          consentTitle,
+          consentBody,
           [
             {
               text: t('privacyRead'),
@@ -765,31 +791,12 @@ export default function useProfile({ onProfileSaved } = {}) {
                 try {
                   await require('react-native').Linking.openURL(PRIVACY_URL);
                 } catch (e) {
-                  Alert.alert('Lenke', PRIVACY_URL);
+                  showAlert('Lenke', PRIVACY_URL);
                 }
               },
             },
-            {
-              text: 'Nei',
-              style: 'cancel',
-              onPress: async () => {
-                const v = false;
-                if (!mounted) return;
-                setConsentAnalytics(v);
-                await AsyncStorage.setItem('analyticsConsentPrompted', 'yes');
-                await saveProfile({ silent: true, override: { consent_analytics: v } });
-              },
-            },
-            {
-              text: 'Ja',
-              onPress: async () => {
-                const v = true;
-                if (!mounted) return;
-                setConsentAnalytics(v);
-                await AsyncStorage.setItem('analyticsConsentPrompted', 'yes');
-                await saveProfile({ silent: true, override: { consent_analytics: v } });
-              },
-            },
+            { text: 'Nei', style: 'cancel', onPress: () => answer(false) },
+            { text: 'Ja', onPress: () => answer(true) },
           ]
         );
       } catch (e) {
@@ -812,13 +819,30 @@ export default function useProfile({ onProfileSaved } = {}) {
     if (!pendingDocFile) return;
     const file = pendingDocFile;
     setPendingDocFile(null);
+    // The backend deliberately doesn't store anonymous uploads (it only
+    // returns the extracted text), so an anonymous upload would look like it
+    // worked and then vanish. Say so up front instead.
+    if (!authTokenState) {
+      showAlert(t('documents.login_required_title'), t('documents.login_required_body'));
+      return;
+    }
     setDocsUploading(true);
     try {
       const formData = new FormData();
-      const uri = file.assets ? file.assets[0].uri : file.uri;
-      const fileName = file.assets ? (file.assets[0].name || 'dokument') : (file.name || 'dokument');
-      const mimeType = file.assets ? (file.assets[0].mimeType || 'application/octet-stream') : (file.mimeType || 'application/octet-stream');
-      formData.append('file', { uri, name: fileName, type: mimeType });
+      const asset = file.assets ? file.assets[0] : file;
+      const uri = asset.uri;
+      const fileName = asset.name || 'dokument';
+      const mimeType = asset.mimeType || 'application/octet-stream';
+      if (Platform.OS === 'web') {
+        // The RN-native { uri, name, type } object only works in a true
+        // native build; in the web/Capacitor build it gets stringified, the
+        // file part is missing and the backend answers 422. Send a real
+        // File/Blob, same as the CV import (_sendCvBlob) does.
+        const blob = asset.file || (await (await fetch(uri)).blob());
+        formData.append('file', blob, fileName);
+      } else {
+        formData.append('file', { uri, name: fileName, type: mimeType });
+      }
       formData.append('document_type', documentType);
 
       const resp = await fetch(`${API}/profile/documents`, {
@@ -828,12 +852,16 @@ export default function useProfile({ onProfileSaved } = {}) {
       });
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
-        throw new Error(err.detail || 'Opplasting feilet');
+        // FastAPI validation errors (422) carry `detail` as an array of
+        // objects -- don't let that turn into "[object Object]".
+        const detail = typeof err.detail === 'string' ? err.detail : '';
+        throw new Error(detail || t('documents.upload_failed'));
       }
       await loadProfileDocuments();
       logEvent('document_uploaded', { type: documentType });
     } catch (e) {
-      Alert.alert('Feil', e.message || 'Kunne ikke laste opp dokumentet');
+      logEvent('document_upload_failed', { type: documentType, detail: String(e?.message || e).slice(0, 200) });
+      showAlert(t('common.error'), e.message || t('documents.upload_failed'));
     }
     setDocsUploading(false);
   }
@@ -844,14 +872,14 @@ export default function useProfile({ onProfileSaved } = {}) {
         await apiFetch(`/profile/documents/${docId}`, { method: 'DELETE' });
         setProfileDocsList((prev) => prev.filter((d) => d.id !== docId));
       } catch (e) {
-        Alert.alert('Feil', 'Kunne ikke slette dokumentet');
+        showAlert('Feil', 'Kunne ikke slette dokumentet');
       }
     };
     if (Platform.OS === 'web') {
       if (window.confirm('Slette dette dokumentet?')) await doDelete();
       return;
     }
-    Alert.alert('Slette dokument', 'Er du sikker?', [
+    showAlert('Slette dokument', 'Er du sikker?', [
       { text: 'Avbryt', style: 'cancel' },
       { text: 'Slett', style: 'destructive', onPress: doDelete },
     ]);
@@ -867,7 +895,7 @@ export default function useProfile({ onProfileSaved } = {}) {
       setPendingDocFile(result);
       setShowDocTypeModal(true);
     } catch (e) {
-      Alert.alert('Feil', 'Kunne ikke åpne filvelger');
+      showAlert('Feil', 'Kunne ikke åpne filvelger');
     }
   }
 
@@ -878,7 +906,7 @@ export default function useProfile({ onProfileSaved } = {}) {
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm?.granted) {
-        Alert.alert('Tillatelse', 'Du må gi tilgang til bildebiblioteket for å velge bilde.');
+        showAlert('Tillatelse', 'Du må gi tilgang til bildebiblioteket for å velge bilde.');
         return;
       }
 
@@ -893,7 +921,7 @@ export default function useProfile({ onProfileSaved } = {}) {
       if (res.canceled) return;
       const asset = (res.assets && res.assets[0]) ? res.assets[0] : null;
       if (!asset || !asset.base64) {
-        Alert.alert('Feil', 'Kunne ikke lese bilde (mangler base64).');
+        showAlert('Feil', 'Kunne ikke lese bilde (mangler base64).');
         return;
       }
 
@@ -905,7 +933,7 @@ export default function useProfile({ onProfileSaved } = {}) {
         saveProfile({ silent: true, override: { photo_data: dataUri } });
       }
     } catch (e) {
-      Alert.alert('Feil', String(e));
+      showAlert('Feil', String(e));
     }
   }
 

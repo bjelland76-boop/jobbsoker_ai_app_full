@@ -260,7 +260,10 @@
     "no_documents": "Inga dokument än. Använd \"Skicka ansökan\" på analyssidan för att generera PDF.",
     "open_pdf_full": "Öppna PDF (Ansökan + CV)",
     "back_to_profile": "Tillbaka till Profil",
-    "unknown_application": "Ansökan"
+    "unknown_application": "Ansökan",
+    "login_required_title": "Logga in för att ladda upp dokument",
+    "login_required_body": "Dokument sparas på ditt konto, så du måste vara inloggad för att ladda upp dem.",
+    "upload_failed": "Det gick inte att ladda upp dokumentet"
   },
   "settings": {
     "title": "E-postinställningar",
@@ -536,6 +539,7 @@
     "paste_job_ad_first": "Klistra in jobbannons först.",
     "save_profile_before_sending": "Spara profilen innan du skickar",
     "enter_email_to_send": "Ange din e-postadress för att skicka ansökan.",
-    "save_profile_first": "Spara profilen först"
+    "save_profile_first": "Spara profilen först",
+    "generation_failed_no_charge": "Genereringen misslyckades – du debiterades ingen kredit. Försök igen."
   }
 }

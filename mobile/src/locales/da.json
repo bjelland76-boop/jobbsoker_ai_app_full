@@ -260,7 +260,10 @@
     "no_documents": "Ingen dokumenter endnu. Brug \"Send ansøgning\" på analysesiden for at generere PDF.",
     "open_pdf_full": "Åbn PDF (ansøgning + CV)",
     "back_to_profile": "Tilbage til Profil",
-    "unknown_application": "Ansøgning"
+    "unknown_application": "Ansøgning",
+    "login_required_title": "Log ind for at uploade dokumenter",
+    "login_required_body": "Dokumenter gemmes på din konto, så du skal være logget ind for at uploade dem.",
+    "upload_failed": "Dokumentet kunne ikke uploades"
   },
   "settings": {
     "title": "E-mailindstillinger",
@@ -536,6 +539,7 @@
     "paste_job_ad_first": "Indsæt jobannonce først.",
     "save_profile_before_sending": "Gem profilen før afsendelse",
     "enter_email_to_send": "Indtast din e-mailadresse for at sende ansøgningen.",
-    "save_profile_first": "Gem profilen først"
+    "save_profile_first": "Gem profilen først",
+    "generation_failed_no_charge": "Genereringen mislykkedes – du blev ikke trukket for en kredit. Prøv igen."
   }
 }

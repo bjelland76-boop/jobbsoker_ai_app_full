@@ -238,7 +238,10 @@
     "no_documents": "Dokumentų dar nėra. Naudokite „Siųsti paraišką“ Analizės puslapyje, kad sugeneruotumėte PDF.",
     "open_pdf_full": "Atidaryti PDF (Paraiška + CV)",
     "back_to_profile": "Atgal į Profilį",
-    "unknown_application": "Paraiška"
+    "unknown_application": "Paraiška",
+    "login_required_title": "Prisijunkite, kad galėtumėte įkelti dokumentus",
+    "login_required_body": "Dokumentai saugomi jūsų paskyroje, todėl norėdami juos įkelti turite būti prisijungę.",
+    "upload_failed": "Nepavyko įkelti dokumento"
   },
   "settings": {
     "title": "El. pašto nustatymai",
@@ -448,5 +451,8 @@
     "skip": "Praleisti",
     "next": "Kitas",
     "get_started": "Pradėti"
+  },
+  "errors": {
+    "generation_failed_no_charge": "Generuoti nepavyko – kreditas nebuvo nuskaičiuotas. Bandykite dar kartą."
   }
 }

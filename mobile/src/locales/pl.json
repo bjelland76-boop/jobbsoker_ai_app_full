@@ -238,7 +238,10 @@
     "no_documents": "Brak dokumentów. Użyj \"Wyślij podanie\" na stronie analizy, aby wygenerować PDF.",
     "open_pdf_full": "Otwórz PDF (List + CV)",
     "back_to_profile": "Wróć do Profilu",
-    "unknown_application": "Podanie"
+    "unknown_application": "Podanie",
+    "login_required_title": "Zaloguj się, aby przesłać dokumenty",
+    "login_required_body": "Dokumenty są zapisywane na Twoim koncie, dlatego musisz być zalogowany, aby je przesłać.",
+    "upload_failed": "Nie udało się przesłać dokumentu"
   },
   "settings": {
     "title": "Ustawienia e-mail",
@@ -448,5 +451,8 @@
     "skip": "Pomiń",
     "next": "Dalej",
     "get_started": "Zaczynamy"
+  },
+  "errors": {
+    "generation_failed_no_charge": "Generowanie nie powiodło się – nie pobrano kredytu. Spróbuj ponownie."
   }
 }

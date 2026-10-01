@@ -238,7 +238,10 @@
     "no_documents": "لا توجد مستندات بعد. استخدم \"إرسال الطلب\" في صفحة التحليل لإنشاء PDF.",
     "open_pdf_full": "فتح PDF (الطلب + السيرة الذاتية)",
     "back_to_profile": "العودة إلى الملف الشخصي",
-    "unknown_application": "طلب"
+    "unknown_application": "طلب",
+    "login_required_title": "سجّل الدخول لرفع المستندات",
+    "login_required_body": "تُحفظ المستندات في حسابك، لذا يجب أن تكون مسجّل الدخول لرفعها.",
+    "upload_failed": "تعذّر رفع المستند"
   },
   "settings": {
     "title": "إعدادات البريد الإلكتروني",
@@ -448,5 +451,8 @@
     "skip": "تخطي",
     "next": "التالي",
     "get_started": "ابدأ"
+  },
+  "errors": {
+    "generation_failed_no_charge": "فشل الإنشاء – لم يتم خصم أي رصيد منك. يرجى المحاولة مرة أخرى."
   }
 }

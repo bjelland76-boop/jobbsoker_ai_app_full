@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View, Text, TextInput, TouchableOpacity, Pressable,
-  Switch, Modal, ScrollView, ActivityIndicator, Image, Linking, Alert,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Pressable, Switch, Modal, ScrollView, ActivityIndicator, Image, Linking } from 'react-native';
+import { showAlert } from '../utils/showAlert';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useApp } from '../context/AppContext';
 import { useProfileContext } from '../context/ProfileContext';
@@ -1348,7 +1346,7 @@ export default function ProfileScreen({ onManageSubscription }) {
               try {
                 await Linking.openURL(PRIVACY_URL);
               } catch (e) {
-                Alert.alert('Lenke', PRIVACY_URL);
+                showAlert('Lenke', PRIVACY_URL);
               }
             }}
           >
@@ -1373,7 +1371,7 @@ export default function ProfileScreen({ onManageSubscription }) {
               try {
                 await Linking.openURL(url);
               } catch (e) {
-                Alert.alert('E-post', FEEDBACK_EMAIL);
+                showAlert('E-post', FEEDBACK_EMAIL);
               }
             }}
           >

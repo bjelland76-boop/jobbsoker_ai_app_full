@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View, Text, TextInput, TouchableOpacity, Alert, Platform,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Platform } from 'react-native';
+import { showAlert } from '../utils/showAlert';
 import { useApp, apiFetch } from '../context/AppContext';
 import GoogleSignInButton from '../components/GoogleSignInButton';
 
@@ -228,12 +227,12 @@ export default function AuthScreen() {
                 });
                 setAuthCode('');
                 setResendCooldown(30);
-                Alert.alert(t('auth.code_sent_title'), t('auth.code_sent_body'));
+                showAlert(t('auth.code_sent_title'), t('auth.code_sent_body'));
               } catch (e) {
                 if (e.status === 429) {
-                  Alert.alert(t('common.too_many_attempts_title'), t('common.too_many_attempts_body'));
+                  showAlert(t('common.too_many_attempts_title'), t('common.too_many_attempts_body'));
                 } else {
-                  Alert.alert(t('common.error'), errText(e));
+                  showAlert(t('common.error'), errText(e));
                 }
               }
               setResendLoading(false);

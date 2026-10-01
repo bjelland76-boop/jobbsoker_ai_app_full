@@ -238,7 +238,10 @@
     "no_documents": "Chưa có tài liệu. Dùng \"Gửi đơn xin việc\" trên trang Phân tích để tạo PDF.",
     "open_pdf_full": "Mở PDF (Thư xin việc + CV)",
     "back_to_profile": "Quay lại Hồ sơ",
-    "unknown_application": "Đơn xin việc"
+    "unknown_application": "Đơn xin việc",
+    "login_required_title": "Đăng nhập để tải lên tài liệu",
+    "login_required_body": "Tài liệu được lưu vào tài khoản của bạn, vì vậy bạn cần đăng nhập để tải lên.",
+    "upload_failed": "Không thể tải lên tài liệu"
   },
   "settings": {
     "title": "Cài đặt email",
@@ -449,5 +452,8 @@
     "skip": "Bỏ qua",
     "next": "Tiếp theo",
     "get_started": "Bắt đầu"
+  },
+  "errors": {
+    "generation_failed_no_charge": "Tạo hồ sơ thất bại – bạn không bị trừ lượt sử dụng. Vui lòng thử lại."
   }
 }
