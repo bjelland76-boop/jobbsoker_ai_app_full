@@ -101,18 +101,31 @@ def main() -> int:
 
         print("[OK] Abonnement (1_maanedsabonnement): aktiv status og expiry hentet korrekt fra Google")
 
-        # 2) Idempotency: replaying the SAME purchase_token must not call
-        #    Google again and must not change subscription_end.
-        with patch("app.main.requests.get", return_value=sub_active_resp) as mock_get2:
+        # 2) Replaying the SAME subscription purchase_token re-reads it from
+        #    Google (renewals keep the token, only expiryTime moves) instead
+        #    of short-circuiting -- but never records a second row.
+        renewed_dt = expiry_dt + timedelta(days=30)
+        sub_renewed_resp = _FakeResp(200, {
+            "subscriptionState": "SUBSCRIPTION_STATE_ACTIVE",
+            "lineItems": [{"expiryTime": renewed_dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")}],
+        })
+        with patch("app.main.requests.get", return_value=sub_renewed_resp) as mock_get2:
             r2 = client.post(
                 "/play-billing/verify-purchase",
                 json={"purchase_token": "tok_sub_1", "product_id": "1_maanedsabonnement"},
                 headers={"Authorization": f"Bearer {token}"},
             )
         _assert(r2.status_code == 200, "replayed verify-purchase should still return 200")
-        _assert(not mock_get2.called, "a known purchase_token must short-circuit before ever calling Google again")
+        _assert(mock_get2.called, "a known SUBSCRIPTION token must be re-read from Google (renewal)")
+        db.expire_all()
+        profile = db.get(Profile, profile_id)
+        _assert(abs((profile.subscription_end - renewed_dt).total_seconds()) < 2, "replay must pick up the renewed expiryTime")
+        rows = db.scalars(
+            __import__("sqlalchemy").select(PlayBillingPurchase).where(PlayBillingPurchase.purchase_token == "tok_sub_1")
+        ).all()
+        _assert(len(rows) == 1, f"replay must not record a second row, got {len(rows)}")
 
-        print("[OK] Idempotent ved gjentatt kall med samme purchase_token (ingen nytt Google-kall)")
+        print("[OK] Gjentatt kall med samme abonnement-token henter fornyet expiry fra Google, ingen ny rad")
 
         # 3) One-time pass product ("7dager"), Google reports purchaseState=0
         #    (purchased) -> subscription_status="active", subscription_end

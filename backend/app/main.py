@@ -398,7 +398,11 @@ def _expire_stale_subscription(db: Session, profile: Profile, *, commit: bool = 
         and profile.subscription_end is not None
         and profile.subscription_end < datetime.utcnow()
     ):
-        profile.subscription_status = "expired"
+        # A Play subscription that just passed its end has most likely
+        # renewed (same token, new expiryTime) -- ask Google before expiring.
+        _refresh_play_subscription(db, profile)
+        if profile.subscription_status == "active" and profile.subscription_end < datetime.utcnow():
+            profile.subscription_status = "expired"
         if commit:
             db.commit()
 
@@ -761,6 +765,14 @@ async def lifespan(app: FastAPI):
         coalesce=True,
     )
     scheduler.add_job(maybe_send_scheduled_report, id="admin_stats_report_startup")
+    # Play subscription renewals (no RTDN yet): hourly, plus once at startup.
+    scheduler.add_job(
+        refresh_play_subscriptions,
+        "interval",
+        hours=1,
+        next_run_time=datetime.utcnow(),
+        id="play_subscription_refresh",
+    )
     scheduler.start()
 
     yield
@@ -3468,14 +3480,24 @@ _PLAY_PRODUCT_TYPES = {
     "7dager": "one_time_pass",
 }
 
-_PLAY_SUBSCRIPTION_STATE_MAP = {
-    "SUBSCRIPTION_STATE_ACTIVE": "active",
-    "SUBSCRIPTION_STATE_IN_GRACE_PERIOD": "past_due",
-    "SUBSCRIPTION_STATE_ON_HOLD": "past_due",
-    "SUBSCRIPTION_STATE_CANCELED": "cancelled",
-    "SUBSCRIPTION_STATE_EXPIRED": "cancelled",
-    "SUBSCRIPTION_STATE_PAUSED": "cancelled",
+# subscriptionsv2 states that still entitle the user to access:
+# - IN_GRACE_PERIOD: Google is retrying a failed renewal payment; Google's
+#   policy requires keeping access during the grace period.
+# - CANCELED: auto-renew turned off, but already paid until expiryTime (in
+#   the v2 API this is NOT "access revoked" -- that's EXPIRED).
+_PLAY_SUB_ACCESS_STATES = {
+    "SUBSCRIPTION_STATE_ACTIVE",
+    "SUBSCRIPTION_STATE_IN_GRACE_PERIOD",
+    "SUBSCRIPTION_STATE_CANCELED",
 }
+# Our subscription_status for the states that don't grant access. Anything
+# unlisted (PENDING, PENDING_PURCHASE_CANCELED, UNSPECIFIED) -> "cancelled".
+_PLAY_SUB_NO_ACCESS_STATUS = {
+    "SUBSCRIPTION_STATE_ON_HOLD": "past_due",
+    "SUBSCRIPTION_STATE_PAUSED": "cancelled",
+    "SUBSCRIPTION_STATE_EXPIRED": "expired",
+}
+_PLAY_SUBSCRIPTION_PRODUCTS = {pid for pid, kind in _PLAY_PRODUCT_TYPES.items() if kind == "subscription"}
 
 
 def _parse_play_rfc3339(value: str) -> datetime:
@@ -3483,6 +3505,147 @@ def _parse_play_rfc3339(value: str) -> datetime:
     returns (e.g. expiryTime) into a naive UTC datetime, matching how the
     rest of this file stores subscription_end."""
     return datetime.strptime(value.split(".")[0].rstrip("Z"), "%Y-%m-%dT%H:%M:%S")
+
+
+class PlayApiError(Exception):
+    """Play Developer API unreachable or returned non-200."""
+
+    def __init__(self, message: str, status_code: int | None = None):
+        super().__init__(message)
+        self.status_code = status_code
+
+
+def _fetch_play_subscription(purchase_token: str, access_token: str) -> dict:
+    url = (
+        f"https://androidpublisher.googleapis.com/androidpublisher/v3/applications/"
+        f"{PLAY_PACKAGE_NAME}/purchases/subscriptionsv2/tokens/{purchase_token}"
+    )
+    try:
+        resp = requests.get(url, headers={"Authorization": f"Bearer {access_token}"}, timeout=10)
+    except Exception as e:
+        raise PlayApiError(f"Kunne ikke nå Google Play: {e}") from e
+    if resp.status_code != 200:
+        logger.error("[play-billing] Play Developer API %s: %s", resp.status_code, resp.text[:2000])
+        raise PlayApiError(
+            f"Play Developer API avviste kjøpet ({resp.status_code}): {resp.text[:300]}",
+            status_code=resp.status_code,
+        )
+    return resp.json()
+
+
+def _play_subscription_entitlement(body: dict, now: datetime) -> tuple[bool, str, datetime | None]:
+    """(grants_access, our_status, subscription_end) from a subscriptionsv2
+    response. Google's state + expiryTime are the source of truth; this is
+    re-fetched on every renewal check, so renewals simply move expiryTime."""
+    state = body.get("subscriptionState") or ""
+    expiries = [
+        _parse_play_rfc3339(item["expiryTime"])
+        for item in (body.get("lineItems") or [])
+        if item.get("expiryTime")
+    ]
+    expiry = max(expiries) if expiries else None
+
+    if state in _PLAY_SUB_ACCESS_STATES:
+        if state == "SUBSCRIPTION_STATE_CANCELED" and (expiry is None or expiry <= now):
+            return False, "expired", expiry
+        # Google says entitled but expiryTime is missing/past (can happen
+        # around grace-period boundaries): grant a short window; the hourly
+        # refresh job re-checks well before it runs out.
+        end = expiry if expiry and expiry > now else now + timedelta(days=1)
+        return True, "active", end
+    return False, _PLAY_SUB_NO_ACCESS_STATUS.get(state, "cancelled"), expiry
+
+
+def _apply_play_entitlement(
+    profile: Profile, grants: bool, our_status: str, play_end: datetime | None, now: datetime
+) -> None:
+    """Write a Play subscription entitlement to the profile, without letting
+    Play shorten or remove access that came from somewhere else (a Stripe
+    subscription or a 7-day pass with a later end). Caller commits."""
+    cur_end = profile.subscription_end
+    currently_entitled = profile.subscription_status == "active" and (cur_end is None or cur_end > now)
+
+    if grants:
+        if currently_entitled and (cur_end is None or cur_end > play_end):
+            return
+        profile.subscription_status = "active"
+        profile.subscription_end = play_end
+        return
+
+    from_play = cur_end is not None and play_end is not None and cur_end <= play_end + timedelta(days=1)
+    if currently_entitled and not from_play:
+        return
+    profile.subscription_status = our_status
+    profile.subscription_end = play_end or cur_end
+
+
+def _latest_play_subscription_purchase(db: Session, user_id: int) -> PlayBillingPurchase | None:
+    return db.scalars(
+        select(PlayBillingPurchase)
+        .where(
+            PlayBillingPurchase.user_id == user_id,
+            PlayBillingPurchase.product_id.in_(_PLAY_SUBSCRIPTION_PRODUCTS),
+        )
+        .order_by(PlayBillingPurchase.verified_at.desc(), PlayBillingPurchase.id.desc())
+    ).first()
+
+
+def _refresh_play_subscription(db: Session, profile: Profile) -> bool:
+    """Re-read the user's Play subscription from Google and update the
+    profile (renewals keep the same purchase token and only move expiryTime,
+    so this is how a renewal reaches us without RTDN). Returns True if the
+    profile was refreshed. Never raises; caller commits."""
+    if profile.user_id is None:
+        return False
+    purchase = _latest_play_subscription_purchase(db, profile.user_id)
+    if purchase is None:
+        return False
+    try:
+        access_token = _get_play_developer_access_token()
+        if not access_token:
+            return False
+        body = _fetch_play_subscription(purchase.purchase_token, access_token)
+        now = datetime.utcnow()
+        grants, our_status, play_end = _play_subscription_entitlement(body, now)
+        _apply_play_entitlement(profile, grants, our_status, play_end, now)
+        return True
+    except Exception:
+        logger.exception("[play-billing] refresh failed for user_id=%s purchase_id=%s", profile.user_id, purchase.id)
+        return False
+
+
+def refresh_play_subscriptions() -> None:
+    """Hourly job: re-check Play subscriptions that are about to lapse, have
+    just lapsed, or are on hold, so a renewal (or recovery from on-hold) is
+    picked up even if the user never opens the app around the renewal."""
+    db = SessionLocal()
+    try:
+        now = datetime.utcnow()
+        user_ids = db.scalars(
+            select(PlayBillingPurchase.user_id)
+            .where(PlayBillingPurchase.product_id.in_(_PLAY_SUBSCRIPTION_PRODUCTS))
+            .distinct()
+        ).all()
+        refreshed = 0
+        for uid in user_ids:
+            profile = db.scalars(select(Profile).where(Profile.user_id == uid)).first()
+            if not profile:
+                continue
+            end = profile.subscription_end
+            due = (
+                profile.subscription_status in ("active", "past_due") and (end is None or end < now + timedelta(days=1))
+            ) or (
+                profile.subscription_status == "expired" and end is not None and end > now - timedelta(days=3)
+            )
+            if due and _refresh_play_subscription(db, profile):
+                db.commit()
+                refreshed += 1
+        if refreshed:
+            print(f"[PlayRefresh] refreshed {refreshed} subscription(s)", flush=True)
+    except Exception as e:
+        print(f"[PlayRefresh] job error: {e!r}", flush=True)
+    finally:
+        db.close()
 
 
 @app.post("/play-billing/verify-purchase", tags=["billing"])
@@ -3503,12 +3666,35 @@ def play_billing_verify_purchase(
     existing = db.scalars(
         select(PlayBillingPurchase).where(PlayBillingPurchase.purchase_token == data.purchase_token)
     ).first()
-    if existing:
+    # A known one-time pass must never be re-applied (that would re-grant 7
+    # days on every "Gjenopprett kjøp"). A known SUBSCRIPTION token is
+    # re-read from Google instead: renewals keep the same token and only
+    # move expiryTime, so returning early here meant a restore never
+    # picked up a renewal.
+    if existing and _PLAY_PRODUCT_TYPES.get(existing.product_id) != "subscription":
         return {"verified": True}
 
     access_token = _get_play_developer_access_token()
     if not access_token:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Play Billing er ikke konfigurert (GOOGLE_PLAY_SERVICE_ACCOUNT_JSON mangler)")
+
+    if existing:
+        # Refresh the token OWNER's profile (not necessarily current_user's,
+        # e.g. another app account on the same Google account) -- same
+        # ownership rule as before, just no longer frozen at first verify.
+        owner_profile = db.scalars(select(Profile).where(Profile.user_id == existing.user_id)).first()
+        if owner_profile:
+            try:
+                body = _fetch_play_subscription(existing.purchase_token, access_token)
+            except PlayApiError:
+                # Restore must not fail just because the refresh did; the
+                # hourly job retries.
+                return {"verified": True}
+            now = datetime.utcnow()
+            grants, our_status, play_end = _play_subscription_entitlement(body, now)
+            _apply_play_entitlement(owner_profile, grants, our_status, play_end, now)
+            db.commit()
+        return {"verified": True}
 
     profile = db.scalars(select(Profile).where(Profile.user_id == current_user.id)).first()
     if not profile:
@@ -3517,32 +3703,20 @@ def play_billing_verify_purchase(
     headers = {"Authorization": f"Bearer {access_token}"}
 
     if product_type == "subscription":
-        url = (
-            f"https://androidpublisher.googleapis.com/androidpublisher/v3/applications/"
-            f"{PLAY_PACKAGE_NAME}/purchases/subscriptionsv2/tokens/{data.purchase_token}"
-        )
         try:
-            resp = requests.get(url, headers=headers, timeout=10)
-        except Exception as e:
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Kunne ikke nå Google Play: {e}")
-        if resp.status_code != 200:
-            logger.error("[play-billing] Play Developer API %s: %s", resp.status_code, resp.text[:2000])
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Play Developer API avviste kjøpet ({resp.status_code}): {resp.text[:300]}")
+            body = _fetch_play_subscription(data.purchase_token, access_token)
+        except PlayApiError as e:
+            code = status.HTTP_400_BAD_REQUEST if e.status_code is not None else status.HTTP_502_BAD_GATEWAY
+            raise HTTPException(status_code=code, detail=str(e))
 
-        body = resp.json()
-        state = body.get("subscriptionState") or ""
-        our_status = _PLAY_SUBSCRIPTION_STATE_MAP.get(state, "cancelled")
-        if our_status != "active":
+        now = datetime.utcnow()
+        grants, our_status, play_end = _play_subscription_entitlement(body, now)
+        if not grants:
+            state = body.get("subscriptionState") or ""
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Abonnementet er ikke aktivt (status: {state})")
 
-        subscription_end = None
-        for item in body.get("lineItems") or []:
-            expiry = item.get("expiryTime")
-            if expiry:
-                subscription_end = _parse_play_rfc3339(expiry)
-                break
-
-        _set_subscription_status(db, profile=profile, subscription_status=our_status, subscription_end=subscription_end)
+        _apply_play_entitlement(profile, grants, our_status, play_end, now)
+        db.commit()
 
     else:  # "one_time_pass" -- e.g. "7dager"
         url = (
