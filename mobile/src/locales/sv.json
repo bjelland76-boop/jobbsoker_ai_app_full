@@ -165,7 +165,8 @@
     "open_pdf": "Öppna PDF",
     "section_cover_letter": "Ansökan",
     "section_cv": "CV",
-    "no_text": "Ingen text att visa."
+    "no_text": "Ingen text att visa.",
+    "analysis_language_notice": "Analysen kan visas på norska. Detta är tillfälligt."
   },
   "faq": {
     "getting_started_q": "Hur kommer jag igång?",

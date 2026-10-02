@@ -165,7 +165,8 @@
     "open_pdf": "Åbn PDF",
     "section_cover_letter": "Ansøgning",
     "section_cv": "CV",
-    "no_text": "Ingen tekst at vise."
+    "no_text": "Ingen tekst at vise.",
+    "analysis_language_notice": "Analysen kan blive vist på norsk. Dette er midlertidigt."
   },
   "faq": {
     "getting_started_q": "Hvordan kommer jeg i gang?",
