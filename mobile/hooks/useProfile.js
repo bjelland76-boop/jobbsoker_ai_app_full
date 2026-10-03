@@ -53,7 +53,7 @@ export function serializeCvGaps(list) {
 
 // Accepts optional { onProfileSaved } callback for cross-hook notifications
 export default function useProfile({ onProfileSaved } = {}) {
-  const { authReady, authTokenState, logEvent, errText, t, setShowInactivityReminder } = useApp();
+  const { authReady, authTokenState, logEvent, errText, t, setShowInactivityReminder, setActiveTab } = useApp();
 
   // ---------------------------------------------------------------------------
   // State
@@ -111,6 +111,17 @@ export default function useProfile({ onProfileSaved } = {}) {
   // cancel -- so the user always has visible feedback, even when nothing
   // else on screen changes (see cv_upload_from_home investigation).
   const [cvImportNotice, setCvImportNotice] = useState('');
+  // True once the initial profile load has finished (found, not found, or
+  // failed). isProfileTooEmpty() is also true WHILE loading, so UI that
+  // switches on "empty profile" waits for this to avoid flashing the
+  // empty-profile variant at returning users.
+  const [profileLoadSettled, setProfileLoadSettled] = useState(false);
+  // Set when a CV import was started from the analysis screen's profile
+  // wall: after the imported data is applied, take the user straight back
+  // to the analysis they were about to run (their pasted link/text is kept
+  // in useJobAnalysis state).
+  const returnToAnalysisAfterImportRef = useRef(false);
+  const [cvImportedForAnalysis, setCvImportedForAnalysis] = useState(false);
 
   // Edit state
   const [editExperience, setEditExperience] = useState(false);
@@ -325,6 +336,8 @@ export default function useProfile({ onProfileSaved } = {}) {
         }
       } catch (e) {
         if (__DEV__) console.log('Kunne ikke laste profil:', e);
+      } finally {
+        setProfileLoadSettled(true);
       }
     }
 
@@ -335,6 +348,7 @@ export default function useProfile({ onProfileSaved } = {}) {
     if (!authReady) return;
 
     profileLoadedRef.current = false;
+    setProfileLoadSettled(false);
     loadProfile();
   }, [authReady, authTokenState]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -508,13 +522,15 @@ export default function useProfile({ onProfileSaved } = {}) {
     }
   }
 
-  async function importCvFromFile() {
+  async function importCvFromFile({ returnToAnalysis = false } = {}) {
+    returnToAnalysisAfterImportRef.current = returnToAnalysis;
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
         copyToCacheDirectory: true,
       });
       if (result.canceled) {
+        returnToAnalysisAfterImportRef.current = false;
         setCvImportNotice(t('profile.import_cv_canceled'));
         return;
       }
@@ -593,6 +609,12 @@ export default function useProfile({ onProfileSaved } = {}) {
     }
 
     setCvImportPreview(null);
+
+    if (returnToAnalysisAfterImportRef.current) {
+      returnToAnalysisAfterImportRef.current = false;
+      setCvImportedForAnalysis(true);
+      setActiveTab?.('new');
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -1030,6 +1052,8 @@ export default function useProfile({ onProfileSaved } = {}) {
     cvImportLoading,
     cvImportPreview, setCvImportPreview,
     cvImportNotice, setCvImportNotice,
+    profileLoadSettled,
+    cvImportedForAnalysis, setCvImportedForAnalysis,
 
     // Documents
     profileDocsList, setProfileDocsList,

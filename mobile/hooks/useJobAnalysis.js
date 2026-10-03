@@ -53,6 +53,9 @@ export default function useJobAnalysis({
   // Alternative to jobUrl for job ads with no stable URL (pasted text).
   const [jobText, setJobText] = useState('');
   const [jobInputMode, setJobInputMode] = useState('url'); // 'url' | 'text'
+  // Set when "Start analyse" was blocked by an empty profile; NewJobScreen
+  // highlights its "import your CV first" card while this is true.
+  const [profileWallHit, setProfileWallHit] = useState(false);
   const [analysis, setAnalysis] = useState(null);
   // Isolert Fase 6-leveranse: pop-up state for DeadlineReminderModal,
   // shown right after a fresh analysis (see analyzeJob() below).
@@ -317,35 +320,40 @@ export default function useJobAnalysis({
   // Analyze job
   // ---------------------------------------------------------------------------
   async function analyzeJob() {
+    // Every press is logged, and every early return says why: before this,
+    // analyze_job_started only fired AFTER the checks below, so an attempt
+    // stopped by an empty profile was invisible in the funnel.
+    logEvent('analyze_job_clicked', { mode: jobInputMode });
     const hasJobInput = jobInputMode === 'text' ? !!jobText.trim() : !!jobUrl.trim();
     if (!hasJobInput) {
+      logEvent('analyze_job_blocked', { reason: 'no_input' });
       showAlert(t('errors.missing_url_title'), t('errors.missing_url_body'));
       return;
     }
 
-    // A brand-new anonymous user has no profile row yet -- rather than
-    // dead-ending here (the old behaviour, see git history), silently
-    // create an empty one so a first-time visitor can reach an analysis
-    // without a manual "save profile" detour. The isProfileTooEmpty()
-    // check right below still gates on having *real* CV content (name
-    // alone isn't enough for a useful analysis anyway), so this only
-    // removes the redundant technical step, not the legitimate one.
+    // Gate on real CV content BEFORE the silent profile save below: saving
+    // first would create an empty profile on the server (and, since v52,
+    // trigger the consent prompt) just before turning the user away. No
+    // dialog -- NewJobScreen shows its "import your CV first" card and
+    // highlights it instead.
+    if (isProfileTooEmpty?.()) {
+      logEvent('analyze_job_blocked', { reason: 'empty_profile' });
+      setProfileWallHit(true);
+      return;
+    }
+    setProfileWallHit(false);
+
+    // A brand-new anonymous user with CV content (e.g. just imported) may
+    // not have a profile row yet -- create it silently rather than
+    // dead-ending on a manual "save profile" detour.
     let currentProfileId = profileId;
     if (!currentProfileId) {
       currentProfileId = await saveProfile?.({ silent: true });
       if (!currentProfileId) {
         // saveProfile already surfaced its own error alert on failure.
+        logEvent('analyze_job_blocked', { reason: 'no_profile' });
         return;
       }
-    }
-
-    if (isProfileTooEmpty?.()) {
-      const title = t('errors.complete_profile_title');
-      const body = t('errors.complete_profile_body_analysis');
-      if (window.confirm(`${title}\n\n${body}`)) {
-        setActiveTab('profile');
-      }
-      return;
     }
 
     await flushAutoSave?.();
@@ -947,6 +955,7 @@ export default function useJobAnalysis({
     jobUrl, setJobUrl,
     jobText, setJobText,
     jobInputMode, setJobInputMode,
+    profileWallHit, setProfileWallHit,
     analysis, setAnalysis,
     deadlinePrompt, dismissDeadlinePrompt,
     justAnalyzed, setJustAnalyzed,

@@ -75,10 +75,15 @@ export default function HomeScreen({
   adminStats, adminStatsLoading, setAdminStats, setAdminStatsLoading,
 }) {
   const { t, logEvent, setActiveTab, setShowFaq } = useApp();
-  const { importCvFromFile, setCvImportNotice } = useProfileContext() || {};
+  const { importCvFromFile, setCvImportNotice, isProfileTooEmpty, profileLoadSettled } = useProfileContext() || {};
+  // CV first, like onboarding: until the profile has real content, a job
+  // analysis can't run (see NewJobScreen's profile wall), so the main call
+  // to action is uploading a CV. Waits for the profile load to settle so a
+  // returning user with a full profile never sees this variant flash.
+  const profileEmpty = !!profileLoadSettled && !!isProfileTooEmpty?.();
 
-  function uploadCvFromHome() {
-    logEvent('cv_upload_from_home');
+  function uploadCvFromHome(source = 'quick') {
+    logEvent('cv_upload_from_home', { source });
     // Shown on ProfileScreen (see below) so the tab switch that follows
     // doesn't look like an unexplained jump -- the user taps this button,
     // the screen changes AND the OS file picker opens at the same instant,
@@ -203,7 +208,7 @@ export default function HomeScreen({
       : (appsSentCount > 0)
         ? t('home.message_active_applications', { count: appsSentCount })
         : (analysedJobsCount === 0)
-          ? t('home.message_new_user')
+          ? (profileEmpty ? t('home.message_new_user_cv_first') : t('home.message_new_user'))
           : t('home.subtitle');
 
   return (
@@ -245,9 +250,15 @@ export default function HomeScreen({
           {dynamicMessage}
         </Text>
 
-        <TouchableOpacity style={[styles.aerligPrimaryButton, styles.cardElevated]} onPress={() => setActiveTab('new')}>
-          <Text style={styles.aerligPrimaryButtonText}>{t('home.analyze_job')}</Text>
-        </TouchableOpacity>
+        {profileEmpty ? (
+          <TouchableOpacity style={[styles.aerligPrimaryButton, styles.cardElevated]} onPress={() => uploadCvFromHome('hero')}>
+            <Text style={styles.aerligPrimaryButtonText}>{t('home.upload_cv')}</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={[styles.aerligPrimaryButton, styles.cardElevated]} onPress={() => setActiveTab('new')}>
+            <Text style={styles.aerligPrimaryButtonText}>{t('home.analyze_job')}</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Moved up from the stats grid below so a new user sees this
             before -- not after -- trying "Analyser jobb"/"Analyser CV",
@@ -284,14 +295,25 @@ export default function HomeScreen({
             <Ionicons name="mic-outline" size={16} color="#993C1D" style={{ marginRight: 6 }} />
             <Text style={styles.aerligQuickButtonText}>{t('home.interview_practice')}</Text>
           </Pressable>
-          <Pressable
-            {...ripple}
-            style={[styles.aerligQuickButton, styles.cardElevated]}
-            onPress={uploadCvFromHome}
-          >
-            <Ionicons name="cloud-upload-outline" size={16} color="#993C1D" style={{ marginRight: 6 }} />
-            <Text style={styles.aerligQuickButtonText}>{t('home.upload_cv')}</Text>
-          </Pressable>
+          {profileEmpty ? (
+            <Pressable
+              {...ripple}
+              style={[styles.aerligQuickButton, styles.cardElevated]}
+              onPress={() => setActiveTab('new')}
+            >
+              <Ionicons name="search-outline" size={16} color="#993C1D" style={{ marginRight: 6 }} />
+              <Text style={styles.aerligQuickButtonText}>{t('home.analyze_job')}</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              {...ripple}
+              style={[styles.aerligQuickButton, styles.cardElevated]}
+              onPress={() => uploadCvFromHome('quick')}
+            >
+              <Ionicons name="cloud-upload-outline" size={16} color="#993C1D" style={{ marginRight: 6 }} />
+              <Text style={styles.aerligQuickButtonText}>{t('home.upload_cv')}</Text>
+            </Pressable>
+          )}
         </View>
       </View>
 

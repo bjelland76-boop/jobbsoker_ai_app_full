@@ -138,6 +138,7 @@ function AppContent() {
     jobUrl, setJobUrl,
     jobText, setJobText,
     jobInputMode, setJobInputMode,
+    profileWallHit,
     analysis, setAnalysis,
     deadlinePrompt, dismissDeadlinePrompt,
     justAnalyzed, setJustAnalyzed,
@@ -1101,6 +1102,7 @@ function AppContent() {
             jobText={jobText} setJobText={setJobText}
             jobInputMode={jobInputMode} setJobInputMode={setJobInputMode}
             loading={loading} analyzeJob={analyzeJob}
+            profileWallHit={profileWallHit}
           />}
           {activeTab === 'applications' && <ApplicationsScreen
             applications={applications} applicationsLoading={applicationsLoading}
